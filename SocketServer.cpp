@@ -217,7 +217,7 @@ void	SocketServer::startSocket(void)
 						char hi[4096]; //for size, something enough big to hold client's message, but not big problem.
 									  // if there is no enough space, it sends message in more times
 						bytes = recv(it->fd, hi, sizeof(hi), 0);
-						printf("bytes recv %i\n", bytes);
+						// printf("bytes recv %i\n", bytes);
 						if (bytes <= 0)
 						{
 							if (bytes == 0)
@@ -252,7 +252,7 @@ void	SocketServer::startSocket(void)
 										ServerResponse serverResponse;
 										std::string message;
 
-										printf("if method is GET\n");
+										// printf("if method is GET\n");
 										message = serverResponse.AnalyzeRequest(infoRequest);
 										// printf("message %s\n", message.c_str());
 										if (send(it->fd, message.c_str(), strlen(message.c_str()), 0) == -1)
