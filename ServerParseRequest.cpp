@@ -48,22 +48,22 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	method = findMethod(inputString);
 	requestParse["method"] = method;
 
-	//target - what clients wants
+	//request target - what clients want
 	std::string requestTarget;
 	std::size_t request_index_start = method.size() + 2;
 	if (inputString.find(" ", request_index_start) != std::string::npos)
 	{
 		requestTarget = inputString.substr(method.size() + 1, (inputString.find(" ", method.size() + 1)) - (method.size() + 1));
-		if (requestTarget == "/")
-		{
-			requestTarget.clear();
-			requestTarget = "localhost";
-		}
-		requestParse["target"] = requestTarget;
+		// if (requestTarget == "/")
+		// {
+		// 	requestTarget.clear();
+		// 	requestTarget = "localhost";
+		// }
+		requestParse["request-target"] = requestTarget;
 
 	}
 	else
-		requestParse["target"] = "target not defined";
+		requestParse["request-target"] = "target not defined";
 
 	//protocol - which protocol to send messages
 	std::string protocol;
