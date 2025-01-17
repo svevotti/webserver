@@ -13,6 +13,7 @@
 #define LISTEN -6
 #define RECEIVE -7
 #define SEND -8
+#define ACCEPT -9
 
 // static int gloabal_i = 0;
 
@@ -81,7 +82,7 @@ void printError(int error)
 	}
 }
 
-int createServerSocket(void)
+int createServerSocket(const char* portNumber)
 {
 	int _socketFd;
 	struct addrinfo hints, *serverInfo, *ptr; //struct info about server address
@@ -92,7 +93,7 @@ int createServerSocket(void)
 	hints.ai_family = AF_UNSPEC; //flag to set either iPV4 or iPV6
 	hints.ai_socktype = SOCK_STREAM; //type of socket, we need TCP
 	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
-	error = getaddrinfo(NULL, PORT, &hints, &serverInfo);
+	error = getaddrinfo(NULL, portNumber, &hints, &serverInfo);
 	if (error == -1)
 		std::cout << "Error getaddrinfo" << std::endl;
 	//find first available socket
@@ -140,23 +141,37 @@ void	SocketServer::startSocket(void)
     socklen_t sin_size;
 	std::vector<pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
 
-	_socketFd = createServerSocket();
+	_socketFd = createServerSocket("8080");
 	if (_socketFd < 0)
 		printError(_socketFd);
 
 	//init poll - it is a struct, needed to handle multiple clients
 	poll_sets.reserve(100); // allocate beforehand memory to avoid vector to reallocate after push back - it is then hard to track my pointer
-	struct pollfd myPoll;
-	myPoll.fd = _socketFd; //first fd in poll struct
-	myPoll.events = POLLIN; //flag for incoming connections
-	poll_sets.push_back(myPoll);
+	struct pollfd myPoll[200];
+	myPoll[0].fd = _socketFd; //first fd in poll struct
+	myPoll[0].events = POLLIN; //flag for incoming connections
+	poll_sets.push_back(myPoll[0]);
+
+	//create second socket for second port
+	std::vector<pollfd> poll_sets2;
+	int socketFd2 = createServerSocket("9090");
+	if (socketFd2 < 0)
+		printError(socketFd2);
+
+	//init poll - it is a struct, needed to handle multiple clients
+	poll_sets2.reserve(100); // allocate beforehand memory to avoid vector to reallocate after push back - it is then hard to track my pointer
+	// struct pollfd myPoll2;
+	myPoll[1].fd = socketFd2; //first fd in poll struct
+	myPoll[1].events = POLLIN; //flag for incoming connections
+	poll_sets.push_back(myPoll[1]);
 
 	int res;
 	std::cout << "Waiting connections..." << std::endl;
+	// int i = 0;
 	//inf loop to accept incoming connections
 	while(1)
 	{
-		res = poll((pollfd *)&poll_sets[0], (unsigned int)poll_sets.size(), 10000);
+		res = poll((pollfd *)&poll_sets[0], (unsigned int)poll_sets.size(), 1 * 60 * 1000);
         if (res == -1)
 		{
             perror("poll");
@@ -164,8 +179,9 @@ void	SocketServer::startSocket(void)
         }
 		else if (res == 0) //if there are no connections, it is just printing a message
 		{
-			printf("Waiting connections...\n");
-			continue;
+			printf("Waiting connections over...\n");
+			break ;
+			// continue;
 		}
 		else
 		{
@@ -181,11 +197,46 @@ void	SocketServer::startSocket(void)
 						_newSocketFd = accept(_socketFd, (struct sockaddr *)&their_addr, &sin_size); //client socket
 						if (_newSocketFd == -1)
 						{
-							perror("accept");
+							printError(ACCEPT);
 							continue;
 						}
 						//add new fds in poll struct
-						pollfd client_pollfd;
+						pollfd client_pollfd;	
+						client_pollfd.fd = _newSocketFd;
+						client_pollfd.events = POLLIN;
+						poll_sets.push_back(client_pollfd);
+
+						char s[256];
+						//just checking wich IPV is - so i can print address properly
+						if (their_addr.ss_family == AF_INET)
+						{
+							struct sockaddr_in *sin;
+							sin = (struct sockaddr_in *)&their_addr;
+							inet_ntop(their_addr.ss_family, sin, s, sizeof s);
+							std::cout << "server: got connection from " << s << std::endl;
+						}
+						else if (their_addr.ss_family == AF_INET6)
+						{
+							struct sockaddr_in6 *sin;
+							sin = (struct sockaddr_in6 *)&their_addr;
+							inet_ntop(their_addr.ss_family, sin, s, sizeof s);
+							std::cout << "server: got connection from " << s << std::endl;
+						}
+						else
+							std::cout <<"Unknown" << std::endl;
+						memset(&s, 0, sizeof(s));
+					}
+					else if (it->fd == socketFd2) //new client to add
+					{
+						sin_size = sizeof(their_addr);
+						_newSocketFd = accept(socketFd2, (struct sockaddr *)&their_addr, &sin_size); //client socket
+						if (_newSocketFd == -1)
+						{
+							printError(ACCEPT);
+							continue;
+						}
+						//add new fds in poll struct
+						pollfd client_pollfd;	
 						client_pollfd.fd = _newSocketFd;
 						client_pollfd.events = POLLIN;
 						poll_sets.push_back(client_pollfd);
@@ -238,6 +289,7 @@ void	SocketServer::startSocket(void)
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
 								infoRequest = request.parseRequestHttp(hi);
+								printf("client message %s\n", hi);
 								// std::map<std::string, std::string>::iterator ittt;
 								// for (ittt = infoRequest.begin(); ittt != infoRequest.end(); ittt++)
 								// {
