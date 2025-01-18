@@ -167,7 +167,9 @@ void	SocketServer::startSocket(void)
 		if (arraySockets[i] < 0)
 			printError(arraySockets[i]);
 	}
-
+	for (i = 0; i < 2; i++)
+		free(arrayPorts[i]);
+	free(arrayPorts);
 	poll_sets.reserve(100);
 	struct pollfd myPoll[200];
 
@@ -337,5 +339,10 @@ void	SocketServer::startSocket(void)
 			}
 		}
 	}
-	close(_socketFd);
+	//closinf fds
+	for (i = 0; i < 2; i++)
+	{
+		if(myPoll[i].fd >= 0)
+			close(myPoll[i].fd);
+	}
 }
