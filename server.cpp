@@ -5,12 +5,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "SocketServer.hpp"
+#include "InfoServer.hpp"
 
 int main(void)
 {
+	InfoServer		server;	
+	SocketServer 	sockets;
 
-	SocketServer singleSocket;
-
-	singleSocket.startSocket();
+	server.setArrayPorts("8080");
+	server.setArrayPorts("9090");
+	sockets.startSocket(server);
 	return (0);
 }

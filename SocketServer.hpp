@@ -14,6 +14,7 @@
 
 #include "ServerParseRequest.hpp"
 #include "ServerResponse.hpp"
+#include "InfoServer.hpp"
 
 
 #define PORT "8080"
@@ -26,7 +27,7 @@ public:
 	~SocketServer();
 	SocketServer(const SocketServer &);
 	void	operator=(const SocketServer &);
-	void	startSocket();
+	void	startSocket(InfoServer);
 	// int		getSocketServerPort();
 
 private:
