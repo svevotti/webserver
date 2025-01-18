@@ -135,13 +135,50 @@ int createServerSocket(const char* portNumber)
 	return (_socketFd);
 }
 
+int findMatchingSocket(int pollFd, int array[])
+{
+	int i = 0;
+	for (i = 0; i < 2; i++)
+	{
+		if (pollFd == array[i])
+			return(i);
+	}
+	return -1;
+}
+
 void	SocketServer::startSocket(void)
 {
 	struct sockaddr_storage their_addr; // struct to store client's address information
     socklen_t sin_size;
 	std::vector<pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
 
-	_socketFd = createServerSocket("8080");
+	/*array of sockets*/
+	int arraySockets[2];
+	char **arrayPorts;
+	arrayPorts = (char **)malloc(sizeof(char *) * (3));
+	arrayPorts[0] = strdup("8080");
+	arrayPorts[1] = strdup("9090");
+	arrayPorts[2] = NULL;
+
+	int i;
+	for (i = 0; i < 2; i++)
+	{
+		arraySockets[i] = createServerSocket(arrayPorts[i]);
+		if (arraySockets[i] < 0)
+			printError(arraySockets[i]);
+	}
+
+	poll_sets.reserve(100);
+	struct pollfd myPoll[200];
+
+	for (i = 0; i < 2; i++)
+	{
+		myPoll[i].fd = arraySockets[i];
+		myPoll[i].events = POLLIN;
+		poll_sets.push_back(myPoll[i]);
+	}
+
+	/*_socketFd = createServerSocket("8080");
 	if (_socketFd < 0)
 		printError(_socketFd);
 
@@ -163,7 +200,7 @@ void	SocketServer::startSocket(void)
 	// struct pollfd myPoll2;
 	myPoll[1].fd = socketFd2; //first fd in poll struct
 	myPoll[1].events = POLLIN; //flag for incoming connections
-	poll_sets.push_back(myPoll[1]);
+	poll_sets.push_back(myPoll[1]); */
 
 	int res;
 	std::cout << "Waiting connections..." << std::endl;
@@ -191,45 +228,11 @@ void	SocketServer::startSocket(void)
 			{
 				if (it->revents & POLLIN) //if there is data to read
 				{
-					if (it->fd == _socketFd) //new client to add
+					int indexFd = findMatchingSocket(it->fd, arraySockets); //look for socket in the array
+					if (indexFd != -1) //new client to add
 					{
 						sin_size = sizeof(their_addr);
-						_newSocketFd = accept(_socketFd, (struct sockaddr *)&their_addr, &sin_size); //client socket
-						if (_newSocketFd == -1)
-						{
-							printError(ACCEPT);
-							continue;
-						}
-						//add new fds in poll struct
-						pollfd client_pollfd;	
-						client_pollfd.fd = _newSocketFd;
-						client_pollfd.events = POLLIN;
-						poll_sets.push_back(client_pollfd);
-
-						char s[256];
-						//just checking wich IPV is - so i can print address properly
-						if (their_addr.ss_family == AF_INET)
-						{
-							struct sockaddr_in *sin;
-							sin = (struct sockaddr_in *)&their_addr;
-							inet_ntop(their_addr.ss_family, sin, s, sizeof s);
-							std::cout << "server: got connection from " << s << std::endl;
-						}
-						else if (their_addr.ss_family == AF_INET6)
-						{
-							struct sockaddr_in6 *sin;
-							sin = (struct sockaddr_in6 *)&their_addr;
-							inet_ntop(their_addr.ss_family, sin, s, sizeof s);
-							std::cout << "server: got connection from " << s << std::endl;
-						}
-						else
-							std::cout <<"Unknown" << std::endl;
-						memset(&s, 0, sizeof(s));
-					}
-					else if (it->fd == socketFd2) //new client to add
-					{
-						sin_size = sizeof(their_addr);
-						_newSocketFd = accept(socketFd2, (struct sockaddr *)&their_addr, &sin_size); //client socket
+						_newSocketFd = accept(arraySockets[indexFd], (struct sockaddr *)&their_addr, &sin_size); //client socket
 						if (_newSocketFd == -1)
 						{
 							printError(ACCEPT);
