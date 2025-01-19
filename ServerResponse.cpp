@@ -1,5 +1,6 @@
 #include "ServerResponse.hpp"
 #include <fstream>
+#include <dirent.h>
 
 std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> request)
 {
@@ -30,21 +31,36 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 						"</html>\r\n";
 			return (response);
 		}
-		if (requestTarget == "/") //to show OK for first page
+		if (requestTarget == "/") //what client wants - in this case we give back default page(index.html)
 		{
 			// locate file: open home dir, see the contents
-			// check if it exists
-			// get file size (count characters)
-			// get file content into string
-			// assemle response
+			std::string directoryPath = "." + requestTarget; //only slash means current directory ?
+			struct dirent *folder;
+			std::string defaultPage;
+			std::vector<std::string> listContentDirectory;
+			std::string str;
+			DIR *dir;
+			
+			dir = opendir(directoryPath.c_str());
+			if (dir == NULL)
+				std::cerr << "Error in opening directory" << std::endl;
+			while ((folder = readdir(dir)) != NULL)
+			{
+				// std::cout << "content in folder: " << folder->d_name << std::endl;
+				std::string str(folder->d_name);
+				if (str == "index.html")
+					defaultPage = str;
+			}
 			std::fstream file;
 			std::string line;
 			std::string bodyHtml;
 			int bodyHtmlLen;
 
-			file.open("index.html", std::fstream::in | std::fstream::out);
+			// check if it exists
+			file.open(defaultPage, std::fstream::in | std::fstream::out); //checking if i can open file, ergo it exists
 			if (!file)
 				std::cerr << "Error in opening file" << std::endl;
+			// get file content into string
 			while (std::getline(file, line))
 			{
 				// std::cout << "line: " << line << std::endl;
@@ -55,12 +71,14 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 				// std::cout << "string: " << toString << std::endl;
 			}
 			file.close();
+			//get body size
+			bodyHtmlLen = bodyHtml.length();
+			// assemle response
 			response =	"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/html\r\n"
 						"Content-Length: \r\n" //need to exactly the message's len, or it doesn't work
 						"Connection: close\r\n" //client end connection right away, keep-alive
 						"\r\n";
-			bodyHtmlLen = bodyHtml.length();
 			std::string lenStr = std::to_string(bodyHtmlLen);
 			size_t pos = 0;
 			pos = response.find("Content-Length:");
