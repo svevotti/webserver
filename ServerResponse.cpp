@@ -10,7 +10,7 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 		std::string protocol = request["protocol"];
 		// printf("request target %s\n", requestTarget.c_str());
 		// printf("access : %i\n", access(path.c_str(), F_OK != -1));
-		printf("protocol %s\n", request["protocol"].c_str());
+		// printf("protocol %s\n", request["protocol"].c_str());
 		if (protocol != "HTTP/1.1")
 		{
 			response =	"HTTP/1.1 505 HTTP Version not supported\r\n"

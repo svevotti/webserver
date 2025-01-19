@@ -12,6 +12,7 @@
 #include <netdb.h>
 #include <poll.h>
 #include <map>
+#include <cstdio>
 
 #include "ServerParseRequest.hpp"
 
