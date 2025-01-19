@@ -39,7 +39,8 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 			// assemle response
 			std::fstream file;
 			std::string line;
-			std::string toString;
+			std::string bodyHtml;
+			int bodyHtmlLen;
 
 			file.open("index.html", std::fstream::in | std::fstream::out);
 			if (!file)
@@ -50,29 +51,22 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 				if (line.size() == 0)
 					continue;
 				else
-					toString = toString.append(line + "\r\n");
+					bodyHtml = bodyHtml.append(line + "\r\n");
 				// std::cout << "string: " << toString << std::endl;
 			}
-
 			file.close();
 			response =	"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/html\r\n"
-						"Content-Length: 120\r\n" //need to exactly the message's len, or it doesn't work
-						"Connection: keep-alive\r\n"
+						"Content-Length: \r\n" //need to exactly the message's len, or it doesn't work
+						"Connection: close\r\n" //client end connection right away, keep-alive
 						"\r\n";
-			response = response.append(toString);
-			// response =	"HTTP/1.1 200 OK\r\n"
-			// 			"Content-Type: text/html\r\n"
-			// 			"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
-			// 			"\r\n"
-			// 			"<html>\r\n"
-			// 			"<header>\r\n"
-			// 			"<title>Test page</title>\r\n"
-			// 			"</header>\r\n"
-			// 			"<body>\r\n"
-			// 			"<h1>Hello World</h1>\r\n"
-			// 			"</body>\r\n"
-			// 			"</html>\r\n";
+			bodyHtmlLen = bodyHtml.length();
+			std::string lenStr = std::to_string(bodyHtmlLen);
+			size_t pos = 0;
+			pos = response.find("Content-Length:");
+			pos = response.find(" ", pos);
+			response.insert(pos + 1, lenStr);
+			response = response.append(bodyHtml);
 		}
 		else //adding pages that don't exist
 		{
