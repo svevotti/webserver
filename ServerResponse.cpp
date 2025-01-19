@@ -1,7 +1,10 @@
 #include "ServerResponse.hpp"
+#include <fstream>
 
 std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> request)
 {
+	//hardcoded
+	// std::string homeDirectory = "./";
 	std::string response;
 
 	if (request["method"] == "GET")
@@ -29,21 +32,51 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 		}
 		if (requestTarget == "/") //to show OK for first page
 		{
+			// locate file: open home dir, see the contents
+			// check if it exists
+			// get file size (count characters)
+			// get file content into string
+			// assemle response
+			std::fstream file;
+			std::string line;
+			std::string toString;
+
+			file.open("index.html", std::fstream::in | std::fstream::out);
+			if (!file)
+				std::cerr << "Error in opening file" << std::endl;
+			while (std::getline(file, line))
+			{
+				// std::cout << "line: " << line << std::endl;
+				if (line.size() == 0)
+					continue;
+				else
+					toString = toString.append(line + "\r\n");
+				// std::cout << "string: " << toString << std::endl;
+			}
+
+			file.close();
 			response =	"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/html\r\n"
-						"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
-						"\r\n"
-						"<html>\r\n"
-						"<header>\r\n"
-						"<title>Test page</title>\r\n"
-						"</header>\r\n"
-						"<body>\r\n"
-						"<h1>Hello World</h1>\r\n"
-						"</body>\r\n"
-						"</html>\r\n";
+						"Content-Length: 120\r\n" //need to exactly the message's len, or it doesn't work
+						"Connection: keep-alive\r\n"
+						"\r\n";
+			response = response.append(toString);
+			// response =	"HTTP/1.1 200 OK\r\n"
+			// 			"Content-Type: text/html\r\n"
+			// 			"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
+			// 			"\r\n"
+			// 			"<html>\r\n"
+			// 			"<header>\r\n"
+			// 			"<title>Test page</title>\r\n"
+			// 			"</header>\r\n"
+			// 			"<body>\r\n"
+			// 			"<h1>Hello World</h1>\r\n"
+			// 			"</body>\r\n"
+			// 			"</html>\r\n";
 		}
 		else //adding pages that don't exist
 		{
+
 			// std::cout << "Not done yet" << std::endl;
 			response =	"HTTP/1.1 404 Not Found\r\n"
 						"Content-Type: text/html\r\n"
