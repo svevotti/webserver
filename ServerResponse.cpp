@@ -2,19 +2,26 @@
 #include <fstream>
 #include <dirent.h>
 
-std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> request)
+
+
+
+std::string ServerResponse::AnalyzeRequest(InfoServer info, std::map<std::string, std::string> request)
 {
 	//hardcoded
 	// std::string homeDirectory = "./";
 	std::string response;
 
+	(void)info;
 	if (request["method"] == "GET")
 	{
 		std::string requestTarget = request["request-target"];
-		// locate file: open home dir, see the contents
-		if (access(requestTarget.c_str(), F_OK) == 0)
+		std::cout << "target: " << requestTarget << std::endl;
+		if (requestTarget[0] == '/')
+			requestTarget.erase(0, 1);
+		if (access(requestTarget.c_str(), F_OK) == 0) //it means is asking for default page, index.html
 		{
-			std::string directoryPath = "." + requestTarget; //only slash means current directory ?
+			// locate file: open home dir, see the contents
+			std::string directoryPath = info.getConfigFilePath();
 			struct dirent *folder;
 			std::string defaultPage;
 			std::vector<std::string> listContentDirectory;
@@ -27,7 +34,7 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 			{
 				// std::cout << "content in folder: " << folder->d_name << std::endl;
 				std::string str(folder->d_name);
-				if (str == "index.html")
+				if (str == requestTarget)
 					defaultPage = str;
 			}
 			closedir(dir);
@@ -58,7 +65,7 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 			response =	"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/html\r\n"
 						"Content-Length: \r\n" //need to exactly the message's len, or it doesn't work
-						"Connection: close\r\n" //client end connection right away, keep-alive
+						"Connection: keep-alive\r\n" //client end connection right away, keep-alive
 						"\r\n";
 			std::string lenStr = std::to_string(bodyHtmlLen);
 			size_t pos = 0;

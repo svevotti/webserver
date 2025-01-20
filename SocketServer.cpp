@@ -272,7 +272,7 @@ void	SocketServer::startSocket(InfoServer info)
 										std::string message;
 
 										// printf("if method is GET\n");
-										message = serverResponse.AnalyzeRequest(infoRequest);
+										message = serverResponse.AnalyzeRequest(info, infoRequest);
 										// printf("message %s\n", message.c_str());
 										if (send(it->fd, message.c_str(), strlen(message.c_str()), 0) == -1)
 											printError(SEND);

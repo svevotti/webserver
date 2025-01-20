@@ -16,6 +16,7 @@
 
 #include "ServerParseRequest.hpp"
 #include "ServerStatusCode.hpp"
+#include "InfoServer.hpp"
 
 class ServerResponse
 {
@@ -27,7 +28,7 @@ public:
 	// ~ServerResponse();
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
-	std::string AnalyzeRequest(std::map<std::string, std::string>);
+	std::string AnalyzeRequest(InfoServer, std::map<std::string, std::string>);
 	// int		getSocketServerPort();
 
 private:

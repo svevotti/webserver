@@ -54,11 +54,11 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	if (inputString.find(" ", request_index_start) != std::string::npos)
 	{
 		requestTarget = inputString.substr(method.size() + 1, (inputString.find(" ", method.size() + 1)) - (method.size() + 1));
-		// if (requestTarget == "/")
-		// {
-		// 	requestTarget.clear();
-		// 	requestTarget = "localhost";
-		// }
+		if (requestTarget == "/")
+		{
+			requestTarget.clear();
+			requestTarget = "index.html";
+		}
 		requestParse["request-target"] = requestTarget;
 
 	}
