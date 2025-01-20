@@ -4,28 +4,6 @@
 #include <algorithm>
 #include <cctype>
 
-std::vector<std::string> splitStringByEmptyLines(std::string& inputString)
-{
-    std::vector<std::string> result;
-  
-    std::stringstream ss(inputString);
-    std::string line;
-	std::string new_line;
-
-    // Loop until the end of the string
-    while (getline(ss, line)) {
-        if (!line.empty()) {
-            result.push_back(line);
-        }
-    }
-
-    return result;
-}
-char to_lowercase(unsigned char c)
-{
-    return std::tolower(c);
-}
-
 std::string findMethod(std::string inputStr)
 {
 	if (inputStr.find("GET") != std::string::npos)
@@ -37,8 +15,6 @@ std::string findMethod(std::string inputStr)
 	return ("ERROR");
 }
 
-
-//attention: so far, no body message in HTTP request - it is after all the HTTP headers
 std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *str)
 {
 	std::string inputString(str);
