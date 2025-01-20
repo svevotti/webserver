@@ -16,8 +16,8 @@ std::string ServerResponse::AnalyzeRequest(InfoServer info, std::map<std::string
 	{
 		std::string requestTarget = request["request-target"];
 		std::cout << "target: " << requestTarget << std::endl;
-		if (requestTarget[0] == '/')
-			requestTarget.erase(0, 1);
+		if (requestTarget[0] == '/') //remove because already in the path
+			requestTarget.erase(0, 1); 
 		if (access(requestTarget.c_str(), F_OK) == 0) //it means is asking for default page, index.html
 		{
 			// locate file: open home dir, see the contents
