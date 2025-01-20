@@ -15,7 +15,6 @@
 #define SEND -8
 #define ACCEPT -9
 #define POLL -10
-// static int gloabal_i = 0;
 
 SocketServer::SocketServer(void)
 {
@@ -188,7 +187,7 @@ void	SocketServer::startSocket(InfoServer info)
         if (res == -1)
 		{
             printError(POLL);
-            exit(1);
+            break ;
         }
 		else if (res == 0) //if there are no connections, it is just printing a message
 		{
@@ -217,7 +216,8 @@ void	SocketServer::startSocket(InfoServer info)
 						client_pollfd.events = POLLIN;
 						poll_sets.push_back(client_pollfd);
 
-						/*char s[256];
+						/* to print IPversion 
+						char s[256];
 						//just checking wich IPV is - so i can print address properly
 						if (their_addr.ss_family == AF_INET)
 						{
@@ -262,18 +262,13 @@ void	SocketServer::startSocket(InfoServer info)
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
 								infoRequest = request.parseRequestHttp(hi);
-								//printf("client message %s\n", hi);
-								//server response - always OK
-								if (infoRequest.find("method") != infoRequest.end())
+								if (infoRequest.find("method") != infoRequest.end()) //checks for methods we need to implement
 								{
+									ServerResponse serverResponse;
+									std::string message;
+									message = serverResponse.AnalyzeRequest(info, infoRequest);
 									if (infoRequest["method"] == "GET")
 									{
-										ServerResponse serverResponse;
-										std::string message;
-
-										// printf("if method is GET\n");
-										message = serverResponse.AnalyzeRequest(infoRequest);
-										// printf("message %s\n", message.c_str());
 										if (send(it->fd, message.c_str(), strlen(message.c_str()), 0) == -1)
 											printError(SEND);
 									}

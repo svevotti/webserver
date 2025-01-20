@@ -14,6 +14,7 @@ int main(void)
 
 	server.setArrayPorts("8080");
 	server.setArrayPorts("9090");
+	server.setConfigFilePath("./");
 	sockets.startSocket(server);
 	return (0);
 }
