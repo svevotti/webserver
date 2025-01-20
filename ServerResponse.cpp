@@ -11,36 +11,15 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 	if (request["method"] == "GET")
 	{
 		std::string requestTarget = request["request-target"];
-		std::string protocol = request["protocol"];
-		// printf("request target %s\n", requestTarget.c_str());
-		// printf("access : %i\n", access(path.c_str(), F_OK != -1));
-		// printf("protocol %s\n", request["protocol"].c_str());
-		if (protocol != "HTTP/1.1")
+		// locate file: open home dir, see the contents
+		if (access(requestTarget.c_str(), F_OK) == 0)
 		{
-			response =	"HTTP/1.1 505 HTTP Version not supported\r\n"
-						"Content-Type: text/html\r\n"
-						"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
-						"\r\n"
-						"<html>\r\n"
-						"<header>\r\n"
-						"<title>Http vers</title>\r\n"
-						"</header>\r\n"
-						"<body>\r\n"
-						"<h1>Http wrong!</h1>\r\n"
-						"</body>\r\n"
-						"</html>\r\n";
-			return (response);
-		}
-		if (requestTarget == "/") //what client wants - in this case we give back default page(index.html)
-		{
-			// locate file: open home dir, see the contents
 			std::string directoryPath = "." + requestTarget; //only slash means current directory ?
 			struct dirent *folder;
 			std::string defaultPage;
 			std::vector<std::string> listContentDirectory;
 			std::string str;
 			DIR *dir;
-			
 			dir = opendir(directoryPath.c_str());
 			if (dir == NULL)
 				std::cerr << "Error in opening directory" << std::endl;
@@ -51,12 +30,12 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 				if (str == "index.html")
 					defaultPage = str;
 			}
+			closedir(dir);
+			// check if it exists
 			std::fstream file;
 			std::string line;
 			std::string bodyHtml;
 			int bodyHtmlLen;
-
-			// check if it exists
 			file.open(defaultPage, std::fstream::in | std::fstream::out); //checking if i can open file, ergo it exists
 			if (!file)
 				std::cerr << "Error in opening file" << std::endl;
@@ -74,6 +53,8 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 			//get body size
 			bodyHtmlLen = bodyHtml.length();
 			// assemle response
+			ServerStatusCode status;
+			// response = status.getStatusCode()[200];
 			response =	"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/html\r\n"
 						"Content-Length: \r\n" //need to exactly the message's len, or it doesn't work
@@ -88,8 +69,6 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 		}
 		else //adding pages that don't exist
 		{
-
-			// std::cout << "Not done yet" << std::endl;
 			response =	"HTTP/1.1 404 Not Found\r\n"
 						"Content-Type: text/html\r\n"
 						"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
@@ -103,7 +82,6 @@ std::string ServerResponse::AnalyzeRequest(std::map<std::string, std::string> re
 						"</body>\r\n"
 						"</html>\r\n";
 		}
-		// printf("message to send assembled\n");
 	}
 	return (response);
 }

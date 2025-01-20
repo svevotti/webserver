@@ -15,6 +15,7 @@
 #include <cstdio>
 
 #include "ServerParseRequest.hpp"
+#include "ServerStatusCode.hpp"
 
 class ServerResponse
 {
