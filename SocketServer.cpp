@@ -254,26 +254,28 @@ void	SocketServer::startSocket(InfoServer info)
 							close(it->fd);
 							
 						}
-						else //data to write - server response to client message
+						else //data to write - server response to client message ~ to verify
 						{
-							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write
+							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
 							// {
 								//parsing client message
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
 								infoRequest = request.parseRequestHttp(hi);
-								if (infoRequest.find("method") != infoRequest.end()) //checks for methods we need to implement
+								if (infoRequest.find("method") != infoRequest.end()) //checks for methods we want to implement
 								{
 									ServerResponse serverResponse;
-									std::string message;
-									message = serverResponse.AnalyzeRequest(info, infoRequest);
+									std::string response;
 									if (infoRequest["method"] == "GET")
 									{
-										if (send(it->fd, message.c_str(), strlen(message.c_str()), 0) == -1)
+										response = serverResponse.responseGetMethod(info, infoRequest);
+										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
 									}
 									else if (infoRequest["method"] == "POST")
 									{
+										// std::cout << hi << std::endl;
+										// serverResponse.responsePostMethod(info, infoRequest);
 										std::cout << "handle POST" << std::endl;
 									}
 									else if (infoRequest["method"] == "DELETE")
