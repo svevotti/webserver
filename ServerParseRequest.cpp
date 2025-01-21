@@ -37,9 +37,9 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 		if (requestTarget == "/")
 		{
 			requestTarget.clear();
-			requestTarget = "index.html";
+			requestTarget = "/index.html";
 		}
-		requestParse["request-target"] = requestTarget;
+		requestParse["request-target"] = requestTarget.erase(0, 1);
 
 	}
 	else
