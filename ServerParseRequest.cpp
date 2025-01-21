@@ -12,20 +12,24 @@ std::string findMethod(std::string inputStr)
 		return ("POST");
 	else if (inputStr.find("DELETE") != std::string::npos)
 		return ("DELETE");
-	return ("ERROR");
+	return ("OTHER");
 }
 
 std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *str)
 {
+	/*will use stream to extract information*/
 	std::string inputString(str);
-
-	//method - what client wants to do with target
+	std::istringstream request(inputString);
+	std::string line;
+	std::string key;
+	std::string value;
 	std::string method;
+	std::string protocol;
+	std::string requestTarget; //request target - what clients want
+
+	//parsing first line only
 	method = findMethod(inputString);
 	requestParse["method"] = method;
-
-	//request target - what clients want
-	std::string requestTarget;
 	std::size_t request_index_start = method.size() + 2;
 	if (inputString.find(" ", request_index_start) != std::string::npos)
 	{
@@ -40,9 +44,6 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	}
 	else
 		requestParse["request-target"] = "target not defined";
-
-	//protocol - which protocol to send messages
-	std::string protocol;
 	if (inputString.find("HTTP") != std::string::npos)
 	{
 		std::size_t protocol_index_start = inputString.find("HTTP");
@@ -51,85 +52,30 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	}
 	else
 		requestParse["protocol"] = "protocol not defined";
-	
-	//these are all HTTP headers - additional information
-	//accept
-	std::string accept;
-	if (inputString.find("Accept") != std::string::npos)
-	{
-		std::size_t accept_index_start = inputString.find(" ", inputString.find("Accept")) + 1;
-		accept = inputString.substr(accept_index_start, (inputString.find("\n", accept_index_start) - 1) - accept_index_start);
-		requestParse["accept"] = accept;
-	}
-	else
-		requestParse["accept"] = "accept not defined";
 
-	//user-agent
-	std::string user_agent;
-	if (inputString.find("User-Agent") != std::string::npos)
+	//parsing headers
+	getline(request, line); //skipping first line
+	while (getline(request, line))
 	{
-		std::size_t user_agent_index_start = inputString.find(" ", inputString.find("User-Agent")) + 1;
-		user_agent = inputString.substr(user_agent_index_start, (inputString.find("\n", user_agent_index_start) - 1) - user_agent_index_start);
-		requestParse["user-agent"] = user_agent;
+		if (line.find_first_not_of("\r\n") == std::string::npos)
+			break ;
+		if (line.find(":") != std::string::npos)
+			key = line.substr(0, line.find(":"));
+		if (line.find(" ") != std::string::npos)
+			value = line.substr(line.find(" ") + 1);
+		requestParse[key] = value; //should i have all lowercase?
 	}
-	else
-		requestParse["user-agent"] = "user agent not defined";
-	
-	//accept language
-	std::string accept_language;
-	if (inputString.find("Accept-Language") != std::string::npos)
+	//after empty line to check if there is a body
+	getline(request, line);
+	std::string body = line;
+	if (!line.empty())
 	{
-		std::size_t accept_language_index_start = inputString.find(" ", inputString.find("Accept-Language")) + 1;
-		accept_language = inputString.substr(accept_language_index_start, (inputString.find("\n", accept_language_index_start) - 1) - accept_language_index_start);
-		requestParse["accept-language"] = accept_language;
+		requestParse["body"] = body;
+		std::cout << "is here the body? " << body << std::endl;
+		std::cout << "line at: " << std::endl;
 	}
-	else
-		requestParse["accept-language"] = "accept language not defined";
-	
-	//accept_encoding
-	std::string accept_encoding;
-	if (inputString.find("Accept_Encoding") != std::string::npos)
-	{
-		std::size_t accept_encoding_index_start = inputString.find(" ", inputString.find("Accept_Encoding")) + 1;
-		accept_encoding = inputString.substr(accept_encoding_index_start, (inputString.find("\n", accept_encoding_index_start) - 1) - accept_encoding_index_start);
-		requestParse["accept-encoding"] = accept_encoding;
-	}
-	else
-		requestParse["accept-encoding"] = "accept-encoding not defined";
 
-	//host
-	std::string host;
-	if (inputString.find("Host") != std::string::npos)
-	{
-		std::size_t host_index_start = inputString.find(" ", inputString.find("Host")) + 1;
-		host = inputString.substr(host_index_start, (inputString.find("\n", host_index_start) - 1) - host_index_start);
-		requestParse["host"] = host;
-	}
-	else
-		requestParse["host"] = "host not defined";
-
-	//referer
-	std::string referer;
-	if (inputString.find("Referer") != std::string::npos)
-	{
-		std::size_t referer_index_start = inputString.find(" ", inputString.find("Referer")) + 1;
-		referer = inputString.substr(referer_index_start, (inputString.find("\n", referer_index_start) - 1) - referer_index_start);
-		requestParse["referer"] = referer;
-	}
-	else
-		requestParse["referer"] = "referer not defined";
-
-	//authorization
-	std::string authorization;
-	if (inputString.find("Authorization") != std::string::npos)
-	{
-		std::size_t authorization_index_start = inputString.find(" ", inputString.find("Authorization")) + 1;
-		authorization = inputString.substr(authorization_index_start, (inputString.find("\n", authorization_index_start) - 1) - authorization_index_start);
-		requestParse["authorization"] = authorization;
-	}
-	else
-		requestParse["authorization"] = "authorization not defined";
-
+	//printing parse http request as map
 	// std::map<std::string, std::string>::iterator element;
 	// std::map<std::string, std::string>::iterator ite = requestParse.end();
 

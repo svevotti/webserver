@@ -1,8 +1,9 @@
 #include "ServerResponse.hpp"
 #include <fstream>
 #include <dirent.h>
+#include <sstream>
 
-std::string ServerResponse::AnalyzeRequest(InfoServer info, std::map<std::string, std::string> request)
+std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::string, std::string> request)
 {
 	//hardcoded
 	std::string response;
@@ -36,7 +37,7 @@ std::string ServerResponse::AnalyzeRequest(InfoServer info, std::map<std::string
 		std::string line;
 		std::string bodyHtml;
 		int bodyHtmlLen;
-		file.open(defaultPage, std::fstream::in | std::fstream::out); //checking if i can open file, ergo it exists
+		file.open(defaultPage.c_str(), std::fstream::in | std::fstream::out); //checking if i can open file, ergo it exists
 		if (!file)
 		{
 			std::cerr << "Error in opening the file" << std::endl;
@@ -58,12 +59,17 @@ std::string ServerResponse::AnalyzeRequest(InfoServer info, std::map<std::string
 		// assemle response
 		ServerStatusCode status;
 		// response = status.getStatusCode()[200];
+		/*should I also assemple the first 4 lines? for sure status code*/
 		response =	"HTTP/1.1 200 OK\r\n"
 					"Content-Type: text/html\r\n"
 					"Content-Length: \r\n" //need to exactly the message's len, or it doesn't work
 					"Connection: keep-alive\r\n" //client end connection right away, keep-alive
 					"\r\n";
-		std::string lenStr = std::to_string(bodyHtmlLen);
+		//convert from int to std::string, to review
+		std::ostringstream intermediatestream;
+		intermediatestream << bodyHtmlLen;
+		std::string lenStr = intermediatestream.str();
+
 		size_t pos = 0;
 		pos = response.find("Content-Length:");
 		pos = response.find(" ", pos);
