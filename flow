@@ -1,0 +1,6 @@
+flow http request
+GET has only headers
+POST has headers and body
+parse http request
+get headers
+get body if post
