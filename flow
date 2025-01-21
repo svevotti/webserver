@@ -4,3 +4,10 @@ POST has headers and body
 parse http request
 get headers
 get body if post
+
+string
+put in the stream
+get line and split the line in key and value
+key will be what is before :
+value will be what is after the space
+what happened when i read empty line?
