@@ -7,7 +7,8 @@
 class ServerStatusCode
 {
 	public:
-		std::map<int, std::string> getStatusCode();
+		ServerStatusCode();
+		std::string getStatusCode(int);
 		void setStatusCode();
 	private:
 		std::map<int, std::string> statusCode;
