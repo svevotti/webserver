@@ -48,12 +48,57 @@ std::string getFileContent(std::string fileName)
 	return (bodyHtml);
 }
 
+std::string getContentType(std::string str)
+{
+	std::string	fileExtText[] = {"html", "css", "txt"};
+	std::string fileExtApp[] = {"json", "javascript", "pdf"};
+	std::string fileExtImg[] = {"jpeg", "png", "gif"};
+	std::string fileType;
+	int i = 0;
+	
+	for(i = 0; i < 3; i++)
+	{
+		if (fileExtText[i] == str)
+			fileType = "text/" + str;
+		else if (fileExtApp[i] == str)
+			fileType = "application/" + str;
+		else if (fileExtImg[i] == str)
+			fileType = "image/" + str;
+	}
+	return (fileType);
+}
+
+std::string assembleHeaders(std::string protocol, std::string fileName, std::string length)
+{
+	std::string statusLine;
+	ServerStatusCode CodeNumber;
+	std::string contentType;
+	std::string fileType;
+	std::string fileExtension;
+
+	statusLine += protocol + " " + CodeNumber.getStatusCode(200) + "\r\n";
+	statusLine += "Content-Type: ";
+	if (fileName.find(".") != std::string::npos)
+	{
+		fileExtension = fileName.substr(fileName.find(".") + 1);
+		contentType = getContentType(fileExtension);
+	}
+	statusLine += contentType + "\r\n";
+	statusLine += "Content-Length: " + length + "\r\n";
+	statusLine += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
+	statusLine += "\r\n";
+	return statusLine;
+}
+
 std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::string, std::string> request)
 {
 	std::string response;
 	std::string page;
 	std::string bodyHtml;
 	int bodyHtmlLen;
+	std::ostringstream intermediatestream;
+	std::string strbodyHtmlLen;
+	std::string headers;
 
 	response =	"HTTP/1.1 404 Not Found\r\n"
 					"Content-Type: text/html\r\n"
@@ -67,34 +112,23 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 					"<h1>Not Found!!</h1>\r\n"
 					"</body>\r\n"
 					"</html>\r\n";
-	page = getHtmlPage(info.getConfigFilePath(), request["request-target"]);
+	page = getHtmlPage(info.getConfigFilePath(), request["request-target"]); //to get rid of extension in url need to rewrite url in config file
 	if (!page.empty())
 	{
-		//get body size
 		bodyHtml = getFileContent(page);
 		if (bodyHtml.empty())
-			return (response);
+			return (response); //error in opening file?
+		//get body size
 		bodyHtmlLen = bodyHtml.length();
-		// assemle response
-		ServerStatusCode status;
-		// response = status.getStatusCode()[200];
-		/*should I also assemple the first 4 lines? for sure status code*/
-		response =	"HTTP/1.1 200 OK\r\n"
-					"Content-Type: text/html\r\n"
-					"Content-Length: \r\n" //need to exactly the message's len, or it doesn't work
-					"Connection: keep-alive\r\n" //client end connection right away, keep-alive
-					"\r\n";
 		//convert from int to std::string
-		std::ostringstream intermediatestream;
 		intermediatestream << bodyHtmlLen;
-		std::string lenStr = intermediatestream.str();
-
-		//add len in the response
-		size_t pos = 0;
-		pos = response.find("Content-Length:");
-		pos = response.find(" ", pos);
-		response.insert(pos + 1, lenStr);
-		response = response.append(bodyHtml);
+		strbodyHtmlLen = intermediatestream.str();
+		// assemble response
+		headers = assembleHeaders(request["protocol"], page, strbodyHtmlLen);
+		response.clear();
+		response += headers + bodyHtml;
+		// std::cout << "server response\n" << response << std::endl;
 	}
+	//it means page is empty and i should throw some error code
 	return (response);
 }

@@ -1,7 +1,8 @@
 GNU = c++
 FLAGS = -Wall -Wextra -Werror
 C_98 = -std=c++98
-CPP_FILES = SocketServer.cpp server.cpp ServerParseRequest.cpp ServerResponse.cpp InfoServer.cpp
+CPP_FILES = SocketServer.cpp server.cpp ServerParseRequest.cpp ServerResponse.cpp InfoServer.cpp \
+			ServerStatusCode.cpp
 CPP_OBJ = $(CPP_FILES:.cpp=.o)
 NAME = server
 
