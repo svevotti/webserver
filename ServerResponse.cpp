@@ -112,7 +112,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 					"<h1>Not Found!!</h1>\r\n"
 					"</body>\r\n"
 					"</html>\r\n";
-	page = getHtmlPage(info.getConfigFilePath(), request["Request-target"]); //to get rid of extension in url need to rewrite url in config file
+	page = getHtmlPage(info.getServerRootPath(), request["Request-target"]); //to get rid of extension in url need to rewrite url in config file
 	if (!page.empty())
 	{
 		bodyHtml = getFileContent(page);

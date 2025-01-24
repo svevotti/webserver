@@ -14,7 +14,7 @@ int main(void)
 
 	server.setArrayPorts("8080");
 	server.setArrayPorts("9090");
-	server.setConfigFilePath("./");
+	server.setServerRootPath("/Users/sveva/repos/Circle5/server/");
 	sockets.startSocket(server);
 	return (0);
 }
