@@ -39,6 +39,12 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 			requestTarget.clear();
 			requestTarget = "/index.html";
 		}
+		// else {
+		// 	// look if directory exists
+		// 	// if not return 4040
+		// 	// if yes return index.html of that directory
+		// }
+
 		requestParse["request-target"] = requestTarget.erase(0, 1);
 
 	}
@@ -72,16 +78,15 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	{
 		requestParse["body"] = body;
 		std::cout << "is here the body? " << body << std::endl;
-		std::cout << "line at: " << std::endl;
 	}
 
-	//printing parse http request as map
+	// printing parse http request as map
 	// std::map<std::string, std::string>::iterator element;
 	// std::map<std::string, std::string>::iterator ite = requestParse.end();
 
 	// for(element = requestParse.begin(); element != ite; element++)
 	// {
-	// 	std::cout << "item: " << element->first << " - " <<element->second << std::endl;
+	// 	std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
 	// }
 	return(requestParse);
 }

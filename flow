@@ -11,3 +11,11 @@ get line and split the line in key and value
 key will be what is before :
 value will be what is after the space
 what happened when i read empty line?
+
+post method
+client request to upload an image
+server gets the image data and store it on server side (save image)
+???missing something
+server send back response
+
+parsing client request -> check content type then parse

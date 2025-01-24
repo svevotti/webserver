@@ -132,3 +132,18 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	//it means page is empty and i should throw some error code
 	return (response);
 }
+
+std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request)
+{
+	//we can fake i saved and store the image when it is already there
+	std::string response =
+					"HTTP/1.1 201 Created\r\n"
+					"Content-Type: text/html\r\n"
+					"Content-Length: 85\r\n"
+					"<html><body><h1>Image uploaded successfully!</h1></body></html>\r\n";
+	(void)info;
+	(void)request;
+	// std::cout << "what should look like POST response?\n";
+
+	return (response);
+}
