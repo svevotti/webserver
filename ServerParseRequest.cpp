@@ -39,7 +39,7 @@ void ServerParseRequest::parseFirstLine(std::string str)
 		requestParse["Request-target"] = requestTarget.erase(0, 1);
 	}
 	else
-		requestParse["request-target"] = "target not defined"; //error
+		requestParse["Request-target"] = "target not defined"; //error
 	if (str.find("HTTP") != std::string::npos)
 	{
 		std::size_t protocol_index_start = str.find("HTTP");
@@ -47,7 +47,7 @@ void ServerParseRequest::parseFirstLine(std::string str)
 		requestParse["Protocol"] = protocol;
 	}
 	else
-		requestParse["protocol"] = "protocol not defined";
+		requestParse["Protocol"] = "protocol not defined";
 }
 
 void ServerParseRequest::parseHeaders(std::istringstream& str)
@@ -81,25 +81,32 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	getline(request, line); //skipping first line
 	parseHeaders(request);
 	getline(request, line);
-	//parsing body based on content lenght?
+	//parsing body based on content lenght
 	std::map<std::string, std::string>::iterator it = requestParse.find("Content-Length");
 	if (it == requestParse.end())
-		std::cout << "no body found" << std::endl;
+		return (requestParse);
 	else //parse body
 	{
-		//check content type
-		//text or multidata
-		//if text can be store in one string
-		//if multidata -> it has different info, so need a struct for each of boundary
+		std::string contentType = requestParse["Content-Type"];
+		if (contentType.find("text") != std::string::npos)
+		{
+			//store in one string
+			requestParse["Body"] = line;
+		}
+		// else if (contentType.find("multipart") != std::string::npos)
+		// {
+			
+		// }
 	}
 
 	// printing parse http request as map
-	// std::map<std::string, std::string>::iterator element;
-	// std::map<std::string, std::string>::iterator ite = requestParse.end();
+	std::map<std::string, std::string>::iterator element;
+	std::map<std::string, std::string>::iterator ite = requestParse.end();
 
-	// for(element = requestParse.begin(); element != ite; element++)
-	// {
-	// 	std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
-	// }
+	for(element = requestParse.begin(); element != ite; element++)
+	{
+		std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
+	}
+	std::cout << "before returning" << std::endl;
 	return(requestParse);
 }
