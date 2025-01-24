@@ -112,7 +112,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 					"<h1>Not Found!!</h1>\r\n"
 					"</body>\r\n"
 					"</html>\r\n";
-	page = getHtmlPage(info.getConfigFilePath(), request["request-target"]); //to get rid of extension in url need to rewrite url in config file
+	page = getHtmlPage(info.getConfigFilePath(), request["Request-target"]); //to get rid of extension in url need to rewrite url in config file
 	if (!page.empty())
 	{
 		bodyHtml = getFileContent(page);
@@ -124,11 +124,26 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 		intermediatestream << bodyHtmlLen;
 		strbodyHtmlLen = intermediatestream.str();
 		// assemble response
-		headers = assembleHeaders(request["protocol"], page, strbodyHtmlLen);
+		headers = assembleHeaders(request["Protocol"], page, strbodyHtmlLen);
 		response.clear();
 		response += headers + bodyHtml;
 		// std::cout << "server response\n" << response << std::endl;
 	}
 	//it means page is empty and i should throw some error code
+	return (response);
+}
+
+std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request)
+{
+	//we can fake i saved and store the image when it is already there
+	std::string response =
+					"HTTP/1.1 200 OK\r\n"
+					"Content-Length: 0\r\n"
+					"Connection: close\r\n"
+					"\r\n"; //very imporant
+	(void)info;
+	(void)request;
+	// std::cout << "what should look like POST response?\n";
+
 	return (response);
 }

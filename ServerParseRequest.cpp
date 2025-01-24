@@ -15,47 +15,47 @@ std::string findMethod(std::string inputStr)
 	return ("OTHER");
 }
 
-std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *str)
+void ServerParseRequest::parseFirstLine(std::string str)
 {
-	/*will use stream to extract information*/
-	std::string inputString(str);
-	std::istringstream request(inputString);
-	std::string line;
-	std::string key;
-	std::string value;
 	std::string method;
+	std::string requestTarget;
 	std::string protocol;
-	std::string requestTarget; //request target - what clients want
 
-	//parsing first line only
-	method = findMethod(inputString);
-	requestParse["method"] = method;
-	std::size_t request_index_start = method.size() + 2;
-	if (inputString.find(" ", request_index_start) != std::string::npos)
+	method = findMethod(str);
+	requestParse["Method"] = method;
+	if (str.find("/") != std::string::npos) // "/" means server's root path
 	{
-		requestTarget = inputString.substr(method.size() + 1, (inputString.find(" ", method.size() + 1)) - (method.size() + 1));
-		if (requestTarget == "/")
+		requestTarget = str.substr(method.size() + 1, (str.find(" ", method.size() + 1)) - (method.size() + 1));
+		if (requestTarget == "/") //asking for index.html
 		{
 			requestTarget.clear();
 			requestTarget = "/index.html";
 		}
-		requestParse["request-target"] = requestTarget.erase(0, 1);
-
+		// else {
+		// 	// look if directory exists
+		// 	// if not return 404
+		// 	// if yes return index.html of that directory
+		// }
+		requestParse["Request-target"] = requestTarget.erase(0, 1);
 	}
 	else
-		requestParse["request-target"] = "target not defined";
-	if (inputString.find("HTTP") != std::string::npos)
+		requestParse["Request-target"] = "target not defined"; //error
+	if (str.find("HTTP") != std::string::npos)
 	{
-		std::size_t protocol_index_start = inputString.find("HTTP");
-		protocol = inputString.substr(protocol_index_start, (inputString.find("\n", protocol_index_start) - 1) - protocol_index_start);
-		requestParse["protocol"] = protocol;
+		std::size_t protocol_index_start = str.find("HTTP");
+		protocol = str.substr(protocol_index_start, (str.find("\n", protocol_index_start) - 1) - protocol_index_start);
+		requestParse["Protocol"] = protocol;
 	}
 	else
-		requestParse["protocol"] = "protocol not defined";
+		requestParse["Protocol"] = "protocol not defined";
+}
 
-	//parsing headers
-	getline(request, line); //skipping first line
-	while (getline(request, line))
+void ServerParseRequest::parseHeaders(std::istringstream& str)
+{
+	std::string line;
+	std::string key;
+	std::string value;
+	while (getline(str, line))
 	{
 		if (line.find_first_not_of("\r\n") == std::string::npos)
 			break ;
@@ -65,23 +65,48 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 			value = line.substr(line.find(" ") + 1);
 		requestParse[key] = value; //should i have all lowercase?
 	}
-	//after empty line to check if there is a body
+}
+
+std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *str)
+{
+	/*will use stream to extract information*/
+	std::string inputString(str);
+	std::istringstream request(inputString);
+	std::string line;
+	std::string key;
+	std::string value;
+
+	parseFirstLine(inputString);
+	//parsing headers
+	getline(request, line); //skipping first line
+	parseHeaders(request);
 	getline(request, line);
-	std::string body = line;
-	if (!line.empty())
+	//parsing body based on content lenght
+	std::map<std::string, std::string>::iterator it = requestParse.find("Content-Length");
+	if (it == requestParse.end())
+		return (requestParse);
+	else //parse body
 	{
-		requestParse["body"] = body;
-		std::cout << "is here the body? " << body << std::endl;
-		std::cout << "line at: " << std::endl;
+		std::string contentType = requestParse["Content-Type"];
+		if (contentType.find("text") != std::string::npos)
+		{
+			//store in one string
+			requestParse["Body"] = line;
+		}
+		// else if (contentType.find("multipart") != std::string::npos)
+		// {
+			
+		// }
 	}
 
-	//printing parse http request as map
-	// std::map<std::string, std::string>::iterator element;
-	// std::map<std::string, std::string>::iterator ite = requestParse.end();
+	// printing parse http request as map
+	std::map<std::string, std::string>::iterator element;
+	std::map<std::string, std::string>::iterator ite = requestParse.end();
 
-	// for(element = requestParse.begin(); element != ite; element++)
-	// {
-	// 	std::cout << "item: " << element->first << " - " <<element->second << std::endl;
-	// }
+	for(element = requestParse.begin(); element != ite; element++)
+	{
+		std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
+	}
+	std::cout << "before returning" << std::endl;
 	return(requestParse);
 }

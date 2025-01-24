@@ -262,23 +262,30 @@ void	SocketServer::startSocket(InfoServer info)
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
 								infoRequest = request.parseRequestHttp(hi);
-								if (infoRequest.find("method") != infoRequest.end()) //checks for methods we want to implement
+								if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
 								{
 									ServerResponse serverResponse;
 									std::string response;
-									if (infoRequest["method"] == "GET")
+									if (infoRequest["Method"] == "GET")
 									{
 										response = serverResponse.responseGetMethod(info, infoRequest);
 										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
+										std::cout << "Get response sent" << std::endl;
 									}
-									else if (infoRequest["method"] == "POST")
+									else if (infoRequest["Method"] == "POST")
 									{
 										// std::cout << hi << std::endl;
 										// serverResponse.responsePostMethod(info, infoRequest);
-										std::cout << "handle POST" << std::endl;
+										std::cout << "handle 1POST" << std::endl;
+										response = serverResponse.responsePostMethod(info, infoRequest);
+										std::cout << "handle 2POST" << std::endl;
+										std::cout << response << std::endl;
+										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+											printError(SEND);
+										std::cout << "handle 3POST" << std::endl;
 									}
-									else if (infoRequest["method"] == "DELETE")
+									else if (infoRequest["Method"] == "DELETE")
 									{
 										std::cout << "handle DELETE" << std::endl;
 									}

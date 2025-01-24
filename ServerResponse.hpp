@@ -29,7 +29,7 @@ public:
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
 	std::string responseGetMethod(InfoServer, std::map<std::string, std::string>);
-	void responsePostMethod(InfoServer, std::map<std::string, std::string>);
+	std::string responsePostMethod(InfoServer, std::map<std::string, std::string>);
 	// int		getSocketServerPort();
 
 private:
