@@ -14,7 +14,7 @@ int main(void)
 
 	server.setArrayPorts("8080");
 	server.setArrayPorts("9090");
-	server.setServerRootPath("/Users/sveva/repos/Circle5/server/");
+	server.setServerRootPath("/home/smazzari/repos/Github/Circle5/webserver/server_root/public/");
 	sockets.startSocket(server);
 	return (0);
 }

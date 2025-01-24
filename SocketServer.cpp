@@ -261,7 +261,7 @@ void	SocketServer::startSocket(InfoServer info)
 								//parsing client message
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
-								infoRequest = request.parseRequestHttp(hi);
+								infoRequest = request.parseRequestHttp(hi, info.getServerRootPath());
 								if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
 								{
 									ServerResponse serverResponse;
