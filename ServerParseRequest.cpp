@@ -104,25 +104,19 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	//parsing headers
 	getline(request, line); //skipping first line
 	parseHeaders(request);
-	getline(request, line);
+	getline(request, line); //skip empty line
 	//parsing body based on content lenght
 	std::map<std::string, std::string>::iterator it = requestParse.find("Content-Length");
 	if (it == requestParse.end())
 		return (requestParse);
-	else //parse body
+	else //store body
 	{
-		std::string contentType = requestParse["Content-Type"];
-		if (contentType.find("text") != std::string::npos)
+		if (inputString.find(line) != std::string::npos)
 		{
-			//store in one string
-			requestParse["Body"] = line;
+			std::string body = inputString.substr(inputString.find(line));
+			requestParse["Body"] = body;
 		}
-		// else if (contentType.find("multipart") != std::string::npos)
-		// {
-			
-		// }
 	}
-
 	// printing parse http request as map
 	// std::map<std::string, std::string>::iterator element;
 	// std::map<std::string, std::string>::iterator ite = requestParse.end();

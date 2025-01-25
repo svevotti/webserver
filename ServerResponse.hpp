@@ -32,9 +32,6 @@ public:
 	std::string responsePostMethod(InfoServer, std::map<std::string, std::string>);
 	// int		getSocketServerPort();
 
-private:
-	std::map<std::string, std::string> requestParse;
-
 };
 
 #endif
