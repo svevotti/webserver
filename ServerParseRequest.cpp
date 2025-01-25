@@ -25,13 +25,13 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 	std::string protocol;
 
 
-	std::cout << "Str: " << str << std::endl;
+	// std::cout << "Str: " << str << std::endl;
 	method = findMethod(str);
 	requestParse["Method"] = method;
 	if (str.find("/") != std::string::npos) // "/" means server's root path
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		std::cout << "substring: " << subStr << "." << std::endl;
+		// std::cout << "substring: " << subStr << "." << std::endl;
 		if (subStr == "/" || subStr == "/index.html") //asking for index.html at root
 			requestTarget = path + "index.html";
 		else
@@ -42,17 +42,17 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 			std::string page;
 			DIR *dir;
 
-			std::cout << "path - \n" << path << std::endl;
-			std::cout << "folder - \n" << subStr << std::endl;
+			// std::cout << "path - \n" << path << std::endl;
+			// std::cout << "folder - \n" << subStr << std::endl;
 			dir = opendir(path.c_str());
 			if (dir == NULL)
 				std::cerr << "Error in opening directory" << std::endl;
 			while ((folder = readdir(dir)) != NULL)
 			{
 				// std::cout << "content: " << folder->d_name << std::endl;
-				std::cout << "folder: " << subStr << std::endl;
+				// std::cout << "folder: " << subStr << std::endl;
 				std::string temp(folder->d_name);
-				std::cout << "temp: " << temp << std::endl;
+				// std::cout << "temp: " << temp << std::endl;
 				if ((temp + "/index.html")== subStr)
 					requestTarget = path + subStr;
 			}
@@ -60,7 +60,7 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 			// if not return 404
 		}
 		requestParse["Request-target"] = requestTarget;
-		std::cout << "path to index.html - " << requestTarget << std::endl;
+		// std::cout << "path to index.html - " << requestTarget << std::endl;
 	}
 	else
 		requestParse["Request-target"] = "target not defined"; //error
@@ -131,6 +131,6 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *st
 	// {
 	// 	std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
 	// }
-	std::cout << "before returning" << std::endl;
+	// std::cout << "before returning" << std::endl;
 	return(requestParse);
 }

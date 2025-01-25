@@ -271,7 +271,7 @@ void	SocketServer::startSocket(InfoServer info)
 										response = serverResponse.responseGetMethod(info, infoRequest);
 										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
-										std::cout << "Get response sent" << std::endl;
+										// std::cout << "Get response sent" << std::endl;
 									}
 									else if (infoRequest["Method"] == "POST")
 									{

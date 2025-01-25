@@ -39,6 +39,7 @@ std::string getFileContent(std::string fileName)
 	std::string line;
 	std::string bodyHtml;
 	
+	// std::cout << "path to index " << fileName << std::endl;
 	file.open(fileName.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
 	if (!file)
 	{
@@ -127,7 +128,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	if (!request["Request-target"].empty())
 	{
 		bodyHtml = getFileContent(request["Request-target"]);
-		std::cout << "bodyhtml: " << bodyHtml << std::endl;
+		// std::cout << "bodyhtml: " << bodyHtml << std::endl;
 		if (bodyHtml.empty())
 			return (response); //error in opening file?
 		//get body size
