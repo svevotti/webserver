@@ -1,13 +1,13 @@
 #include "InfoServer.hpp"
 
 
-void InfoServer::setConfigFilePath(std::string path)
+void InfoServer::setServerRootPath(std::string path)
 {
-    ConfigFilePath = path;
+    serverRootPath = path;
 }
-std::string InfoServer::getConfigFilePath(void)
+std::string InfoServer::getServerRootPath(void)
 {
-    return ConfigFilePath;
+    return serverRootPath;
 }
 
 void InfoServer::setArrayPorts(std::string portNumber)

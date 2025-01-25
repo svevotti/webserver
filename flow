@@ -19,3 +19,7 @@ server gets the image data and store it on server side (save image)
 server send back response
 
 parsing client request -> check content type then parse
+
+
+server root path harcoded
+request http if / ->index file

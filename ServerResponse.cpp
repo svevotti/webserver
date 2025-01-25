@@ -9,16 +9,27 @@ std::string	getHtmlPage(std::string path, std::string target)
 	std::string page;
 	std::string str;
 	DIR *dir;
+
+	std::cout << "path - \n" << path << std::endl;
+	std::cout << "target - \n" << target << std::endl;
 	dir = opendir(path.c_str());
 	if (dir == NULL)
 		std::cerr << "Error in opening directory" << std::endl;
 	while ((folder = readdir(dir)) != NULL)
 	{
+		std::cout << "content: " << folder->d_name << std::endl;
+		std::cout << "target: " << target << std::endl;
 		std::string str(folder->d_name);
+		std::cout << "str: " << str << std::endl;
 		if (str == target)
+		{
+			std::cout << "here" << std::endl;
 			page = str;
+			break;
+		}
 	}
 	closedir(dir);
+	std::cout << "page before returning - " << page << std::endl;
 	return (page);
 }
 
@@ -27,7 +38,8 @@ std::string getFileContent(std::string fileName)
 	std::fstream file;
 	std::string line;
 	std::string bodyHtml;
-
+	
+	// std::cout << "path to index " << fileName << std::endl;
 	file.open(fileName.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
 	if (!file)
 	{
@@ -100,6 +112,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	std::string strbodyHtmlLen;
 	std::string headers;
 
+	(void)info;
 	response =	"HTTP/1.1 404 Not Found\r\n"
 					"Content-Type: text/html\r\n"
 					"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
@@ -112,10 +125,10 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 					"<h1>Not Found!!</h1>\r\n"
 					"</body>\r\n"
 					"</html>\r\n";
-	page = getHtmlPage(info.getConfigFilePath(), request["Request-target"]); //to get rid of extension in url need to rewrite url in config file
-	if (!page.empty())
+	if (!request["Request-target"].empty())
 	{
-		bodyHtml = getFileContent(page);
+		bodyHtml = getFileContent(request["Request-target"]);
+		// std::cout << "bodyhtml: " << bodyHtml << std::endl;
 		if (bodyHtml.empty())
 			return (response); //error in opening file?
 		//get body size
@@ -129,6 +142,8 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 		response += headers + bodyHtml;
 		// std::cout << "server response\n" << response << std::endl;
 	}
+	else
+		std::cout << "emptiness" << std::endl;
 	//it means page is empty and i should throw some error code
 	return (response);
 }

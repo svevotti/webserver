@@ -24,8 +24,8 @@ public:
 	// ~ServerResponse();
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
-	std::map<std::string, std::string>	parseRequestHttp(char *);
-	void parseFirstLine(std::string);
+	std::map<std::string, std::string>	parseRequestHttp(char *, std::string);
+	void parseFirstLine(std::string, std::string);
 	void parseHeaders(std::istringstream&);
 	// int		getSocketServerPort();
 
