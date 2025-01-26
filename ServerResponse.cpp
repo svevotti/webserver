@@ -2,6 +2,11 @@
 #include <fstream>
 #include <dirent.h>
 #include <sstream>
+#include <iostream>
+#include <string>
+#include <limits>
+#include <algorithm>
+#include <cctype>
 
 std::string	getHtmlPage(std::string path, std::string target)
 {
@@ -154,28 +159,43 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 	//parse body
 	std::cout << "\033[36mStart to parse body\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
-	std::string str = request["Body"];
 	// std::string message;
 	std::cout << "\033[33mContent type as in the map: " << contentType << "\033[0m" << std::endl;
-	std::cout << "here" << std::endl;
-	std::cout << "str to parse " << str << std::endl;
-	// if (contentType.find("boundary") != std::string::npos) //example image, different format
-	// {
-	// 	if (contentType.find("=") != std::string::npos)
-	// 	{
-	// 		std::string boundary = contentType.substr(str.find("=") + 1);
-	// 		std::cout << "boundary is " << boundary << std::endl;
-	// 	}
-	// 	else
-	// 		std::cout << "Some error\n" << std::endl;
-	// }
-	// else
-	// {
-	// 	//store in one string
-	// 	message = str;
-	// 	std::cout << "message is " << message << std::endl;
-	// }
-	//we can fake i saved and store the image when it is already there
+	std::cout << "request body" << request["Body"] << std::endl;
+	std::cout << "str to parse: '" << request["Body"] << " ' " << std::endl;
+	if (contentType.find("boundary") != std::string::npos) //multi format data
+	{
+		//find boundary		
+		std::string boundary;
+		if (contentType.find("=") != std::string::npos)
+		{
+			boundary = contentType.substr(contentType.find("=") + 1);
+			std::cout << "boundary is " << boundary << std::endl;
+		}
+		else
+			std::cout << "Some error\n" << std::endl;
+		int sizeStr = request["Body"].size();
+		int boundaryLen = boundary.size();
+		int start = 0;
+		int end = 0;
+		for (int i = 0; i < sizeStr; i++)
+		{
+			
+		}
+		//save each section in a vector
+		std::vector<std::string> bodySections;
+		std::istringstream stream(request["Body"]);
+		std::string line;
+		std::string temp;
+		// std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Clear any leftover newline
+		 
+		std::cout << "vector element: " << bodySections[0] << std::endl;
+	}
+	else
+	{
+		//store in one string
+		std::cout << "message is " << request["Body"] << std::endl;
+	}	//we can fake i saved and store the image when it is already there
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
 					"Content-Length: 0\r\n"

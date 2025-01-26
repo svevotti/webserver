@@ -23,3 +23,29 @@ parsing client request -> check content type then parse
 
 server root path harcoded
 request http if / ->index file
+
+parse body multipart
+
+--boundary123456
+content-
+content-
+
+body
+
+--boundary123456
+content-
+content-
+--boundary123456--
+
+find boundary123456
+then go till the blank line
+store in vector
+check for last section: boundary123456--
+
+the section goes from after boundary to empty line
+keep track of pos = 0
+find boundary in the string
+skip full boundary -> index start
+then find first empty line -> index end
+copy str into vector
+start new search boundary after full section is copied
