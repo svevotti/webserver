@@ -150,6 +150,31 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 
 std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request)
 {
+
+	//parse body
+	std::cout << "\033[36mStart to parse body\033[0m" << std::endl;
+	std::string contentType = request["Content-Type"];
+	std::string str = request["Body"];
+	// std::string message;
+	std::cout << "\033[33mContent type as in the map: " << contentType << "\033[0m" << std::endl;
+	std::cout << "here" << std::endl;
+	std::cout << "str to parse " << str << std::endl;
+	// if (contentType.find("boundary") != std::string::npos) //example image, different format
+	// {
+	// 	if (contentType.find("=") != std::string::npos)
+	// 	{
+	// 		std::string boundary = contentType.substr(str.find("=") + 1);
+	// 		std::cout << "boundary is " << boundary << std::endl;
+	// 	}
+	// 	else
+	// 		std::cout << "Some error\n" << std::endl;
+	// }
+	// else
+	// {
+	// 	//store in one string
+	// 	message = str;
+	// 	std::cout << "message is " << message << std::endl;
+	// }
 	//we can fake i saved and store the image when it is already there
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
