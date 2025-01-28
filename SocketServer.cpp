@@ -316,9 +316,9 @@ void	SocketServer::startSocket(InfoServer info)
 								int count = 0;
 								while (1)
 								{
-									count++;
 									if (*result == '\r')
 										break ;
+									count++;
 									result++;
 								}
 								printf("count %d\n", count);
@@ -331,7 +331,8 @@ void	SocketServer::startSocket(InfoServer info)
 									i++;
 									index_start++;
 								}
-								printf("boundry: %s, %ld\n", b, strlen(b));
+								b[i] = '\0';
+								// printf("boundry: %s, %ld\n", b, strlen(b));
 								char *result2 = strstr(buffer, b);
 								printf("i: %ld\n", result2 - buffer);
 								printf("i: %s\n", ft_substr(buffer, result2 - buffer, strlen(b)));
@@ -341,29 +342,29 @@ void	SocketServer::startSocket(InfoServer info)
 								printf("j: %ld\n", result2 - buffer);
 								printf("j: %s\n", ft_substr(buffer, result2 - buffer, strlen(b) + 2));
 
-								printf("all: %s\n", ft_substr(buffer, 0, 143));
-								printf("all: %s\n", ft_substr(buffer, 0, 250));
+								// printf("all: %s\n", ft_substr(buffer, 0, 143));
+								// printf("all: %s\n", ft_substr(buffer, 0, 250));
 
 								int blen = strlen(b);
 								printf("boundary: %s, %d\n", b, blen);
 								int last_index = 0;
-								// strcat(b, "--\r\n");
-								int index_start_last_b = res - blen - 2;
+								// strcat(b, "\r\n");
+								// int index_start_last_b = res - blen - 2;
 								// printf("b %s\n", b);
 								for (int i = 0; i < res; i++) {
-									int diff = ft_memcmp(buffer + i, b, blen + 4);
+									int diff = ft_memcmp(buffer + i, b, blen);
 									// printf("diff: %d")
 									if (diff == 0) {
 										printf("boundary index: %d\n", i);
 										last_index = i;
 									}
 								}
-								printf("%c\n", buffer[index_start_last_b]);
+								printf("k: %s\n", buffer + last_index);
 								printf("last index %d\n", last_index);
-								printf("after boundary: %s\n", ft_substr(buffer, last_index + blen, 100));
+								// printf("after boundary: %s\n", ft_substr(buffer, last_index + blen, 100));
 								char new_line[] = "\r\n\r\n";
 								int last_new_line = 0;
-								for (int i = last_index + blen; i < 43176; i++) {
+								for (int i = 0; i < 43176; i++) {
 									int diff = ft_memcmp(buffer + i, new_line, 4);
 									// printf("diff: %d")
 									if (diff == 0) {
@@ -381,7 +382,17 @@ void	SocketServer::startSocket(InfoServer info)
 
 								// Write the array to the file
 								int header_size = last_new_line + 2;
+								for (int i = header_size + 1; i < 43176; i++) {
+									int diff = ft_memcmp(buffer + i, new_line, 4);
+									// printf("diff: %d")
+									if (diff == 0) {
+										printf("boundary index: %d\n", i);
+										last_new_line = i;
+										break ;
+									}
+								}
 								printf("header_size: %d\n", header_size);
+								printf("last_new_line in section %d\n", last_new_line);
 								ssize_t written = write(file, buffer + last_new_line + 4, res - header_size);
 								if (written < 0) {
 									perror("Error writing to file");
@@ -391,8 +402,8 @@ void	SocketServer::startSocket(InfoServer info)
 								close(file);
 								// int size_binary = res - header_size;
 								// printf("size binary is %d\n", size_binary);
-								index_start_last_b = res - blen;
-								printf("%s\n", buffer + index_start_last_b);
+								// index_start_last_b = res - blen;
+								// printf("%s\n", buffer + index_start_last_b);
 								//  for (int i = 0; i < size_binary; i++) {
 								// 		char byte = body[i];
 								// 		// Example: Print the byte in hexadecimal format
