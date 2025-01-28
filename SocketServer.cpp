@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 #include "SocketServer.hpp"
+#include <iostream>
+#include <fstream>
 
 #define SOCKET -1
 #define GETADDRINFO -2
@@ -15,6 +17,49 @@
 #define SEND -8
 #define ACCEPT -9
 #define POLL -10
+#define BUFFER 1000000
+
+char	*ft_substr(char const *s, unsigned int start, size_t len)
+{
+	char	*substr;
+	size_t	substr_len;
+
+	if ((size_t)start > strlen(s))
+	{
+		substr = (char *)malloc(sizeof(char) * (1));
+		if (substr == NULL)
+			return (NULL);
+		substr[0] = '\0';
+		return (substr);
+	}
+	substr_len = strlen(s + start);
+	if (len > substr_len)
+		len = substr_len;
+	substr = (char *)malloc(sizeof(char) * (len + 1));
+	if (substr == NULL)
+		return (NULL);
+	strlcpy(substr, s + start, len + 1);
+	return (substr);
+}
+
+int	ft_memcmp(const void *s1, const void *s2, size_t n)
+{
+	unsigned char	*p1;
+	unsigned char	*p2;
+	// int				subs;
+
+	p1 = (unsigned char *)s1;
+	p2 = (unsigned char *)s2;
+	while (n > 0)
+	{
+		if (*p1 != *p2)
+			return (-1);
+		p1++;
+		p2++;
+		n--;
+	}
+	return (0);
+}
 
 SocketServer::SocketServer(void)
 {
@@ -240,10 +285,11 @@ void	SocketServer::startSocket(InfoServer info)
 					else //old client sent something
 					{
 						//receives from client, if recv zero means client is not up anymore
-						char hi[4096]; //for size, something enough big to hold client's message, but not big problem.
-									  // if there is no enough space, it sends message in more times
-						res = recv(it->fd, hi, sizeof(hi), 0);
-						// printf("bytes recv %i\n", bytes);
+						char buffer[BUFFER]; //for size, something enough big to hold client's message, but not big problem.
+									  		// if there is no enough space, it sends message in more times
+						// printf("buffer before recv %lu\n", sizeof(buffer));
+						res = recv(it->fd, buffer, BUFFER - 1, 0);
+						buffer[res] = '\0';
 						if (res <= 0)
 						{
 							if (res == 0)
@@ -256,45 +302,161 @@ void	SocketServer::startSocket(InfoServer info)
 						}
 						else //data to write - server response to client message ~ to verify
 						{
+							//using strstr to find boundaries
 							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
 							// {
 								//parsing client message
-								ServerParseRequest request;
-								std::map<std::string, std::string> infoRequest;
-								infoRequest = request.parseRequestHttp(hi, info.getServerRootPath());
-								if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
+								// printf("buffer %s\n", buffer);
+								printf("bytes received %d\n", res);
+								char *result = strstr(buffer, "=");
+								// if (result != NULL)
+								// 	printf("where I find = %s\n", result);
+								result++;
+								int index_start = result - buffer;
+								int count = 0;
+								while (1)
 								{
-									ServerResponse serverResponse;
-									std::string response;
-									if (infoRequest["Method"] == "GET")
-									{
-										response = serverResponse.responseGetMethod(info, infoRequest);
-										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-											printError(SEND);
-										// std::cout << "Get response sent" << std::endl;
-									}
-									else if (infoRequest["Method"] == "POST")
-									{
-										// std::cout << hi << std::endl;
-										// serverResponse.responsePostMethod(info, infoRequest);
-										std::cout << "handle 1POST" << std::endl;
-										response = serverResponse.responsePostMethod(info, infoRequest);
-										std::cout << "handle 2POST" << std::endl;
-										std::cout << response << std::endl;
-										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-											printError(SEND);
-										std::cout << "handle 3POST" << std::endl;
-									}
-									else if (infoRequest["Method"] == "DELETE")
-									{
-										std::cout << "handle DELETE" << std::endl;
+									count++;
+									if (*result == '\r')
+										break ;
+									result++;
+								}
+								printf("count %d\n", count);
+								int i = 0;
+								char *b;
+								b = (char *)malloc(sizeof(char) * (count + 1));
+								while (i < count - 1)
+								{
+									b[i] = buffer[index_start];
+									i++;
+									index_start++;
+								}
+								printf("boundry: %s, %ld\n", b, strlen(b));
+								char *result2 = strstr(buffer, b);
+								printf("i: %ld\n", result2 - buffer);
+								printf("i: %s\n", ft_substr(buffer, result2 - buffer, strlen(b)));
+								// strcat(b, "--");
+								printf("boundry: %s\n", b);
+								result2 = strstr(result2 + 1, b);
+								printf("j: %ld\n", result2 - buffer);
+								printf("j: %s\n", ft_substr(buffer, result2 - buffer, strlen(b) + 2));
+
+								printf("all: %s\n", ft_substr(buffer, 0, 143));
+								printf("all: %s\n", ft_substr(buffer, 0, 250));
+
+								int blen = strlen(b);
+								printf("boundary: %s, %d\n", b, blen);
+								int last_index = 0;
+								// strcat(b, "--\r\n");
+								int index_start_last_b = res - blen - 2;
+								// printf("b %s\n", b);
+								for (int i = 0; i < res; i++) {
+									int diff = ft_memcmp(buffer + i, b, blen + 4);
+									// printf("diff: %d")
+									if (diff == 0) {
+										printf("boundary index: %d\n", i);
+										last_index = i;
 									}
 								}
-								else
-								{
-									std::cout << "method not found" << std::endl;
+								printf("%c\n", buffer[index_start_last_b]);
+								printf("last index %d\n", last_index);
+								printf("after boundary: %s\n", ft_substr(buffer, last_index + blen, 100));
+								char new_line[] = "\r\n\r\n";
+								int last_new_line = 0;
+								for (int i = last_index + blen; i < 43176; i++) {
+									int diff = ft_memcmp(buffer + i, new_line, 4);
+									// printf("diff: %d")
+									if (diff == 0) {
+										printf("boundary index: %d\n", i);
+										last_new_line = i;
+										break ;
+									}
 								}
-								memset(&hi, 0, strlen(hi));
+								printf("last_new_line: %d\n", last_new_line);
+								int file = open("data.jpg", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+								if (file < 0) {
+									perror("Error opening file");
+									exit(1);
+								}
+
+								// Write the array to the file
+								int header_size = last_new_line + 2;
+								printf("header_size: %d\n", header_size);
+								ssize_t written = write(file, buffer + last_new_line + 4, res - header_size);
+								if (written < 0) {
+									perror("Error writing to file");
+									close(file);
+									exit(1);
+								}
+								close(file);
+								// int size_binary = res - header_size;
+								// printf("size binary is %d\n", size_binary);
+								index_start_last_b = res - blen;
+								printf("%s\n", buffer + index_start_last_b);
+								//  for (int i = 0; i < size_binary; i++) {
+								// 		char byte = body[i];
+								// 		// Example: Print the byte in hexadecimal format
+								// 		printf("%02x ", byte);
+								//  }
+								// char *body = buffer + last_new_line + 4;
+								// printf("size body %lu\n", strlen(body));
+								// for (int i = 0; i< size_binary; i++)
+								// {
+								// 	int diff = ft_memcmp(body, b, strlen(b));
+								// 	if (diff == 0)
+								// 		printf("b found at %d\n", diff);
+								// }
+								// Close the file						
+								// result2 = strstr(result2 + 1, b);
+								// printf("k: %ld\n", result2 - buffer);
+								// if (result2 != NULL)
+								// 	printf("reached the end %s\n", result2);
+								// else
+								// 	printf("result %s\n", result2);
+								exit(1);
+								// ServerParseRequest request;
+								// std::map<std::string, std::string> infoRequest;
+								// infoRequest = request.parseRequestHttp(buffer, info.getServerRootPath());
+								// if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
+								// {
+								// 	ServerResponse serverResponse;
+								// 	std::string response;
+								// 	if (infoRequest["Method"] == "GET")
+								// 	{
+								// 		response = serverResponse.responseGetMethod(info, infoRequest);
+								// 		if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+								// 			printError(SEND);
+								// 		// std::cout << "Get response sent" << std::endl;
+								// 	}
+								// 	else if (infoRequest["Method"] == "POST")
+								// 	{
+								// 		std::string strBuff(buffer);
+								// 		std::string boundary;
+								// 		if (strBuff.find("=") != std::string::npos)
+								// 		{
+								// 			boundary = strBuff.substr(strBuff.find("=") + 1, strBuff.find("\r\n", strBuff.find("=")) - strBuff.find("=") + 1);
+								// 		}
+								// 		// std::cout << "boundary in sock " << boundary << std::endl;
+								// 		// std::cout << hi << std::endl;
+								// 		// serverResponse.responsePostMethod(info, infoRequest);
+								// 		// std::cout << "handle 1POST" << std::endl;
+								// 		response = serverResponse.responsePostMethod(info, infoRequest, buffer);
+								// 		// std::cout << "handle 2POST" << std::endl;
+								// 		// std::cout << response << std::endl;
+								// 		if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+								// 			printError(SEND);
+								// 		// std::cout << "handle 3POST" << std::endl;
+								// 	}
+								// 	else if (infoRequest["Method"] == "DELETE")
+								// 	{
+								// 		std::cout << "handle DELETE" << std::endl;
+								// 	}
+								// }
+								// else
+								// {
+								// 	std::cout << "method not found" << std::endl;
+								// }
+								memset(&buffer, 0, strlen(buffer));
 							// }
 						}
 					}
