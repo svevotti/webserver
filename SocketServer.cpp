@@ -393,7 +393,7 @@ void	SocketServer::startSocket(InfoServer info)
 								}
 								printf("header_size: %d\n", header_size);
 								printf("last_new_line in section %d\n", last_new_line);
-								ssize_t written = write(file, buffer + last_new_line + 4, res - header_size);
+								ssize_t written = write(file, buffer + last_new_line + 4, res - last_new_line);
 								if (written < 0) {
 									perror("Error writing to file");
 									close(file);
