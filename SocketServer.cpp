@@ -345,9 +345,8 @@ void	SocketServer::startSocket(InfoServer info)
 									std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 								else if (res < 0)
 									printError(RECEIVE);
-
+								buffer[res] = '\0';
 							}
-							buffer[res] = '\0';
 							//using strstr to find boundaries
 							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
 							// {
