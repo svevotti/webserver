@@ -8,6 +8,25 @@
 #include <algorithm>
 #include <cctype>
 
+int	ft_memcmp(const void *s1, const void *s2, size_t n)
+{
+	unsigned char	*p1;
+	unsigned char	*p2;
+	// int				subs;
+
+	p1 = (unsigned char *)s1;
+	p2 = (unsigned char *)s2;
+	while (n > 0)
+	{
+		if (*p1 != *p2)
+			return (-1);
+		p1++;
+		p2++;
+		n--;
+	}
+	return (0);
+}
+
 std::string	getHtmlPage(std::string path, std::string target)
 {
 	struct dirent *folder;
@@ -153,43 +172,98 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request)
+char *getBoundary(char *buffer)
+{
+	char *b;
+	char *result = strstr(buffer, "=");
+	result++;
+	int index_start = result - buffer;
+	int count = 0;
+	while (1)
+	{
+		if (*result == '\r')
+			break ;
+		count++;
+		result++;
+	}
+	printf("count %d\n", count);
+	int i = 0;
+	b = (char *)malloc(sizeof(char) * (count + 1));
+	while (i < count - 1)
+	{
+		b[i] = buffer[index_start];
+		i++;
+		index_start++;
+	}
+	b[i] = '\0';
+	return (b);
+}
+
+std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request, char *buffer, int size)
 {
 
 	//parse body
 	std::cout << "\033[36mStart to parse body\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
-	// std::string message;
-	std::cout << "\033[33mContent type as in the map: " << contentType << "\033[0m" << std::endl;
-	std::cout << "request body" << request["Body"] << std::endl;
-	std::cout << "str to parse: '" << request["Body"] << " ' " << std::endl;
+	printf("buffer %s\n", buffer);
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		//find boundary		
-		std::string boundary;
-		if (contentType.find("=") != std::string::npos)
-		{
-			boundary = contentType.substr(contentType.find("=") + 1);
-			std::cout << "boundary is " << boundary << std::endl;
+		// char *b;
+		// b = getBoundary(buffer);
+		// int blen = strlen(b);
+		// printf("boundary: %s, %d\n", b, blen);
+		//check if all boundaries are found
+		// for (int i = 0; i < size; i++) {
+		// 	int diff = ft_memcmp(buffer + i, b, blen);
+		// 	// printf("diff: %d")
+		// 	if (diff == 0) {
+		// 		printf("boundary index: %d\n", i);
+		// 	}
+		// }
+		//find index of empty line between header and body
+		char new_line[] = "\r\n\r\n";
+		int last_new_line = 0;
+		for (int i = 0; i < size; i++) {
+			int diff = ft_memcmp(buffer + i, new_line, 4);
+			// printf("diff: %d")
+			if (diff == 0) {
+				// printf("boundary index: %d\n", i);
+				last_new_line = i;
+				break ;
+			}
 		}
-		else
-			std::cout << "Some error\n" << std::endl;
-		int sizeStr = request["Body"].size();
-		int boundaryLen = boundary.size();
-		int start = 0;
-		int end = 0;
-		for (int i = 0; i < sizeStr; i++)
-		{
-			
+		// printf("last_new_line: %d\n", last_new_line);
+		//open file
+		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
+		std::cout << pathToFile << std::endl;
+		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (file < 0) {
+			perror("Error opening file");
+			exit(1);
 		}
-		//save each section in a vector
-		std::vector<std::string> bodySections;
-		std::istringstream stream(request["Body"]);
-		std::string line;
-		std::string temp;
-		// std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Clear any leftover newline
-		 
-		std::cout << "vector element: " << bodySections[0] << std::endl;
+
+		//find empty line in the section between header and body
+		int header_size = last_new_line + 2;
+		for (int i = header_size + 1; i < size; i++) {
+			int diff = ft_memcmp(buffer + i, new_line, 4);
+			// printf("diff: %d")
+			if (diff == 0) {
+				// printf("boundary index: %d\n", i);
+				last_new_line = i;
+				break ;
+			}
+		}
+		// printf("header_size: %d\n", header_size);
+		// printf("last_new_line in section %d\n", last_new_line);
+		//write to the file
+		ssize_t written = write(file, buffer + last_new_line + 4, size - last_new_line);
+		if (written < 0) {
+			perror("Error writing to file");
+			close(file);
+			exit(1);
+		}
+		close(file);
 	}
 	else
 	{
@@ -201,9 +275,5 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 					"Content-Length: 0\r\n"
 					"Connection: close\r\n"
 					"\r\n"; //very imporant
-	(void)info;
-	(void)request;
-	// std::cout << "what should look like POST response?\n";
-
 	return (response);
 }
