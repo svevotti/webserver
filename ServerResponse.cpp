@@ -199,7 +199,7 @@ char *getBoundary(char *buffer)
 	return (b);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request, char *buffer, int size)
+std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request, const char *buffer, int size)
 {
 
 	//parse body

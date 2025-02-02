@@ -71,25 +71,6 @@ char	*ft_substr(char const *s, unsigned int start, size_t len)
 	return (substr);
 }
 
-// int	ft_memcmp(const void *s1, const void *s2, size_t n)
-// {
-// 	unsigned char	*p1;
-// 	unsigned char	*p2;
-// 	// int				subs;
-
-// 	p1 = (unsigned char *)s1;
-// 	p2 = (unsigned char *)s2;
-// 	while (n > 0)
-// 	{
-// 		if (*p1 != *p2)
-// 			return (-1);
-// 		p1++;
-// 		p2++;
-// 		n--;
-// 	}
-// 	return (0);
-// }
-
 SocketServer::SocketServer(void)
 {
 	// std::cout << "Default constructor" << std::endl;
@@ -164,47 +145,56 @@ void printError(int error)
 int createServerSocket(const char* portNumber)
 {
 	int _socketFd;
-	struct addrinfo hints, *serverInfo, *ptr; //struct info about server address
+	struct addrinfo hints, *serverInfo; //struct info about server address
 	int error;
 	int opt = 1;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC; //flag to set either iPV4 or iPV6
+	hints.ai_family = AF_INET6; //flag to set either iPV4 or iPV6
 	hints.ai_socktype = SOCK_STREAM; //type of socket, we need TCP
 	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
 	error = getaddrinfo(NULL, portNumber, &hints, &serverInfo);
 	if (error == -1)
 		std::cout << "Error getaddrinfo" << std::endl;
 	//find first available socket
-	for (ptr = serverInfo; ptr != NULL; ptr = ptr->ai_next)
-	{
-		_socketFd = socket(ptr->ai_family, ptr->ai_socktype, 0); //create socket
+	// for (ptr = serverInfo; ptr != NULL; ptr = ptr->ai_next)
+	// {
+		_socketFd = socket(serverInfo->ai_family, serverInfo->ai_socktype, 0); //create socket
 		if (_socketFd == -1)
 		{
 			printError(SOCKET);
-			continue;
+			// continue;
 		}
-		int status = fcntl(_socketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
-		if (status == -1)
-  			printError(FCNTL);
 		if (setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) //make the address reusable
 		{
             printError(SETSOCKET);
             exit(1); //exit in cpp look up
         }
-		if (bind(_socketFd, ptr->ai_addr, ptr->ai_addrlen) == -1) //binding address to port number
+		int status = fcntl(_socketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
+		if (status == -1)
+  			printError(FCNTL);
+		else 
+		{
+    // Check if the socket is in non-blocking mode
+			int flags = fcntl(_socketFd, F_GETFL); // Get the current flags
+			if (flags & O_NONBLOCK)
+				printf("Socket correctly set to non-blocking\n");
+			else 
+				printf("Socket is not set to non-blocking\n");
+		}
+		if (bind(_socketFd, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) //binding address to port number
 		{
 			printError(BIND);
-			continue;
+			// continue;
 		}
-		break ;
-	}
+	// 	break ;
+	// }
 	freeaddrinfo(serverInfo);
-	if (ptr == NULL)
-	{
-		perror("failed to connect to server");
-		exit(1);
-	}
+	// if (ptr == NULL)
+	// {
+	// 	perror("failed to connect to server");
+	// 	exit(1);
+	// }
 	//listen
 	if (listen(_socketFd, 5) == -1) //make server socket listenning to incoming connections
 	{
@@ -224,33 +214,6 @@ int findMatchingSocket(int pollFd, int array[])
 	}
 	return -1;
 }
-
-// char *getBoundary(char *buffer)
-// {
-// 	char *b;
-// 	char *result = strstr(buffer, "=");
-// 	result++;
-// 	int index_start = result - buffer;
-// 	int count = 0;
-// 	while (1)
-// 	{
-// 		if (*result == '\r')
-// 			break ;
-// 		count++;
-// 		result++;
-// 	}
-// 	printf("count %d\n", count);
-// 	int i = 0;
-// 	b = (char *)malloc(sizeof(char) * (count + 1));
-// 	while (i < count - 1)
-// 	{
-// 		b[i] = buffer[index_start];
-// 		i++;
-// 		index_start++;
-// 	}
-// 	b[i] = '\0';
-// 	return (b);
-// }
 
 void	SocketServer::startSocket(InfoServer info)
 {
@@ -313,16 +276,30 @@ void	SocketServer::startSocket(InfoServer info)
 							printError(ACCEPT);
 							continue;
 						}
-						//add new fds in poll struct	
+						//set non blocking
+						int status = fcntl(_newSocketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
+						if (status == -1)
+							printError(FCNTL);
+					// 	else 
+					// 	{
+					// // Check if the socket is in non-blocking mode
+					// 		int flags = fcntl(_socketFd, F_GETFL); // Get the current flags
+					// 		if (flags & O_NONBLOCK)
+					// 			printf("Socket correctly set to non-blocking\n");
+					// 		else 
+					// 			printf("Socket is not set to non-blocking\n");
+					// 	}
+						//add new fds in poll struct
 						client_pollfd.fd = _newSocketFd;
 						client_pollfd.events = POLLIN;
 						poll_sets.push_back(client_pollfd);
 					}
 					else //old client sent something
 					{
-						//receives from client, if recv zero means client is not up anymore //for size, something enough big to hold client's message, but not big problem.
-									  		// if there is no enough space, it sends message in more times
-						char buffer[BUFFER];
+						//receives from client, if recv zero means client is not up anymore
+						//for buffer size, something enough big to hold client's message, but not big problem.
+						// if there is no enough space, it sends message in more times
+						/*char buffer[BUFFER];
 						res = recv(it->fd, buffer, BUFFER - 1, 0);
 						buffer[res] = '\0';
 						if (res <= 0)
@@ -334,30 +311,67 @@ void	SocketServer::startSocket(InfoServer info)
 								printError(RECEIVE);
 							poll_sets.erase(it);
 							close(it->fd);
-						}
-						else //data to write - server response to client message ~ to verify
+						*/
+						//create a loop to store all bytes
+						char buffer[BUFFER];
+						std::string full_buffer;
+						int tot_bytes_recv = 0;
+						int flag = fcntl(it->fd, F_GETFL);
+						if (flag & O_NONBLOCK)
+							std::cout << "Socket number " << it->fd << " is non-blocking" << std::endl;
+						else
+							std::cout << "Socket number " << it->fd << " is blocking" << std::endl;
+						res = recv(it->fd, buffer, BUFFER -1, 0);
+						full_buffer.append(buffer);
+						if (full_buffer.find("Content-Length") != std::string::npos)
 						{
-							char *result = strstr(buffer, "POST");
-							if (result != NULL)
-							{
-								res = recv(it->fd, buffer + res, BUFFER - 1, 0);
-								if (res == 0)
-									std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-								else if (res < 0)
-									printError(RECEIVE);
-								buffer[res] = '\0';
-							}
+							// std::string size = full_buffer.substr(full_buffer.("Content-Length:"))
+						}
+						while (1)
+						{
+							if (res <= 0)
+								break ;
+							res = recv(it->fd, buffer, BUFFER - 1, 0);
+							buffer[res] = '\0';
+							// printf("headers %s\n", buffer);
+							full_buffer.append(buffer);
+							tot_bytes_recv += res;
+							printf("res %d\n", res);
+							printf("tot bytes %d\n", tot_bytes_recv);
+						}
+						printf("after loop %d\n", res);
+						if (res == 0)
+						{
+							if (res == 0)
+								std::cout << "socket number " << it->fd << " closed connection" << std::endl;
+							// else if (tot_bytes_recv == -1)
+							// 	printError(RECEIVE);
+							poll_sets.erase(it);
+							close(it->fd);
+						}
+						else //if ((res & EAGAIN) || (res & EWOULDBLOCK)) it means it is in non blocking mode and no more data //data to write - server response to client message ~ to verify
+						{
+							// char *result = strstr(buffer, "POST");
+							// if (result != NULL)
+							// {
+							// 	res = recv(it->fd, buffer + res, BUFFER - 1, 0);
+							// 	if (res == 0)
+							// 		std::cout << "socket number " << it->fd << " closed connection" << std::endl;
+							// 	else if (res < 0)
+							// 		printError(RECEIVE);
+							// 	buffer[res] = '\0';
+							// }
 							//using strstr to find boundaries
 							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
 							// {
 								//parsing client message
-								printf("bytes received %d\n", res);
+								printf("bytes received %d\n", tot_bytes_recv);
 								// std::string headers(buffer);
 								// std::cout << l << " : " << headers << std::endl;
 								// l++;
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
-								infoRequest = request.parseRequestHttp(buffer, info.getServerRootPath());
+								infoRequest = request.parseRequestHttp(full_buffer.c_str(), info.getServerRootPath());
 								if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
 								{
 									ServerResponse serverResponse;
@@ -371,7 +385,7 @@ void	SocketServer::startSocket(InfoServer info)
 									}
 									else if (infoRequest["Method"] == "POST")
 									{
-										response = serverResponse.responsePostMethod(info, infoRequest, buffer, res);
+										response = serverResponse.responsePostMethod(info, infoRequest, full_buffer.c_str(), tot_bytes_recv);
 										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
 										// std::cout << "handle 3POST" << std::endl;

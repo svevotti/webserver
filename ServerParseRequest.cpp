@@ -91,7 +91,7 @@ void ServerParseRequest::parseHeaders(std::istringstream& str)
 	}
 }
 
-std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *str, std::string path)
+std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const char *str, std::string path)
 {
 	/*will use stream to extract information*/
 	std::string inputString(str);
