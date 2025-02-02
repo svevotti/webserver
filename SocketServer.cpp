@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sstream>
 
 #define SOCKET -1
 #define GETADDRINFO -2
@@ -321,33 +322,60 @@ void	SocketServer::startSocket(InfoServer info)
 							std::cout << "Socket number " << it->fd << " is non-blocking" << std::endl;
 						else
 							std::cout << "Socket number " << it->fd << " is blocking" << std::endl;
-						res = recv(it->fd, buffer, BUFFER -1, 0);
-						full_buffer.append(buffer);
-						if (full_buffer.find("Content-Length") != std::string::npos)
-						{
-							// std::string size = full_buffer.substr(full_buffer.("Content-Length:"))
-						}
+						int contentLen = 0;
+						int i = 0;
 						while (1)
 						{
+							res = recv(it->fd, buffer, BUFFER - 1, 0);
 							if (res <= 0)
 								break ;
-							res = recv(it->fd, buffer, BUFFER - 1, 0);
+							printf("res %d\n", res);
 							buffer[res] = '\0';
+							//can look for content lenght
 							// printf("headers %s\n", buffer);
 							full_buffer.append(buffer);
+							std::cout << "loop: " << i << std::endl;
+							std::cout << "buffer: " << full_buffer << std::endl;
+							std::string content_str = "Content-Length: ";
+							int len = content_str.size();
+							// std::cout << "len of line is: " << len << std::endl;
+							if (full_buffer.find(content_str) != std::string::npos)
+							{
+								// printf("index starting line %ld\n", full_buffer.find(content_str));
+								if (full_buffer.find("\r\n", full_buffer.find(content_str)) != std::string::npos)
+								{
+									// printf("index end line %ld\n", full_buffer.find("\r\n", full_buffer.find(content_str)));
+									len = full_buffer.find("\r\n", full_buffer.find(content_str)) - full_buffer.find(content_str);
+									// std::string sub = full_buffer.substr(full_buffer.find(content_str), len);
+									// std::cout << "substr and length: ..." << len << " " << sub << "..." << std::endl;
+									std::string size_str = full_buffer.substr(full_buffer.find(content_str) + content_str.size(), len - content_str.size());
+									// std::cout << "start: " << full_buffer.find(content_str) + content_str.size() << std::endl;
+									// std::cout << "should be number: " << full_buffer[full_buffer.find(content_str) + content_str.size()] << std::endl;
+									std::stringstream ss;
+									ss << size_str;
+									ss >> contentLen;
+								}
+								std::cout << "tot length: " << contentLen << std::endl;
+							}
 							tot_bytes_recv += res;
-							printf("res %d\n", res);
-							printf("tot bytes %d\n", tot_bytes_recv);
+							printf("adding to tot bytes %d\n", tot_bytes_recv);
+							i++;
 						}
-						printf("after loop %d\n", res);
-						if (res == 0)
+						printf("after loop tot bytes %d\n", tot_bytes_recv);
+						printf("after loop res %d\n", res);
+						if (tot_bytes_recv < contentLen || res == 0)
 						{
-							if (res == 0)
-								std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-							// else if (tot_bytes_recv == -1)
-							// 	printError(RECEIVE);
-							poll_sets.erase(it);
-							close(it->fd);
+							if (res <= 0)
+							{
+								if (res == 0)
+									std::cout << "socket number " << it->fd << " closed connection" << std::endl;
+								else
+									printError(RECEIVE);
+								// else if (tot_bytes_recv == -1)
+								// 	printError(RECEIVE);
+								poll_sets.erase(it);
+								close(it->fd);
+							}
 						}
 						else //if ((res & EAGAIN) || (res & EWOULDBLOCK)) it means it is in non blocking mode and no more data //data to write - server response to client message ~ to verify
 						{
@@ -365,7 +393,8 @@ void	SocketServer::startSocket(InfoServer info)
 							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
 							// {
 								//parsing client message
-								printf("bytes received %d\n", tot_bytes_recv);
+								printf("bytes received %ld\n", full_buffer.length());
+								std::cout << "full buffer: " << full_buffer << std::endl;
 								// std::string headers(buffer);
 								// std::cout << l << " : " << headers << std::endl;
 								// l++;
