@@ -24,53 +24,7 @@
 #define SEND -8
 #define ACCEPT -9
 #define POLL -10
-#define BUFFER 1000000
-
-void printIpvVersion(struct sockaddr_storage address)
-{
-	char s[256];
-						//just checking wich IPV is - so i can print address properly
-	if (address.ss_family == AF_INET)
-	{
-		struct sockaddr_in *sin;
-		sin = (struct sockaddr_in *)&address;
-		inet_ntop(address.ss_family, sin, s, sizeof(s));
-		std::cout << "server: got connection from " << s << std::endl;
-	}
-	else if (address.ss_family == AF_INET6)
-	{
-		struct sockaddr_in6 *sin;
-		sin = (struct sockaddr_in6 *)&address;
-		inet_ntop(address.ss_family, sin, s, sizeof(s));
-		std::cout << "server: got connection from " << s << std::endl;
-	}
-	else
-		std::cout <<"Unknown" << std::endl;
-	memset(&s, 0, sizeof(s));
-}
-
-char	*ft_substr(char const *s, unsigned int start, size_t len)
-{
-	char	*substr;
-	size_t	substr_len;
-
-	if ((size_t)start > strlen(s))
-	{
-		substr = (char *)malloc(sizeof(char) * (1));
-		if (substr == NULL)
-			return (NULL);
-		substr[0] = '\0';
-		return (substr);
-	}
-	substr_len = strlen(s + start);
-	if (len > substr_len)
-		len = substr_len;
-	substr = (char *)malloc(sizeof(char) * (len + 1));
-	if (substr == NULL)
-		return (NULL);
-	strncpy(substr, s + start, len + 1);
-	return (substr);
-}
+#define BUFFER 1024
 
 SocketServer::SocketServer(void)
 {
@@ -104,45 +58,6 @@ void	SocketServer::operator=(const SocketServer &other)
 	// std::cout << "Copy assignment" << std::endl;
 }
 
-void printError(int error)
-{
-	switch (error)
-	{
-		case -1:
-		std::cerr << "Error creating socket" << std::endl;
-		break ;
-		case -2:
-		std::cerr << "Error getaddrinfo" << std::endl;
-		break ;
-		case -3:
-		std::cerr << "Error fcntl" << std::endl;
-		break ;
-		case -4:
-		std::cerr << "Error setsocket" << std::endl;
-		break ;
-		case -5:
-		std::cerr << "Error bind" << std::endl;
-		break ;
-		case -6:
-		std::cerr << "Error listen" << std::endl;
-		break;
-		case -7:
-		std::cerr << "Error receive" << std::endl;
-		break;
-		case -8:
-		std::cerr << "Error send" << std::endl;
-		break;
-		default:
-		case -9:
-		std::cerr << "Error accept" << std::endl;
-		break;
-		case -10:
-		std::cerr << "Error poll" << std::endl;
-		break;
-		std::cerr << "Some other error" << std::endl;
-	}
-}
-
 int createServerSocket(const char* portNumber)
 {
 	int _socketFd;
@@ -150,7 +65,7 @@ int createServerSocket(const char* portNumber)
 	int error;
 	int opt = 1;
 
-	memset(&hints, 0, sizeof(hints));
+	ft_memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6; //flag to set either iPV4 or iPV6
 	hints.ai_socktype = SOCK_STREAM; //type of socket, we need TCP
 	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
@@ -216,18 +131,6 @@ int findMatchingSocket(int pollFd, int array[])
 	return -1;
 }
 
-void infoRecvLoop(int number, int bytes, char *buffer, std::string full_str, int size, int accumilating_size)
-{
-	std::cout << "recv call number: " << number << std::endl;
-	std::cout << "- received bytes: " << bytes << std::endl;
-	// printf("- buffer %s\n", buffer);
-	// std::cout << "- appended string: " << full_str << std::endl;
-	std::cout << "- content-length: " << size << std::endl;
-	std::cout << "- message size so far: " << accumilating_size << std::endl;
-	(void)buffer;
-	(void)full_str;
-}
-
 void	SocketServer::startSocket(InfoServer info)
 {
 	struct sockaddr_storage their_addr; // struct to store client's address information
@@ -240,7 +143,6 @@ void	SocketServer::startSocket(InfoServer info)
 	std::vector<pollfd>::iterator it;
 	std::vector<pollfd>::iterator end;
 	pollfd client_pollfd;
-	// int l = 0;
 
 	/*array of sockets*/
 	for (i = 0; i < 2; i++)
@@ -289,7 +191,7 @@ void	SocketServer::startSocket(InfoServer info)
 							printError(ACCEPT);
 							continue;
 						}
-						//set non blocking
+						//set non blocking socket
 						int status = fcntl(_newSocketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
 						if (status == -1)
 							printError(FCNTL);
@@ -312,19 +214,6 @@ void	SocketServer::startSocket(InfoServer info)
 						//receives from client, if recv zero means client is not up anymore
 						//for buffer size, something enough big to hold client's message, but not big problem.
 						// if there is no enough space, it sends message in more times
-						/*char buffer[BUFFER];
-						res = recv(it->fd, buffer, BUFFER - 1, 0);
-						buffer[res] = '\0';
-						if (res <= 0)
-						{
-							printf("here\n");
-							if (res == 0)
-								std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-							else
-								printError(RECEIVE);
-							poll_sets.erase(it);
-							close(it->fd);
-						*/
 						//create a loop to store all bytes
 						char buffer[BUFFER];
 						std::string full_buffer;
@@ -339,7 +228,7 @@ void	SocketServer::startSocket(InfoServer info)
 						int findsizeonetime = 0;
 						while (1)
 						{
-							memset(&buffer, 0, strlen(buffer));
+							ft_memset(&buffer, 0, strlen(buffer));
 							res = recv(it->fd, buffer, BUFFER - 1, 0);
 							if (res <= 0)
 							{
@@ -353,7 +242,7 @@ void	SocketServer::startSocket(InfoServer info)
 							}
 							buffer[res] = '\0';
 							//can look for content lenght
-							full_buffer.append(buffer, res);
+							full_buffer.append(buffer, res); //need to specify how much you want to append...
 							std::string content_str = "Content-Length: ";
 							int len = content_str.size();
 							if (full_buffer.find(content_str) != std::string::npos && findsizeonetime == 0)
@@ -370,11 +259,9 @@ void	SocketServer::startSocket(InfoServer info)
 								findsizeonetime = 1;
 							}
 							tot_bytes_recv += res;
-							infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
+							// infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
 							i++;
 						}
-						printf("after loop tot bytes %d\n", tot_bytes_recv);
-						printf("after loop res %d\n", res);
 						if (tot_bytes_recv < contentLen || res == 0)
 						{
 							if (res <= 0)
@@ -383,33 +270,12 @@ void	SocketServer::startSocket(InfoServer info)
 									std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 								else
 									printError(RECEIVE);
-								// else if (tot_bytes_recv == -1)
-								// 	printError(RECEIVE);
 								poll_sets.erase(it);
 								close(it->fd);
 							}
 						}
 						else //if ((res & EAGAIN) || (res & EWOULDBLOCK)) it means it is in non blocking mode and no more data //data to write - server response to client message ~ to verify
 						{
-							// char *result = strstr(buffer, "POST");
-							// if (result != NULL)
-							// {
-							// 	res = recv(it->fd, buffer + res, BUFFER - 1, 0);
-							// 	if (res == 0)
-							// 		std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-							// 	else if (res < 0)
-							// 		printError(RECEIVE);
-							// 	buffer[res] = '\0';
-							// }
-							//using strstr to find boundaries
-							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
-							// {
-								//parsing client message
-								// printf("bytes received %ld\n", full_buffer.length());
-								// std::cout << "full buffer: " << full_buffer << std::endl;
-								// std::string headers(buffer);
-								// std::cout << l << " : " << headers << std::endl;
-								// l++;
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
 								infoRequest = request.parseRequestHttp(full_buffer.c_str(), info.getServerRootPath());
@@ -422,14 +288,12 @@ void	SocketServer::startSocket(InfoServer info)
 										response = serverResponse.responseGetMethod(info, infoRequest);
 										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
-										// std::cout << "Get response sent" << std::endl;
 									}
 									else if (infoRequest["Method"] == "POST")
 									{
 										response = serverResponse.responsePostMethod(info, infoRequest, full_buffer.c_str(), tot_bytes_recv);
 										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
-										// std::cout << "handle 3POST" << std::endl;
 									}
 									else if (infoRequest["Method"] == "DELETE")
 									{
@@ -440,7 +304,7 @@ void	SocketServer::startSocket(InfoServer info)
 								{
 									std::cout << "method not found" << std::endl;
 								}
-								memset(&buffer, 0, strlen(buffer));
+								ft_memset(&buffer, 0, strlen(buffer));
 							// }
 						}
 					}
@@ -449,7 +313,7 @@ void	SocketServer::startSocket(InfoServer info)
 			}
 		}
 	}
-	//closinf fds
+	//closing clinets fds
 	for (i = 0; i < 2; i++)
 	{
 		if(myPoll[i].fd >= 0)

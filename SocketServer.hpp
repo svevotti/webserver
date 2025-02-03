@@ -16,6 +16,8 @@
 #include "ServerResponse.hpp"
 #include "InfoServer.hpp"
 #include "ServerStatusCode.hpp"
+#include "StringManipulations.hpp"
+#include "PrintingFunctions.hpp"
 
 
 #define PORT "8080"

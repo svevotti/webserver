@@ -203,24 +203,24 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 {
 	
 	//parse body
-	std::cout << "\033[36mStart to parse body\033[0m" << std::endl;
+	std::cout << "\033[36mExtract data\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
 	// printf("buffer %s\n", buffer);
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		//find boundary		
-		char *b;
-		b = getBoundary(buffer);
-		int blen = strlen(b);
-		printf("boundary: %s, %d\n", b, blen);
+		// char *b;
+		// b = getBoundary(buffer);
+		// int blen = strlen(b);
+		// printf("boundary: %s, %d\n", b, blen);
 		//check if all boundaries are found
-		for (int i = 0; i < size; i++) {
-			int diff = ft_memcmp(buffer + i, b, blen);
-			// printf("diff: %d")
-			if (diff == 0) {
-				printf("boundary index: %d for %s\n", i, buffer + i);
-			}
-		}
+		// for (int i = 0; i < size; i++) {
+		// 	int diff = ft_memcmp(buffer + i, b, blen);
+		// 	// printf("diff: %d")
+		// 	if (diff == 0) {
+		// 		printf("boundary index: %d for %s\n", i, buffer + i);
+		// 	}
+		// }
 		//find index of empty line between header and body
 		char new_line[] = "\r\n\r\n";
 		int last_new_line = 0;
@@ -228,7 +228,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			int diff = ft_memcmp(buffer + i, new_line, 4);
 			// printf("diff: %d")
 			if (diff == 0) {
-				printf("boundary index: %d\n", i);
+				// printf("boundary index: %d\n", i);
 				last_new_line = i;
 				break ;
 			}
@@ -236,13 +236,13 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		// printf("last_new_line: %d\n", last_new_line);
 		//open file
 		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
-		std::cout << pathToFile << std::endl;
+		// std::cout << pathToFile << std::endl;
 		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (file < 0) {
 			perror("Error opening file");
 			exit(1);
 		}
-
+		
 		//find empty line in the section between header and body
 		int header_size = last_new_line + 2;
 		for (int i = header_size + 1; i < size; i++) {
@@ -255,7 +255,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			}
 		}
 		// printf("header_size: %d\n", header_size);
-		printf("last_new_line in section %d\n", last_new_line);
+		// printf("last_new_line in section %d\n", last_new_line);
 		//write to the file
 		ssize_t written = write(file, buffer + last_new_line + 4, size - last_new_line);
 		if (written < 0) {
