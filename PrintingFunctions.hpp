@@ -5,6 +5,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <cstdio>
 
 void printIpvVersion(struct sockaddr_storage address);
 

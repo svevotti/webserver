@@ -89,15 +89,7 @@ int createServerSocket(const char* portNumber)
 		int status = fcntl(_socketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
 		if (status == -1)
   			printError(FCNTL);
-		else 
-		{
-    // Check if the socket is in non-blocking mode
-			int flags = fcntl(_socketFd, F_GETFL); // Get the current flags
-			if (flags & O_NONBLOCK)
-				printf("Socket correctly set to non-blocking\n");
-			else 
-				printf("Socket is not set to non-blocking\n");
-		}
+		//void printFcntlFlag(_socketFd);
 		if (bind(_socketFd, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) //binding address to port number
 		{
 			printError(BIND);
@@ -195,15 +187,6 @@ void	SocketServer::startSocket(InfoServer info)
 						int status = fcntl(_newSocketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
 						if (status == -1)
 							printError(FCNTL);
-					// 	else 
-					// 	{
-					// // Check if the socket is in non-blocking mode
-					// 		int flags = fcntl(_socketFd, F_GETFL); // Get the current flags
-					// 		if (flags & O_NONBLOCK)
-					// 			printf("Socket correctly set to non-blocking\n");
-					// 		else 
-					// 			printf("Socket is not set to non-blocking\n");
-					// 	}
 						//add new fds in poll struct
 						client_pollfd.fd = _newSocketFd;
 						client_pollfd.events = POLLIN;
@@ -218,11 +201,7 @@ void	SocketServer::startSocket(InfoServer info)
 						char buffer[BUFFER];
 						std::string full_buffer;
 						int tot_bytes_recv = 0;
-						int flag = fcntl(it->fd, F_GETFL);
-						if (flag & O_NONBLOCK)
-							std::cout << "Socket number " << it->fd << " is non-blocking" << std::endl;
-						else
-							std::cout << "Socket number " << it->fd << " is blocking" << std::endl;
+						//void printFcntlFlag(_newSocketFd);
 						int contentLen = 0;
 						int i = 0;
 						int findsizeonetime = 0;
@@ -230,15 +209,10 @@ void	SocketServer::startSocket(InfoServer info)
 						{
 							ft_memset(&buffer, 0, strlen(buffer));
 							res = recv(it->fd, buffer, BUFFER - 1, 0);
+							printf("res in breaking statement %d\n", res);
 							if (res <= 0)
 							{
-								if (res == 0)
-									break;
-								else
-								{
-									if (res != contentLen)
-										break;
-								}
+								break;
 							}
 							buffer[res] = '\0';
 							//can look for content lenght
@@ -259,9 +233,10 @@ void	SocketServer::startSocket(InfoServer info)
 								findsizeonetime = 1;
 							}
 							tot_bytes_recv += res;
-							// infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
+							infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
 							i++;
 						}
+						printf("recv exits the loop without me\n");
 						if (tot_bytes_recv < contentLen || res == 0)
 						{
 							if (res <= 0)
@@ -269,7 +244,24 @@ void	SocketServer::startSocket(InfoServer info)
 								if (res == 0)
 									std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 								else
-									printError(RECEIVE);
+								{
+									switch (errno) {
+										case EWOULDBLOCK:
+											printf("No data available (non-blocking mode)\n");
+											break;
+										case ETIMEDOUT:
+											printf("Receive operation timed out\n");
+											break;
+										case ECONNRESET:
+											printf("Connection reset by peer\n");
+											break;
+										// Add more cases as needed
+										default:
+											printf("recv error: %s\n", strerror(errno));
+											break;
+									}
+								}
+									// printError(RECEIVE);
 								poll_sets.erase(it);
 								close(it->fd);
 							}

@@ -8,24 +8,17 @@
 #include <algorithm>
 #include <cctype>
 
-int	ft_memcmp(const void *s1, const void *s2, size_t n)
+struct Header
 {
-	unsigned char	*p1;
-	unsigned char	*p2;
-	// int				subs;
+	std::string content_disposition;
+	std::string content_type;
+};
 
-	p1 = (unsigned char *)s1;
-	p2 = (unsigned char *)s2;
-	while (n > 0)
-	{
-		if (*p1 != *p2)
-			return (-1);
-		p1++;
-		p2++;
-		n--;
-	}
-	return (0);
-}
+struct Section
+{
+	Header header;
+	std::string body;
+};
 
 std::string	getHtmlPage(std::string path, std::string target)
 {
@@ -186,10 +179,10 @@ char *getBoundary(const char *buffer)
 		count++;
 		result++;
 	}
-	printf("count %d\n", count);
+	// printf("count %d\n", count);
 	int i = 0;
 	b = (char *)malloc(sizeof(char) * (count + 1));
-	while (i < count - 1)
+	while (i < count)
 	{
 		b[i] = buffer[index_start];
 		i++;
@@ -208,20 +201,41 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 	// printf("buffer %s\n", buffer);
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
+		std::vector<int> boundariesIndexes;
 		//find boundary		
-		// char *b;
-		// b = getBoundary(buffer);
-		// int blen = strlen(b);
-		// printf("boundary: %s, %d\n", b, blen);
+		char *b;
+		b = getBoundary(buffer);
+		int blen = strlen(b);
+		printf("boundary: %s, %d\n", b, blen);
 		//check if all boundaries are found
-		// for (int i = 0; i < size; i++) {
-		// 	int diff = ft_memcmp(buffer + i, b, blen);
-		// 	// printf("diff: %d")
-		// 	if (diff == 0) {
-		// 		printf("boundary index: %d for %s\n", i, buffer + i);
-		// 	}
+		for (int i = 0; i < size; i++) {
+			int diff = ft_memcmp(buffer + i, b, blen);
+			// printf("diff: %d")
+			if (diff == 0) {
+				boundariesIndexes.push_back(i);
+				// printf("boundary index: %d for %s\n", i, buffer + i);
+			}
+		}
+		// for(int i = 0; i < (int)boundariesIndexes.size(); i++)
+		// {
+		// 	std::cout << "i = " << i;
+		// 	std::cout << " -> index boundary: " << boundariesIndexes[i] << std::endl;
 		// }
 		//find index of empty line between header and body
+		std::map<int, struct Part> headersBody;
+		std::string header;
+		int start;
+		int end;
+		for (int i = 0; i < (int)boundariesIndexes.size(); i++)
+		{
+			start = boundariesIndexes[i] + blen;
+			while (buffer[start] != '\r')
+			{
+				header.append(buffer, 1);
+				start++;
+			}
+			std::cout << "should have full line" << std::endl;
+		}
 		char new_line[] = "\r\n\r\n";
 		int last_new_line = 0;
 		for (int i = 0; i < size; i++) {
@@ -234,7 +248,29 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			}
 		}
 		// printf("last_new_line: %d\n", last_new_line);
-		//open file
+		//extract header from section
+
+		//find empty line in the section between header and body
+		int header_size = last_new_line + 2;
+		int indexStartBody = 0;
+		for (int i = header_size + 1; i < size; i++) {
+			int diff = ft_memcmp(buffer + i, new_line, 4);
+			// printf("diff: %d")
+			if (diff == 0) {
+				// printf("boundary index: %d\n", i);
+				indexStartBody = i;
+				break ;
+			}
+		}
+		printf("index start %d, index end %d\n", indexStartBody, last_new_line);
+		for (int i = last_new_line; i < indexStartBody; i++)
+		{
+			printf("%c",buffer[i]);
+		}
+		printf("\n");
+		// printf("header_size: %d\n", header_size);
+		// printf("last_new_line in section %d\n", last_new_line);
+		//openfile
 		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
 		// std::cout << pathToFile << std::endl;
 		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -242,22 +278,8 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			perror("Error opening file");
 			exit(1);
 		}
-		
-		//find empty line in the section between header and body
-		int header_size = last_new_line + 2;
-		for (int i = header_size + 1; i < size; i++) {
-			int diff = ft_memcmp(buffer + i, new_line, 4);
-			// printf("diff: %d")
-			if (diff == 0) {
-				// printf("boundary index: %d\n", i);
-				last_new_line = i;
-				break ;
-			}
-		}
-		// printf("header_size: %d\n", header_size);
-		// printf("last_new_line in section %d\n", last_new_line);
 		//write to the file
-		ssize_t written = write(file, buffer + last_new_line + 4, size - last_new_line);
+		ssize_t written = write(file, buffer + indexStartBody + 4, size - indexStartBody);
 		if (written < 0) {
 			perror("Error writing to file");
 			close(file);

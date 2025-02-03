@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <cstring>
+#include <fcntl.h>
 
 void printIpvVersion(struct sockaddr_storage address)
 {
@@ -76,4 +77,13 @@ void infoRecvLoop(int number, int bytes, char *buffer, std::string full_str, int
 	std::cout << "- message size so far: " << accumilating_size << std::endl;
 	(void)buffer;
 	(void)full_str;
+}
+
+void printFcntlFlag(int fd)
+{
+	int flags = fcntl(fd, F_GETFL); // Get the current flags
+	if (flags & O_NONBLOCK)
+		printf("Socket correctly set to non-blocking\n");
+	else 
+		printf("Socket is not set to non-blocking\n");
 }
