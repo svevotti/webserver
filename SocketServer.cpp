@@ -216,6 +216,18 @@ int findMatchingSocket(int pollFd, int array[])
 	return -1;
 }
 
+void infoRecvLoop(int number, int bytes, char *buffer, std::string full_str, int size, int accumilating_size)
+{
+	std::cout << "recv call number: " << number << std::endl;
+	std::cout << "- received bytes: " << bytes << std::endl;
+	// printf("- buffer %s\n", buffer);
+	// std::cout << "- appended string: " << full_str << std::endl;
+	std::cout << "- content-length: " << size << std::endl;
+	std::cout << "- message size so far: " << accumilating_size << std::endl;
+	(void)buffer;
+	(void)full_str;
+}
+
 void	SocketServer::startSocket(InfoServer info)
 {
 	struct sockaddr_storage their_addr; // struct to store client's address information
@@ -324,41 +336,41 @@ void	SocketServer::startSocket(InfoServer info)
 							std::cout << "Socket number " << it->fd << " is blocking" << std::endl;
 						int contentLen = 0;
 						int i = 0;
+						int findsizeonetime = 0;
 						while (1)
 						{
+							memset(&buffer, 0, strlen(buffer));
 							res = recv(it->fd, buffer, BUFFER - 1, 0);
 							if (res <= 0)
-								break ;
-							printf("res %d\n", res);
+							{
+								if (res == 0)
+									break;
+								else
+								{
+									if (res != contentLen)
+										break;
+								}
+							}
 							buffer[res] = '\0';
 							//can look for content lenght
-							// printf("headers %s\n", buffer);
-							full_buffer.append(buffer);
-							std::cout << "loop: " << i << std::endl;
-							std::cout << "buffer: " << full_buffer << std::endl;
+							full_buffer.append(buffer, res);
 							std::string content_str = "Content-Length: ";
 							int len = content_str.size();
-							// std::cout << "len of line is: " << len << std::endl;
-							if (full_buffer.find(content_str) != std::string::npos)
+							if (full_buffer.find(content_str) != std::string::npos && findsizeonetime == 0)
 							{
-								// printf("index starting line %ld\n", full_buffer.find(content_str));
 								if (full_buffer.find("\r\n", full_buffer.find(content_str)) != std::string::npos)
 								{
-									// printf("index end line %ld\n", full_buffer.find("\r\n", full_buffer.find(content_str)));
 									len = full_buffer.find("\r\n", full_buffer.find(content_str)) - full_buffer.find(content_str);
-									// std::string sub = full_buffer.substr(full_buffer.find(content_str), len);
-									// std::cout << "substr and length: ..." << len << " " << sub << "..." << std::endl;
 									std::string size_str = full_buffer.substr(full_buffer.find(content_str) + content_str.size(), len - content_str.size());
-									// std::cout << "start: " << full_buffer.find(content_str) + content_str.size() << std::endl;
-									// std::cout << "should be number: " << full_buffer[full_buffer.find(content_str) + content_str.size()] << std::endl;
 									std::stringstream ss;
 									ss << size_str;
 									ss >> contentLen;
+									contentLen += res;
 								}
-								std::cout << "tot length: " << contentLen << std::endl;
+								findsizeonetime = 1;
 							}
 							tot_bytes_recv += res;
-							printf("adding to tot bytes %d\n", tot_bytes_recv);
+							infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
 							i++;
 						}
 						printf("after loop tot bytes %d\n", tot_bytes_recv);
@@ -393,8 +405,8 @@ void	SocketServer::startSocket(InfoServer info)
 							// if (it->fd & POLLOUT) //not sure its usage - it there is data to write //wrong place to be
 							// {
 								//parsing client message
-								printf("bytes received %ld\n", full_buffer.length());
-								std::cout << "full buffer: " << full_buffer << std::endl;
+								// printf("bytes received %ld\n", full_buffer.length());
+								// std::cout << "full buffer: " << full_buffer << std::endl;
 								// std::string headers(buffer);
 								// std::cout << l << " : " << headers << std::endl;
 								// l++;

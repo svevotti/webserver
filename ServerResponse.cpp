@@ -257,7 +257,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		// printf("header_size: %d\n", header_size);
 		printf("last_new_line in section %d\n", last_new_line);
 		//write to the file
-		ssize_t written = write(file, buffer + 190, size - 190 - 28);
+		ssize_t written = write(file, buffer + last_new_line + 4, size - last_new_line);
 		if (written < 0) {
 			perror("Error writing to file");
 			close(file);
