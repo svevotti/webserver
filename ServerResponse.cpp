@@ -8,17 +8,18 @@
 #include <algorithm>
 #include <cctype>
 
-struct Header
+typedef struct header
 {
-	std::string content_disposition;
-	std::string content_type;
-};
+	std::map<std::string, std::string> myMap;
+	std::vector<char> binaryData;
+	// std::string value;
+} header;
 
-struct Section
-{
-	Header header;
-	std::string body;
-};
+// struct Section
+// {
+// 	Header header;
+// 	std::string body;
+// };
 
 std::string	getHtmlPage(std::string path, std::string target)
 {
@@ -181,7 +182,7 @@ char *getBoundary(const char *buffer)
 	}
 	// printf("count %d\n", count);
 	int i = 0;
-	b = (char *)malloc(sizeof(char) * (count + 1));
+	b = new char[count+1];
 	while (i < count)
 	{
 		b[i] = buffer[index_start];
@@ -198,7 +199,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 	//parse body
 	std::cout << "\033[36mExtract data\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
-	// printf("buffer %s\n", buffer);
+	std::cout << contentType << std::endl;
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		std::vector<int> boundariesIndexes;
@@ -206,7 +207,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		char *b;
 		b = getBoundary(buffer);
 		int blen = strlen(b);
-		printf("boundary: %s, %d\n", b, blen);
+		printf("boundary: %s-, %d\n", b, blen);
 		//check if all boundaries are found
 		for (int i = 0; i < size; i++) {
 			int diff = ft_memcmp(buffer + i, b, blen);
@@ -216,26 +217,78 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 				// printf("boundary index: %d for %s\n", i, buffer + i);
 			}
 		}
-		// for(int i = 0; i < (int)boundariesIndexes.size(); i++)
-		// {
-		// 	std::cout << "i = " << i;
-		// 	std::cout << " -> index boundary: " << boundariesIndexes[i] << std::endl;
-		// }
-		//find index of empty line between header and body
-		std::map<int, struct Part> headersBody;
-		std::string header;
-		int start;
-		int end;
+		std::vector<int> binaryDataIndexEnd;
 		for (int i = 0; i < (int)boundariesIndexes.size(); i++)
 		{
-			start = boundariesIndexes[i] + blen;
-			while (buffer[start] != '\r')
-			{
-				header.append(buffer, 1);
-				start++;
-			}
-			std::cout << "should have full line" << std::endl;
+			binaryDataIndexEnd.push_back(boundariesIndexes[i] - 4);
 		}
+
+		std::string line;
+		struct header data;
+		std::map<int, struct header> bodySections;
+		std::string key;
+		std::string value;
+		std::vector<int> binaryDataIndex;
+		int indexBinary = 0;
+		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
+		{
+			std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
+			indexBinary = boundariesIndexes[i];
+			while (getline(streamHeaders, line))
+			{
+				// std::cout << "line:" << line << std::endl;
+				// std::cout << "size: " << line.length() << std::endl;
+				if (line.find_first_not_of("\r\n") == std::string::npos)
+				{
+					// printf("on empty line\n");
+					// int indexData = (int)line.find_first_not_of("\r\n");
+					// indexBinary += 4;
+					break ;
+				}
+				indexBinary += line.length() + 1;
+				// printf("index %d\n", indexBinary);
+				if (line.find(b) != std::string::npos)
+				{
+					// printf("boundary found\n");
+					continue;
+				}
+				else
+				{
+					// printf("here\n");
+					if (line.find(":") != std::string::npos)
+						key = line.substr(0, line.find(":"));
+					if (line.find(" ") != std::string::npos)
+						value = line.substr(line.find(" ") + 1);
+					data.myMap[key] = value;
+					bodySections[i] = data;
+				}
+			}
+			// printf("index boundary + size %d + %d\n", boundariesIndexes[i], indexBinary);
+			binaryDataIndex.push_back(indexBinary);
+			streamHeaders.clear();
+			line.clear();
+			key.clear();
+			value.clear();
+			indexBinary = 0;
+		}
+		std::map<int, struct header>::iterator outerIt;
+		std::map<std::string, std::string>::iterator innerIt;
+		int i = 0;
+		for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
+		{
+			// printf("i %d\n", i++);
+			// std::cout << "Index: " << outerIt->first << std::endl;
+			struct header section = outerIt->second;
+
+			for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+			{
+				// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
+				std::cout << innerIt->first << std::endl;
+				std::cout << innerIt->second << std::endl;
+			}
+		}
+		std::vector<char> binaryData;
+
 		char new_line[] = "\r\n\r\n";
 		int last_new_line = 0;
 		for (int i = 0; i < size; i++) {
@@ -247,7 +300,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 				break ;
 			}
 		}
-		// printf("last_new_line: %d\n", last_new_line);
+		printf("last_new_line: %d\n", last_new_line);
 		//extract header from section
 
 		//find empty line in the section between header and body
@@ -262,12 +315,11 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 				break ;
 			}
 		}
-		printf("index start %d, index end %d\n", indexStartBody, last_new_line);
-		for (int i = last_new_line; i < indexStartBody; i++)
-		{
-			printf("%c",buffer[i]);
-		}
-		printf("\n");
+		// for (int i = last_new_line; i < indexStartBody; i++)
+		// {
+		// 	printf("%c",buffer[i]);
+		// }
+		// printf("\n");
 		// printf("header_size: %d\n", header_size);
 		// printf("last_new_line in section %d\n", last_new_line);
 		//openfile

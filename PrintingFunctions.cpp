@@ -5,6 +5,12 @@
 #include <cstring>
 #include <fcntl.h>
 
+typedef struct header
+{
+	std::map<std::string, std::string> myMap;
+	// std::string value;
+} header;
+
 void printIpvVersion(struct sockaddr_storage address)
 {
 	char s[256];

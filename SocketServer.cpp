@@ -198,20 +198,25 @@ void	SocketServer::startSocket(InfoServer info)
 						//for buffer size, something enough big to hold client's message, but not big problem.
 						// if there is no enough space, it sends message in more times
 						//create a loop to store all bytes
-						char buffer[BUFFER];
+						char *buffer;
 						std::string full_buffer;
 						int tot_bytes_recv = 0;
 						//void printFcntlFlag(_newSocketFd);
 						int contentLen = 0;
-						int i = 0;
+						// int i = 0;
 						int findsizeonetime = 0;
+						int size = BUFFER;
 						while (1)
 						{
-							ft_memset(&buffer, 0, strlen(buffer));
-							res = recv(it->fd, buffer, BUFFER - 1, 0);
-							printf("res in breaking statement %d\n", res);
+							buffer = new char[size + 1];
+							// ft_memset(&buffer, 0, strlen(buffer));
+							res = recv(it->fd, buffer, size, 0);
+							// printf("do i get seg fault\n");
+							// printf("res in breaking statement %d\n", res);
 							if (res <= 0)
 							{
+								delete[] buffer;
+								printf("res in breaking statement %d\n", res);
 								break;
 							}
 							buffer[res] = '\0';
@@ -228,16 +233,21 @@ void	SocketServer::startSocket(InfoServer info)
 									std::stringstream ss;
 									ss << size_str;
 									ss >> contentLen;
-									contentLen += res;
+									if (contentLen < size)
+										size = contentLen;
 								}
 								findsizeonetime = 1;
 							}
 							tot_bytes_recv += res;
-							infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
-							i++;
+							// infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
+							// i++;
+							delete[] buffer;
 						}
-						printf("recv exits the loop without me\n");
-						if (tot_bytes_recv < contentLen || res == 0)
+						// just to check why recv returns -1, can't use errno
+						//check if buffer was free properly
+						// std::cout << full_buffer << std::endl;
+						// printf("tot butes received %d and full bytes %d\n", tot_bytes_recv, contentLen);
+						if (tot_bytes_recv < contentLen && res <= 0)
 						{
 							if (res <= 0)
 							{
@@ -266,7 +276,7 @@ void	SocketServer::startSocket(InfoServer info)
 								close(it->fd);
 							}
 						}
-						else //if ((res & EAGAIN) || (res & EWOULDBLOCK)) it means it is in non blocking mode and no more data //data to write - server response to client message ~ to verify
+						else
 						{
 								ServerParseRequest request;
 								std::map<std::string, std::string> infoRequest;
@@ -280,6 +290,7 @@ void	SocketServer::startSocket(InfoServer info)
 										response = serverResponse.responseGetMethod(info, infoRequest);
 										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 											printError(SEND);
+										std::cout << "done with GET response" << std::endl;
 									}
 									else if (infoRequest["Method"] == "POST")
 									{

@@ -17,6 +17,7 @@
 #include "ServerParseRequest.hpp"
 #include "ServerStatusCode.hpp"
 #include "InfoServer.hpp"
+#include "PrintingFunctions.hpp"
 
 class ServerResponse
 {
