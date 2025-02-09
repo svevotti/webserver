@@ -273,7 +273,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		}
 		std::map<int, struct header>::iterator outerIt;
 		std::map<std::string, std::string>::iterator innerIt;
-		int i = 0;
+		// int i = 0;
 		for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
 		{
 			// printf("i %d\n", i++);

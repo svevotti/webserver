@@ -34,3 +34,23 @@ int	ft_memcmp(const void *s1, const void *s2, size_t n)
 	}
 	return (0);
 }
+
+void	*ft_memcpy(void *dest, const void *src, size_t n)
+{
+	const char	*t_src;
+	char		*t_dest;
+	int			i;
+
+	i = 0;
+	t_src = (const char*)src;
+	t_dest = (char*)dest;
+	if (t_src == NULL && t_dest == NULL)
+		return (dest);
+	while (n > 0)
+	{
+		t_dest[i] = t_src[i];
+		i++;
+		n--;
+	}
+	return (dest);
+}
