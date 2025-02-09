@@ -198,7 +198,7 @@ void	SocketServer::startSocket(InfoServer info)
 						//for buffer size, something enough big to hold client's message, but not big problem.
 						// if there is no enough space, it sends message in more times
 						//create a loop to store all bytes
-						char *buffer;
+						char buffer[BUFFER];
 						std::string full_buffer;
 						int tot_bytes_recv = 0;
 						//void printFcntlFlag(_newSocketFd);
@@ -206,17 +206,16 @@ void	SocketServer::startSocket(InfoServer info)
 						// int i = 0;
 						int findsizeonetime = 0;
 						int size = BUFFER;
-						while (1)
-						{
-							buffer = new char[size + 1];
-							// ft_memset(&buffer, 0, strlen(buffer));
-							res = recv(it->fd, buffer, size, 0);
+						int status = true;
+						while (status)
+						{	
+							ft_memset(&buffer, 0, strlen(buffer));
+							res = recv(it->fd, buffer, size,0);
 							// printf("do i get seg fault\n");
 							// printf("res in breaking statement %d\n", res);
 							if (res <= 0)
 							{
-								delete[] buffer;
-								printf("res in breaking statement %d\n", res);
+								status = false;
 								break;
 							}
 							buffer[res] = '\0';
@@ -241,74 +240,69 @@ void	SocketServer::startSocket(InfoServer info)
 							tot_bytes_recv += res;
 							// infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
 							// i++;
-							delete[] buffer;
 						}
-						// just to check why recv returns -1, can't use errno
-						//check if buffer was free properly
-						// std::cout << full_buffer << std::endl;
-						// printf("tot butes received %d and full bytes %d\n", tot_bytes_recv, contentLen);
-						if (tot_bytes_recv < contentLen && res <= 0)
+						if (res == 0)
 						{
-							if (res <= 0)
-							{
-								if (res == 0)
-									std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-								else
-								{
-									switch (errno) {
-										case EWOULDBLOCK:
-											printf("No data available (non-blocking mode)\n");
-											break;
-										case ETIMEDOUT:
-											printf("Receive operation timed out\n");
-											break;
-										case ECONNRESET:
-											printf("Connection reset by peer\n");
-											break;
-										// Add more cases as needed
-										default:
-											printf("recv error: %s\n", strerror(errno));
-											break;
-									}
-								}
-									// printError(RECEIVE);
+								std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 								poll_sets.erase(it);
 								close(it->fd);
+						}
+						else if (res < 0 && tot_bytes_recv < contentLen)
+						{
+							switch (errno) {
+								case EWOULDBLOCK:
+									printf("No data available (non-blocking mode)\n");
+									break;
+								case ETIMEDOUT:
+									printf("Receive operation timed out\n");
+									break;
+								case ECONNRESET:
+									printf("Connection reset by peer\n");
+									break;
+								// Add more cases as needed
+								default:
+									printf("recv error: %s\n", strerror(errno));
+									break;
 							}
+							printError(RECEIVE);
+							poll_sets.erase(it);
+							close(it->fd);
 						}
 						else
 						{
-								ServerParseRequest request;
-								std::map<std::string, std::string> infoRequest;
-								infoRequest = request.parseRequestHttp(full_buffer.c_str(), info.getServerRootPath());
-								if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
+							ServerParseRequest request;
+							std::map<std::string, std::string> infoRequest;
+							infoRequest = request.parseRequestHttp(full_buffer.c_str(), info.getServerRootPath());
+							if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
+							{
+								ServerResponse serverResponse;
+								std::string response;
+								if (infoRequest["Method"] == "GET")
 								{
-									ServerResponse serverResponse;
-									std::string response;
-									if (infoRequest["Method"] == "GET")
-									{
-										response = serverResponse.responseGetMethod(info, infoRequest);
-										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-											printError(SEND);
-										std::cout << "done with GET response" << std::endl;
-									}
-									else if (infoRequest["Method"] == "POST")
-									{
-										response = serverResponse.responsePostMethod(info, infoRequest, full_buffer.c_str(), tot_bytes_recv);
-										if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-											printError(SEND);
-									}
-									else if (infoRequest["Method"] == "DELETE")
-									{
-										std::cout << "handle DELETE" << std::endl;
-									}
+									response = serverResponse.responseGetMethod(info, infoRequest);
+									if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+										printError(SEND);
+									std::cout << "done with GET response" << std::endl;
 								}
-								else
+								else if (infoRequest["Method"] == "POST")
 								{
-									std::cout << "method not found" << std::endl;
+									// response = serverResponse.responseGetMethod(info, infoRequest);
+									response = serverResponse.responsePostMethod(info, infoRequest, full_buffer.c_str(), tot_bytes_recv);
+									if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+										printError(SEND);
+									std::cout << "done with POST response" << std::endl;
+									// exit(1);
 								}
-								ft_memset(&buffer, 0, strlen(buffer));
-							// }
+								else if (infoRequest["Method"] == "DELETE")
+								{
+									std::cout << "handle DELETE" << std::endl;
+								}
+							}
+							else
+							{
+								std::cout << "method not found" << std::endl;
+							}
+							ft_memset(&buffer, 0, strlen(buffer));
 						}
 					}
 						

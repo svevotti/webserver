@@ -93,3 +93,20 @@ void printFcntlFlag(int fd)
 	else 
 		printf("Socket is not set to non-blocking\n");
 }
+
+	// std::map<int, struct header>::iterator outerIt;
+		// std::map<std::string, std::string>::iterator innerIt;
+		// // int i = 0;
+		// for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
+		// {
+		// 	// printf("i %d\n", i++);
+		// 	// std::cout << "Index: " << outerIt->first << std::endl;
+		// 	struct header section = outerIt->second;
+
+		// 	for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+		// 	{
+		// 		// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
+		// 		std::cout << innerIt->first << std::endl;
+		// 		std::cout << innerIt->second << std::endl;
+		// 	}
+		// }

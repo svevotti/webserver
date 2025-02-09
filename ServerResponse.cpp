@@ -199,7 +199,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 	//parse body
 	std::cout << "\033[36mExtract data\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
-	std::cout << contentType << std::endl;
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		std::vector<int> boundariesIndexes;
@@ -207,8 +206,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		char *b;
 		b = getBoundary(buffer);
 		int blen = strlen(b);
-		printf("boundary: %s-, %d\n", b, blen);
-		//check if all boundaries are found
 		for (int i = 0; i < size; i++) {
 			int diff = ft_memcmp(buffer + i, b, blen);
 			// printf("diff: %d")
@@ -217,12 +214,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 				// printf("boundary index: %d for %s\n", i, buffer + i);
 			}
 		}
-		std::vector<int> binaryDataIndexEnd;
-		for (int i = 0; i < (int)boundariesIndexes.size(); i++)
-		{
-			binaryDataIndexEnd.push_back(boundariesIndexes[i] - 4);
-		}
-
 		std::string line;
 		struct header data;
 		std::map<int, struct header> bodySections;
@@ -236,22 +227,11 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			indexBinary = boundariesIndexes[i];
 			while (getline(streamHeaders, line))
 			{
-				// std::cout << "line:" << line << std::endl;
-				// std::cout << "size: " << line.length() << std::endl;
 				if (line.find_first_not_of("\r\n") == std::string::npos)
-				{
-					// printf("on empty line\n");
-					// int indexData = (int)line.find_first_not_of("\r\n");
-					// indexBinary += 4;
 					break ;
-				}
 				indexBinary += line.length() + 1;
-				// printf("index %d\n", indexBinary);
 				if (line.find(b) != std::string::npos)
-				{
-					// printf("boundary found\n");
 					continue;
-				}
 				else
 				{
 					// printf("here\n");
@@ -263,7 +243,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 					bodySections[i] = data;
 				}
 			}
-			// printf("index boundary + size %d + %d\n", boundariesIndexes[i], indexBinary);
 			binaryDataIndex.push_back(indexBinary);
 			streamHeaders.clear();
 			line.clear();
@@ -271,57 +250,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			value.clear();
 			indexBinary = 0;
 		}
-		std::map<int, struct header>::iterator outerIt;
-		std::map<std::string, std::string>::iterator innerIt;
-		// int i = 0;
-		for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
-		{
-			// printf("i %d\n", i++);
-			// std::cout << "Index: " << outerIt->first << std::endl;
-			struct header section = outerIt->second;
 
-			for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
-			{
-				// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
-				std::cout << innerIt->first << std::endl;
-				std::cout << innerIt->second << std::endl;
-			}
-		}
-		std::vector<char> binaryData;
-
-		char new_line[] = "\r\n\r\n";
-		int last_new_line = 0;
-		for (int i = 0; i < size; i++) {
-			int diff = ft_memcmp(buffer + i, new_line, 4);
-			// printf("diff: %d")
-			if (diff == 0) {
-				// printf("boundary index: %d\n", i);
-				last_new_line = i;
-				break ;
-			}
-		}
-		printf("last_new_line: %d\n", last_new_line);
-		//extract header from section
-
-		//find empty line in the section between header and body
-		int header_size = last_new_line + 2;
-		int indexStartBody = 0;
-		for (int i = header_size + 1; i < size; i++) {
-			int diff = ft_memcmp(buffer + i, new_line, 4);
-			// printf("diff: %d")
-			if (diff == 0) {
-				// printf("boundary index: %d\n", i);
-				indexStartBody = i;
-				break ;
-			}
-		}
-		// for (int i = last_new_line; i < indexStartBody; i++)
-		// {
-		// 	printf("%c",buffer[i]);
-		// }
-		// printf("\n");
-		// printf("header_size: %d\n", header_size);
-		// printf("last_new_line in section %d\n", last_new_line);
 		//openfile
 		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
 		// std::cout << pathToFile << std::endl;
@@ -331,7 +260,8 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			exit(1);
 		}
 		//write to the file
-		ssize_t written = write(file, buffer + indexStartBody + 4, size - indexStartBody);
+		std::cout << binaryDataIndex[0] << std::endl;
+		ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
 		if (written < 0) {
 			perror("Error writing to file");
 			close(file);
@@ -347,7 +277,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
 					"Content-Length: 0\r\n"
-					"Connection: close\r\n"
+					"Connection: keep-alive\r\n"
 					"\r\n"; //very imporant
 	return (response);
 }
