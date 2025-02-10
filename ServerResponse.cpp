@@ -197,6 +197,31 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 {
 	
 	//parse body
+	std::string ContentLength = request["Content-Lenght"];
+	std::istringstream iss(ContentLength);
+	int conLen;
+	iss >> conLen;
+
+	std::map<std::string, std::string>::iterator it;
+	for (it = request.begin(); it != request.end(); it++)
+	{
+		std::cout << "first: " << it->first << std::endl;
+		std::cout << "second: " << it->second << std::endl;
+	}
+	// printf("size %d, con len %d\n", size, conLen);
+	std::cout << ContentLength << std::endl;
+	std::cout << size << " - " << conLen << std::endl;
+	if (size < conLen)
+	{
+		std::cout << "partial read of data" << std::endl;
+		std::string responseBad =
+								"HTTP/1.1 400 Bad Request\r\n"
+								"Content-Type: text/plain\r\n"
+								"Content-Length: 45\r\n"
+								"\r\n\r\n"
+								"Error: Incomplete data received. Please resend.\r\n";
+		return (responseBad);
+	}
 	std::cout << "\033[36mExtract data\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
 	if (contentType.find("boundary") != std::string::npos) //multi format data
@@ -204,9 +229,12 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		std::vector<int> boundariesIndexes;
 		//find boundary		
 		char *b;
+		std::cout << "\033[36mGet boundary\033[0m" << std::endl;
 		b = getBoundary(buffer);
 		int blen = strlen(b);
-		for (int i = 0; i < size; i++) {
+		std::cout << "\033[36mGet boundary index in vector\033[0m" << std::endl;
+		for (int i = 0; i < size; i++) 
+		{
 			int diff = ft_memcmp(buffer + i, b, blen);
 			// printf("diff: %d")
 			if (diff == 0) {
@@ -221,6 +249,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		std::string value;
 		std::vector<int> binaryDataIndex;
 		int indexBinary = 0;
+		std::cout << "\033[36mGet sections in body\033[0m" << std::endl;
 		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		{
 			std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
@@ -252,6 +281,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		}
 
 		//openfile
+		std::cout << "\033[36mOpen file\033[0m" << std::endl;
 		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
 		// std::cout << pathToFile << std::endl;
 		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -261,23 +291,30 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		}
 		//write to the file
 		// std::cout << binaryDataIndex[0] << std::endl;
+		std::cout << "\033[36mWrite to file\033[0m" << std::endl;
+		std::cout << size << std::endl;
 		ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
+		std::cout << "\033[36mAfter writing\033[0m" << std::endl;
 		if (written < 0) {
 			perror("Error writing to file");
 			close(file);
 			exit(1);
 		}
+		std::cout << "\033[36mBefore closing file\033[0m" << std::endl;
 		close(file);
+		std::cout << "\033[36mAfter closing file\033[0m" << std::endl;
 	}
 	else
 	{
 		//store in one string
 		std::cout << "message is " << request["Body"] << std::endl;
 	}	//we can fake i saved and store the image when it is already there
+	std::cout << "\033[36mBuilding response\033[0m" << std::endl;
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
 					"Content-Length: 0\r\n"
 					"Connection: keep-alive\r\n"
 					"\r\n"; //very imporant
+	std::cout << "\033[36mBefore returning statment parsing and responding\033[0m" << std::endl;
 	return (response);
 }

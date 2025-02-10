@@ -25,13 +25,13 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 	std::string protocol;
 
 
-	// std::cout << "Str: " << str << std::endl;
+	std::cout << "Str: " << str << std::endl;
 	method = findMethod(str);
 	requestParse["Method"] = method;
 	if (str.find("/") != std::string::npos) // "/" means server's root path
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		// std::cout << "substring: " << subStr << "." << std::endl;
+		std::cout << "substring: " << subStr << "." << std::endl;
 		if (subStr == "/" || subStr == "/index.html") //asking for index.html at root
 			requestTarget = path + "index.html";
 		else
@@ -59,6 +59,7 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 			closedir(dir);
 			// if not return 404
 		}
+	
 		requestParse["Request-target"] = requestTarget;
 		// std::cout << "path to index.html - " << requestTarget << std::endl;
 	}
@@ -81,13 +82,18 @@ void ServerParseRequest::parseHeaders(std::istringstream& str)
 	std::string value;
 	while (getline(str, line))
 	{
+		// std::cout << "line: " << line << std::endl;
 		if (line.find_first_not_of("\r\n") == std::string::npos)
+		{
+			// std::cout << "empty line" << std::endl;
 			break ;
+		}
 		if (line.find(":") != std::string::npos)
 			key = line.substr(0, line.find(":"));
 		if (line.find(" ") != std::string::npos)
 			value = line.substr(line.find(" ") + 1);
 		requestParse[key] = value; //should i have all lowercase?
+		// std::cout << key << " - " << value << std::endl;
 	}
 }
 
@@ -109,14 +115,14 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const ch
 	std::map<std::string, std::string>::iterator it = requestParse.find("Content-Length");
 	if (it == requestParse.end())
 		return (requestParse);
-	else //store body
-	{
-		if (inputString.find(line) != std::string::npos)
-		{
-			std::string body = inputString.substr(inputString.find(line));
-			requestParse["Body"] = body;
-		}
-	}
+	// else //store body
+	// {
+	// 	if (inputString.find(line) != std::string::npos)
+	// 	{
+	// 		std::string body = inputString.substr(inputString.find(line));
+	// 		requestParse["Body"] = body;
+	// 	}
+	// }
 	// printing parse http request as map
 	// std::map<std::string, std::string>::iterator element;
 	// std::map<std::string, std::string>::iterator ite = requestParse.end();

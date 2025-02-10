@@ -20,14 +20,14 @@ class ServerParseRequest : public std::map<std::string, std::string> {
 public:
 	// ServerResponse();
 	// // ServerResponse();
-	// // SocketServer(int);
+	// // Server(int);
 	// ~ServerResponse();
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
 	std::map<std::string, std::string>	parseRequestHttp(const char *, std::string);
 	void parseFirstLine(std::string, std::string);
 	void parseHeaders(std::istringstream&);
-	// int		getSocketServerPort();
+	// int		getServerPort();
 
 private:
 	std::map<std::string, std::string> requestParse;

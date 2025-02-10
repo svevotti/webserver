@@ -1,5 +1,5 @@
-#ifndef SOCKET_SERVER_H
-#define SOCKET_SERVER_H
+#ifndef SERVER_H
+#define SERVER_H
 
 #include <sys/socket.h>
 #include <iostream>
@@ -22,24 +22,14 @@
 
 #define PORT "8080"
 
-class SocketServer {
+class Server {
 
 public:
-	SocketServer();
-	// SocketServer(int);
-	~SocketServer();
-	SocketServer(const SocketServer &);
-	void	operator=(const SocketServer &);
-	void	startSocket(InfoServer);
-	// int		getSocketServerPort();
+	void	startServer(InfoServer);
+	// int		getServerPort();
 
 private:
-	int _socketFd;
-	int _newSocketFd;
-	int _portNumber;
-	struct sockaddr_in _serverAddr;
-	struct sockaddr_in _clientAddr;
-	socklen_t _lenClient;
+	int _serverFds;
 };
 
 #endif

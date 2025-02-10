@@ -25,13 +25,13 @@ class ServerResponse
 public:
 	// ServerResponse();
 	// // ServerResponse();
-	// // SocketServer(int);
+	// // Server(int);
 	// ~ServerResponse();
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
 	std::string responseGetMethod(InfoServer, std::map<std::string, std::string>);
 	std::string responsePostMethod(InfoServer, std::map<std::string, std::string>, const char *, int);
-	// int		getSocketServerPort();
+	// int		getServerPort();
 
 };
 

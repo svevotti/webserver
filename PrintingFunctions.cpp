@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <fcntl.h>
+#include <errno.h>
 
 typedef struct header
 {
@@ -110,3 +111,23 @@ void printFcntlFlag(int fd)
 		// 		std::cout << innerIt->second << std::endl;
 		// 	}
 		// }
+
+int printRecvFlag(int error)
+{
+	switch (error) {
+			case EWOULDBLOCK:
+				printf("No data available (non-blocking mode)\n");
+				return 1;
+			case ETIMEDOUT:
+				printf("Receive operation timed out\n");
+				break;
+			case ECONNRESET:
+				printf("Connection reset by peer\n");
+				break;
+			// Add more cases as needed
+			default:
+				printf("recv error: %s\n", strerror(errno));
+				break;
+		}
+	return 0;
+}
