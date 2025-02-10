@@ -32,6 +32,7 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
 		std::cout << "substring: " << subStr << "." << std::endl;
+		//TODO: don't overwrite the request target, just parse first line
 		if (subStr == "/" || subStr == "/index.html") //asking for index.html at root
 			requestTarget = path + "index.html";
 		else

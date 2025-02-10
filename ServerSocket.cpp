@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sstream>
+#include <stdexcept>
 
 #include "PrintingFunctions.hpp"
 
@@ -145,8 +146,6 @@ int createClientSocket(int fd)
 	clientFd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize); //client socket
 	if (clientFd == -1)
 		printError(ACCEPT);
-	// int send_timeout = 2;
-	// setsockopt(clientFd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout));
 	int status = fcntl(clientFd, F_SETFL, O_NONBLOCK); /*no need since it inherits from server socoet passed in accept*/
 	if (status == -1)
 		printError(FCNTL);
@@ -155,20 +154,38 @@ int createClientSocket(int fd)
 
 int readData(int fd, std::string &str, int &bytes)
 {
-	int res;
+	int res = 0;
 	char buffer[BUFFER];
 
+	char *data = NULL;
+
+	int count = 0;
 	while (1)
 	{
 		// std::cout << "first line loop" << std::endl;
-		ft_memset(&buffer, 0,sizeof(buffer));
+		ft_memset(buffer, 0, sizeof(buffer));
 		res = recv(fd, buffer, BUFFER, 0);
 		if (res <= 0)
+		{
+			// std::cout << "in break statement" << std::endl;
+			printRecvFlag(errno);
+			// std::cout << "after" << std::endl;
 			break;
-		buffer[res] = '\0';
+		}
+		// data = (char *)realloc(data, BUFFER * (count + 1));
+		// memmove(data + (BUFFER * count), buffer, BUFFER);
+		// count++;
+		// buffer[res] = '\0';
 		str.append(buffer, res);
 		bytes += res;
 	}
+	// data[100] = '\0';
+	// printf("header - %s\n", data);
+	// ft_memset(buffer, 0, strlen(buffer));
+	// std::cout << "before exiting readData" << std::endl;
+	// printf("res %d\n", res);
+	// printf("tot data %d\n", bytes);
+	// std::cout << str << std::endl;
 	return res;
 }
 
@@ -176,11 +193,11 @@ void	Server::startServer(InfoServer info)
 {
 	// struct sockaddr_storage their_addr; // struct to store client's address information
     // socklen_t sin_size;
-	std::vector<pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
+	std::vector<struct pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
 	struct pollfd myPoll[200]; //which size to give? there should be a max - client max
 	int arraySockets[2];
 	int i;
-	int res;
+	int returnPoll;
 	int bytesRecv;
 	std::vector<pollfd>::iterator it;
 	std::vector<pollfd>::iterator end;
@@ -205,14 +222,17 @@ void	Server::startServer(InfoServer info)
 	std::cout << "Waiting connections..." << std::endl;
 	while(1)
 	{
-		std::cout << "Set poll" << std::endl;
-		res = poll((pollfd *)&poll_sets[0], (unsigned int)poll_sets.size(), 1 * 60 * 1000);
-        if (res == -1)
+		std::cout << "Set poll size: " << poll_sets.size() << std::endl;
+		// for (int i = 0; i < (int) poll_sets.size(); i++)
+		// 	std::cout << "fd in poll: " << myPoll[i].fd << std::endl;
+		// printf("poll size - %d\n", poll_sets.size());
+		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 60 * 1000);
+        if (returnPoll == -1)
 		{
             printError(POLL);
             break ;
         }
-		else if (res == 0)
+		else if (returnPoll == 0)
 		{
 			printf("Waiting connections timeout 1 minute...\n");
 			break ;
@@ -224,23 +244,51 @@ void	Server::startServer(InfoServer info)
 			{
 				if (it->revents & POLLIN) //if there is data to read
 				{
-					std::cout << "poll event POLLIN" << std::endl;
-					std::cout << "Create new client" << std::endl;
-					clientSocket = createClientSocket(it->fd);
-					if (clientSocket == -1)
-						continue;
-					/*recv data*/
-					std::string full_buffer;
-					int totBytes = 0;
-					std::cout << "Recv data from client" << std::endl;
-					bytesRecv = readData(clientSocket, full_buffer, totBytes);
-					if (bytesRecv == 0)
-						std::cout << "socket number " << clientSocket << " closed connection" << std::endl;
-					else if (bytesRecv == -1)
-						res = printRecvFlag(errno);
-					if (res == 1)
-						serverParsingAndResponse(full_buffer.c_str(), info, clientSocket, totBytes);
-					close(clientSocket);
+					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
+					if (it->fd == arraySockets[0] || it->fd == arraySockets[1])
+					{
+						clientSocket = createClientSocket(it->fd);
+						if (clientSocket == -1)
+							continue;
+
+						struct pollfd clientFd;
+						clientFd.fd = clientSocket;
+						clientFd.events = POLLIN;
+						poll_sets.push_back(clientFd);
+						std::cout << "client created: " <<  clientSocket << std::endl;
+					}
+					else
+					{
+						/*recv data*/
+						std::string full_buffer;
+						int totBytes = 0;
+						// std::cout << "before call readData" << std::endl;
+						bytesRecv = readData(it->fd, full_buffer, totBytes);
+						std::cout << "After call readData" << std::endl;
+						if (bytesRecv == 0)
+						{
+							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
+							// close(it->fd);
+							// it = poll_sets.erase(it);
+						}
+						else if (bytesRecv == -1)
+						{
+							printf("here1\n");
+							bytesRecv = printRecvFlag(errno);
+							printf("here2\n");
+							// close(it->fd);
+							// it = poll_sets.erase(it);
+							printf("here3\n");
+						}
+						if (bytesRecv == 1)
+						{
+							printf("before parsing\n");
+							if (!full_buffer.empty())
+								serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
+						}
+						close(it->fd);
+						it = poll_sets.erase(it);
+					}
 				}
 			}
 		}
