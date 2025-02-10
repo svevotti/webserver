@@ -260,7 +260,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			exit(1);
 		}
 		//write to the file
-		std::cout << binaryDataIndex[0] << std::endl;
+		// std::cout << binaryDataIndex[0] << std::endl;
 		ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
 		if (written < 0) {
 			perror("Error writing to file");

@@ -14,6 +14,8 @@
 #include <arpa/inet.h>
 #include <sstream>
 
+#include "PrintingFunctions.hpp"
+
 #define SOCKET -1
 #define GETADDRINFO -2
 #define FCNTL -3
@@ -123,18 +125,75 @@ int findMatchingSocket(int pollFd, int array[])
 	return -1;
 }
 
+void serverResponse(const char *str, InfoServer info, int fd, int size)
+{
+	ServerParseRequest request;
+	std::map<std::string, std::string> infoRequest;
+	infoRequest = request.parseRequestHttp(str, info.getServerRootPath());
+	if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
+	{
+		ServerResponse serverResponse;
+		std::string response;
+		if (infoRequest["Method"] == "GET")
+		{
+			response = serverResponse.responseGetMethod(info, infoRequest);
+			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+				printError(SEND);
+			std::cout << "done with GET response" << std::endl;
+		}
+		else if (infoRequest["Method"] == "POST")
+		{
+			// response = serverResponse.responseGetMethod(info, infoRequest);
+			response = serverResponse.responsePostMethod(info, infoRequest, str, size);
+			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+				printError(SEND);
+			std::cout << "done with POST response" << std::endl;
+			// exit(1);
+		}
+		else if (infoRequest["Method"] == "DELETE")
+		{
+			std::cout << "handle DELETE" << std::endl;
+		}
+	}
+	else
+	{
+		std::cout << "method not found" << std::endl;
+	}
+}
+
+int getRequestContentLength(std::string buffer)
+{
+	std::string content_str = "Content-Length: ";
+	int len = content_str.size();
+	int contentLength = 0;
+	if (buffer.find(content_str) != std::string::npos)
+	{
+		if (buffer.find("\r\n", buffer.find(content_str)) != std::string::npos)
+		{
+			len = buffer.find("\r\n", buffer.find(content_str)) - buffer.find(content_str);
+			std::string size_str = buffer.substr(buffer.find(content_str) + content_str.size(), len - content_str.size());
+			std::stringstream ss;
+			ss << size_str;
+			ss >> contentLength;
+			return contentLength;
+		}
+	}
+	return -1;
+}
+
 void	SocketServer::startSocket(InfoServer info)
 {
 	struct sockaddr_storage their_addr; // struct to store client's address information
     socklen_t sin_size;
 	std::vector<pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
-	struct pollfd myPoll[200]; //which size to give? there should be a max
+	struct pollfd myPoll[200]; //which size to give? there should be a max - client max
 	int arraySockets[2];
 	int i;
 	int res;
 	std::vector<pollfd>::iterator it;
 	std::vector<pollfd>::iterator end;
-	pollfd client_pollfd;
+	int clientSocket;
+	// pollfd client_pollfd;
 
 	/*array of sockets*/
 	for (i = 0; i < 2; i++)
@@ -171,29 +230,32 @@ void	SocketServer::startSocket(InfoServer info)
 			end = poll_sets.end();
 			for (it = poll_sets.begin(); it != end; it++)
 			{
+				// std::cout << "socket event " << it->events << std::endl;
+				// std::cout << "socket revents " << it->revents << std::endl;
 				if (it->revents & POLLIN) //if there is data to read
 				{
-					int indexFd = findMatchingSocket(it->fd, arraySockets); //look for socket in the array
-					if (indexFd != -1) //new client to add
+					// int indexFd = findMatchingSocket(it->fd, arraySockets); //look for socket in the array
+					// if (indexFd != -1) //new client to add
+					// {
+					sin_size = sizeof(their_addr);
+					clientSocket = accept(it->fd, (struct sockaddr *)&their_addr, &sin_size); //client socket
+					// printf("client fd: %d\n", clientSocket);
+					if (clientSocket == -1)
 					{
-						sin_size = sizeof(their_addr);
-						_newSocketFd = accept(arraySockets[indexFd], (struct sockaddr *)&their_addr, &sin_size); //client socket
-						if (_newSocketFd == -1)
-						{
-							printError(ACCEPT);
-							continue;
-						}
-						//set non blocking socket
-						int status = fcntl(_newSocketFd, F_SETFL, O_NONBLOCK); //making socket non-blocking - not sure how to test it yet
-						if (status == -1)
-							printError(FCNTL);
-						//add new fds in poll struct
-						client_pollfd.fd = _newSocketFd;
-						client_pollfd.events = POLLIN;
-						poll_sets.push_back(client_pollfd);
+						printError(ACCEPT);
+						continue;
 					}
-					else //old client sent something
-					{
+						//set non blocking socket
+					int status = fcntl(clientSocket, F_SETFL, 0); //making socket non-blocking - not sure how to test it yet
+					if (status == -1)
+						printError(FCNTL);
+						//add new fds in poll struct
+						// client_pollfd.fd = _newSocketFd;
+						// client_pollfd.events = POLLIN;
+						// poll_sets.push_back(client_pollfd);
+					// }
+					// else //old client sent something
+					// {
 						//receives from client, if recv zero means client is not up anymore
 						//for buffer size, something enough big to hold client's message, but not big problem.
 						// if there is no enough space, it sends message in more times
@@ -202,110 +264,64 @@ void	SocketServer::startSocket(InfoServer info)
 						std::string full_buffer;
 						int tot_bytes_recv = 0;
 						//void printFcntlFlag(_newSocketFd);
-						int contentLen = 0;
-						// int i = 0;
-						int findsizeonetime = 0;
 						int size = BUFFER;
-						int status = true;
-						while (status)
-						{	
+						// int status = true;
+
+						while (1)
+						{
+							// printf("in the status loop\n");
 							ft_memset(&buffer, 0, strlen(buffer));
-							res = recv(it->fd, buffer, size,0);
+							printFcntlFlag(clientSocket);
+							res = recv(clientSocket, buffer, size, 0);
+							printf("result: %d\n", res);
 							// printf("do i get seg fault\n");
 							// printf("res in breaking statement %d\n", res);
-							if (res <= 0)
+							if (res == 0)
 							{
-								status = false;
+								printf("socket is empty\n");
 								break;
 							}
 							buffer[res] = '\0';
 							//can look for content lenght
 							full_buffer.append(buffer, res); //need to specify how much you want to append...
-							std::string content_str = "Content-Length: ";
-							int len = content_str.size();
-							if (full_buffer.find(content_str) != std::string::npos && findsizeonetime == 0)
-							{
-								if (full_buffer.find("\r\n", full_buffer.find(content_str)) != std::string::npos)
-								{
-									len = full_buffer.find("\r\n", full_buffer.find(content_str)) - full_buffer.find(content_str);
-									std::string size_str = full_buffer.substr(full_buffer.find(content_str) + content_str.size(), len - content_str.size());
-									std::stringstream ss;
-									ss << size_str;
-									ss >> contentLen;
-									if (contentLen < size)
-										size = contentLen;
-								}
-								findsizeonetime = 1;
-							}
 							tot_bytes_recv += res;
 							// infoRecvLoop(i, res, buffer, full_buffer, contentLen, tot_bytes_recv);
 							// i++;
 						}
 						if (res == 0)
 						{
-								std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-								poll_sets.erase(it);
-								close(it->fd);
+							std::cout << "socket number " << clientSocket << " closed connection" << std::endl;
+							// close(clientSocket);
+							// it = poll_sets.erase(it);
 						}
-						else if (res < 0 && tot_bytes_recv < contentLen)
+						else if (res == -1)
 						{
-							switch (errno) {
-								case EWOULDBLOCK:
-									printf("No data available (non-blocking mode)\n");
-									break;
-								case ETIMEDOUT:
-									printf("Receive operation timed out\n");
-									break;
-								case ECONNRESET:
-									printf("Connection reset by peer\n");
-									break;
-								// Add more cases as needed
-								default:
-									printf("recv error: %s\n", strerror(errno));
-									break;
-							}
-							printError(RECEIVE);
-							poll_sets.erase(it);
-							close(it->fd);
+							// switch (errno) {
+							// 	case EWOULDBLOCK:
+							// 		printf("No data available (non-blocking mode)\n");
+							// 		break;
+							// 	case ETIMEDOUT:
+							// 		printf("Receive operation timed out\n");
+							// 		break;
+							// 	case ECONNRESET:
+							// 		printf("Connection reset by peer\n");
+							// 		break;
+							// 	// Add more cases as needed
+							// 	default:
+							// 		printf("recv error: %s\n", strerror(errno));
+							// 		break;
+							// }
+							// printError(RECEIVE);
+							// close(clientSocket);
+							// it = poll_sets.erase(it);
 						}
 						else
 						{
-							ServerParseRequest request;
-							std::map<std::string, std::string> infoRequest;
-							infoRequest = request.parseRequestHttp(full_buffer.c_str(), info.getServerRootPath());
-							if (infoRequest.find("Method") != infoRequest.end()) //checks for methods we want to implement
-							{
-								ServerResponse serverResponse;
-								std::string response;
-								if (infoRequest["Method"] == "GET")
-								{
-									response = serverResponse.responseGetMethod(info, infoRequest);
-									if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-										printError(SEND);
-									std::cout << "done with GET response" << std::endl;
-								}
-								else if (infoRequest["Method"] == "POST")
-								{
-									// response = serverResponse.responseGetMethod(info, infoRequest);
-									response = serverResponse.responsePostMethod(info, infoRequest, full_buffer.c_str(), tot_bytes_recv);
-									if (send(it->fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-										printError(SEND);
-									std::cout << "done with POST response" << std::endl;
-									// exit(1);
-								}
-								else if (infoRequest["Method"] == "DELETE")
-								{
-									std::cout << "handle DELETE" << std::endl;
-								}
-							}
-							else
-							{
-								std::cout << "method not found" << std::endl;
-							}
-							ft_memset(&buffer, 0, strlen(buffer));
+							serverResponse(full_buffer.c_str(), info, clientSocket, tot_bytes_recv);
+							// ft_memset(&buffer, 0, strlen(buffer));
 						}
-					}
-						
+						close(clientSocket);
+					// }	
 				}
 			}
 		}

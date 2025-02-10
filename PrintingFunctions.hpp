@@ -14,6 +14,8 @@ void printError(int error);
 
 void infoRecvLoop(int number, int bytes, char *buffer, std::string full_str, int size, int accumilating_size);
 
+void printFcntlFlag(int fd);
+
 // template<typename T, typename U, typename V>
 // void printMap(std::map<T, U> outerrMap, std::map<V, V> innerMap)
 // {
