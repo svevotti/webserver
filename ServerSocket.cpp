@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <map>
-#include "Server.hpp"
+#include "ServerSocket.hpp"
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
