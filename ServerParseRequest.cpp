@@ -30,7 +30,7 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 	if (str.find("/") != std::string::npos) // "/" means server's root path
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		std::cout << "substring: " << subStr << "." << std::endl;
+		//std::cout << "substring: " << subStr << "." << std::endl;
 		//TODO: don't overwrite the request target, just parse first line
 		// look if directory exists
 		struct dirent *folder;

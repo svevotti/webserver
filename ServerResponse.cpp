@@ -51,13 +51,16 @@ std::string	getHtmlPage(std::string path, std::string target)
 	return (page);
 }
 
-std::string getFileContent(std::string fileName)
+std::string getFileContent(std::string fileName, std::string path)
 {
 	std::fstream file;
 	std::string line;
 	std::string bodyHtml;
+	std::string temp;
 	
 	// std::cout << "path to index " << fileName << std::endl;
+	//TODO: build path to the correct page
+	path += fileName;
 	file.open(fileName.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
 	if (!file)
 	{
@@ -130,7 +133,6 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	std::string strbodyHtmlLen;
 	std::string headers;
 
-	(void)info;
 	response =	"HTTP/1.1 404 Not Found\r\n"
 					"Content-Type: text/html\r\n"
 					"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
@@ -145,7 +147,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 					"</html>\r\n";
 	if (!request["Request-target"].empty())
 	{
-		bodyHtml = getFileContent(request["Request-target"]);
+		bodyHtml = getFileContent(request["Request-target"], info.getServerRootPath());
 		// std::cout << "bodyhtml: " << bodyHtml << std::endl;
 		if (bodyHtml.empty())
 			return (response); //error in opening file?
@@ -197,31 +199,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 {
 	
 	//parse body
-	std::string ContentLength = request["Content-Lenght"];
-	std::istringstream iss(ContentLength);
-	int conLen;
-	iss >> conLen;
-
-	std::map<std::string, std::string>::iterator it;
-	for (it = request.begin(); it != request.end(); it++)
-	{
-		std::cout << "first: " << it->first << std::endl;
-		std::cout << "second: " << it->second << std::endl;
-	}
-	// printf("size %d, con len %d\n", size, conLen);
-	std::cout << ContentLength << std::endl;
-	std::cout << size << " - " << conLen << std::endl;
-	if (size < conLen)
-	{
-		std::cout << "partial read of data" << std::endl;
-		std::string responseBad =
-								"HTTP/1.1 400 Bad Request\r\n"
-								"Content-Type: text/plain\r\n"
-								"Content-Length: 45\r\n"
-								"\r\n\r\n"
-								"Error: Incomplete data received. Please resend.\r\n";
-		return (responseBad);
-	}
 	std::cout << "\033[36mExtract data\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
 	if (contentType.find("boundary") != std::string::npos) //multi format data

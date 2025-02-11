@@ -81,10 +81,10 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	std::map<std::string, std::string>::iterator element;
 	std::map<std::string, std::string>::iterator ite = infoRequest.end();
 
-	for(element = infoRequest.begin(); element != ite; element++)
-	{
-		std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
-	}
+	// for(element = infoRequest.begin(); element != ite; element++)
+	// {
+	// 	std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
+	// }
 	std::cout << "Success reading - responding" << std::endl;
 	if (infoRequest.find("Method") != infoRequest.end())
 	{
