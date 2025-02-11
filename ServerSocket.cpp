@@ -162,37 +162,22 @@ int readData(int fd, std::string &str, int &bytes)
 	int count = 0;
 	while (1)
 	{
-		// std::cout << "first line loop" << std::endl;
 		ft_memset(buffer, 0, sizeof(buffer));
 		res = recv(fd, buffer, BUFFER, 0);
 		if (res <= 0)
 		{
-			// std::cout << "in break statement" << std::endl;
-			printRecvFlag(errno);
-			// std::cout << "after" << std::endl;
+			//printRecvFlag(errno);
 			break;
 		}
-		// data = (char *)realloc(data, BUFFER * (count + 1));
-		// memmove(data + (BUFFER * count), buffer, BUFFER);
-		// count++;
-		// buffer[res] = '\0';
 		str.append(buffer, res);
 		bytes += res;
 	}
-	// data[100] = '\0';
-	// printf("header - %s\n", data);
-	// ft_memset(buffer, 0, strlen(buffer));
-	// std::cout << "before exiting readData" << std::endl;
-	// printf("res %d\n", res);
-	// printf("tot data %d\n", bytes);
-	// std::cout << str << std::endl;
 	return res;
 }
 
 void	Server::startServer(InfoServer info)
 {
-	// struct sockaddr_storage their_addr; // struct to store client's address information
-    // socklen_t sin_size;
+
 	std::vector<struct pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
 	struct pollfd myPoll[200]; //which size to give? there should be a max - client max
 	int arraySockets[2];
@@ -202,7 +187,7 @@ void	Server::startServer(InfoServer info)
 	std::vector<pollfd>::iterator it;
 	std::vector<pollfd>::iterator end;
 	int clientSocket;
-	// pollfd client_pollfd;
+
 
 	/*array of sockets - needed?*/
 	for (i = 0; i < 2; i++)
@@ -223,9 +208,6 @@ void	Server::startServer(InfoServer info)
 	while(1)
 	{
 		std::cout << "Set poll size: " << poll_sets.size() << std::endl;
-		// for (int i = 0; i < (int) poll_sets.size(); i++)
-		// 	std::cout << "fd in poll: " << myPoll[i].fd << std::endl;
-		// printf("poll size - %d\n", poll_sets.size());
 		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 60 * 1000);
         if (returnPoll == -1)
 		{
@@ -262,32 +244,22 @@ void	Server::startServer(InfoServer info)
 						/*recv data*/
 						std::string full_buffer;
 						int totBytes = 0;
-						// std::cout << "before call readData" << std::endl;
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
 						std::cout << "After call readData" << std::endl;
 						if (bytesRecv == 0)
-						{
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-							// close(it->fd);
-							// it = poll_sets.erase(it);
-						}
 						else if (bytesRecv == -1)
-						{
-							printf("here1\n");
 							bytesRecv = printRecvFlag(errno);
-							printf("here2\n");
-							// close(it->fd);
-							// it = poll_sets.erase(it);
-							printf("here3\n");
-						}
 						if (bytesRecv == 1)
 						{
-							printf("before parsing\n");
 							if (!full_buffer.empty())
 								serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
 						}
-						close(it->fd);
-						it = poll_sets.erase(it);
+						else
+						{
+							close(it->fd);
+							it = poll_sets.erase(it);
+						}
 					}
 				}
 			}
