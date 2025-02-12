@@ -23,7 +23,7 @@ Server&	Server::operator=( const Server& copy) {
 Server::~Server() {
 }
 
-Server::Server(int port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index) {}
+Server::Server(std::string port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index) {}
 
 void	Server::setPort( std::string port ) {
 	this->_port = port;
@@ -40,6 +40,10 @@ void	Server::setRoot( std::string root ) {
 }
 void	Server::setIndex( std::string index ) {
 	this->_index = index;
+}
+
+void	Server::setRoutes( const std::string &uri, const Route &route){
+	this->_routes[uri] = route;
 }
 
 bool	Server::isIPValid( std::string ip ) {
@@ -59,17 +63,18 @@ bool	Server::isIPValid( std::string ip ) {
 	std::string	num;
 	for (int i = 0; ip[i]; i++)
 	{
-		if (ip[i] == ".")
+		if (ip[i] == '.' || i + 1 == (int) ip.length())
 		{
-			if (j <= 0 || j > 2)
+			if ((i - j) > 3)
 				return false;
-			num.substr(i - j, j);
-			if (atoi(num) < 0 || atoi(num) > 255)
+			if (i + 1 == (int) ip.length())
+				num = ip.substr(j, i - j + 1);
+			else
+				num = ip.substr(j, i - j);
+			if (atoi(num.c_str()) < 0 || atoi(num.c_str()) > 255)
 				return false;
-			j = 0;
+			j = i + 1;
 		}
-		else
-			j++;
 	}
 	if (ndots != 3)
 		return false;
