@@ -16,6 +16,23 @@ typedef struct header
 	std::vector<char> binaryData;
 } header;
 
+std::string pageNotFound(void)
+{
+    std::string str =   "HTTP/1.1 404 Not Found\r\n"
+					    "Content-Type: text/html\r\n"
+					    "Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
+					    "\r\n"
+					    "<html>\r\n"
+					    "<header>\r\n"
+					    "<title>Not Found</title>\r\n"
+					    "</header>\r\n"
+					    "<body>\r\n"
+					    "<h1>Not Found!!</h1>\r\n"
+					    "</body>\r\n"
+					    "</html>\r\n";
+    return (str);
+}
+
 std::string getFileContent(std::string path)
 {
 	std::ifstream file;
@@ -40,7 +57,7 @@ std::string getFileContent(std::string path)
 	file.close();
 	return (bodyHtml);
 }
-
+//TODO: review this function
 std::string getContentType(std::string str)
 {
 	std::string	fileExtText[] = {"html", "css", "txt"};
@@ -61,7 +78,8 @@ std::string getContentType(std::string str)
 	return (fileType);
 }
 
-std::string assembleHeaders(std::string protocol, std::string fileName, std::string length)
+//TODO: review this function
+std::string assembleHeaders(std::string protocol, std::string length)
 {
 	std::string statusLine;
 	ServerStatusCode CodeNumber;
@@ -71,11 +89,11 @@ std::string assembleHeaders(std::string protocol, std::string fileName, std::str
 
 	statusLine += protocol + " " + CodeNumber.getStatusCode(200) + "\r\n";
 	statusLine += "Content-Type: ";
-	if (fileName.find(".") != std::string::npos)
-	{
-		fileExtension = fileName.substr(fileName.find(".") + 1);
-		contentType = getContentType(fileExtension);
-	}
+	// if (fileName.find(".") != std::string::npos)
+	// {
+	// 	fileExtension = fileName.substr(fileName.find(".") + 1);
+	// 	contentType = getContentType(fileExtension);
+	// }
 	statusLine += contentType + "\r\n";
 	statusLine += "Content-Length: " + length + "\r\n";
 	statusLine += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
@@ -86,36 +104,21 @@ std::string assembleHeaders(std::string protocol, std::string fileName, std::str
 std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::string, std::string> request)
 {
 	std::string response;
-	std::string page;
 	std::string bodyHtml;
 	int bodyHtmlLen;
 	std::ostringstream intermediatestream;
 	std::string strbodyHtmlLen;
 	std::string headers;
+	std::string documentRootPath;
+	std::string pathToTarget;
+	struct stat pathStat;
 
-	response =	"HTTP/1.1 404 Not Found\r\n"
-					"Content-Type: text/html\r\n"
-					"Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
-					"\r\n"
-					"<html>\r\n"
-					"<header>\r\n"
-					"<title>Not Found</title>\r\n"
-					"</header>\r\n"
-					"<body>\r\n"
-					"<h1>Not Found!!</h1>\r\n"
-					"</body>\r\n"
-					"</html>\r\n";
 	if (!request["Request-target"].empty())
 	{
-
-		std::string documentRootPath = info.getServerDocumentRoot();
-		std::string pathToTarget = documentRootPath.substr(0, documentRootPath.length() - 1) + request["Request-target"];
-
-		struct stat pathStat;
-		std::cout << "\033[36m" << pathToTarget << "\033[0m" << std::endl;
+		documentRootPath = info.getServerDocumentRoot();
+		pathToTarget = documentRootPath.substr(0, documentRootPath.length() - 1) + request["Request-target"];
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
 			std::cout << "Error using stat" << std::endl;
-		
 		if (S_ISDIR(pathStat.st_mode))
 		{
 			if (pathToTarget[pathToTarget.length()-1] == '/')
@@ -129,12 +132,12 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 		bodyHtmlLen = bodyHtml.length();
 		intermediatestream << bodyHtmlLen;
 		strbodyHtmlLen = intermediatestream.str();
-		headers = assembleHeaders(request["Protocol"], page, strbodyHtmlLen);
+		headers = assembleHeaders(request["Protocol"], strbodyHtmlLen);
 		response.clear();
 		response += headers + bodyHtml;
 	}
 	else
-		std::cout << "Missing request target" << std::endl;
+		response = pageNotFound();
 	return (response);
 }
 
@@ -152,7 +155,6 @@ char *getBoundary(const char *buffer)
 		count++;
 		result++;
 	}
-	// printf("count %d\n", count);
 	int i = 0;
 	b = new char[count+1];
 	while (i < count)
@@ -188,8 +190,6 @@ std::string createUniqueName(std::string str)
 		extension = str.substr(str.find("."));
 	}
 	std::string fileName = "user_" + name + "_";
-	std::cout << fileName << std::endl;
-
 	timeInfo = localtime(&timeNow);
 	std::vector<int> timestamp;
 	timestamp.push_back(timeInfo->tm_year + 1900);
