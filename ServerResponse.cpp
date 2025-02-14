@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <sys/stat.h>
+#include <ctime>
 
 typedef struct header
 {
@@ -44,7 +45,7 @@ std::string getContentType(std::string str)
 {
 	std::string	fileExtText[] = {"html", "css", "txt"};
 	std::string fileExtApp[] = {"json", "javascript", "pdf"};
-	std::string fileExtImg[] = {"jpeg", "png", "gif"};
+	std::string fileExtImg[] = {"png", "gif", "jpg"};
 	std::string fileType;
 	int i = 0;
 	
@@ -111,7 +112,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 		std::string pathToTarget = documentRootPath.substr(0, documentRootPath.length() - 1) + request["Request-target"];
 
 		struct stat pathStat;
-
+		std::cout << "\033[36m" << pathToTarget << "\033[0m" << std::endl;
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
 			std::cout << "Error using stat" << std::endl;
 		
@@ -162,6 +163,81 @@ char *getBoundary(const char *buffer)
 	}
 	b[i] = '\0';
 	return (b);
+}
+
+std::string idetifyFile(std::string str)
+{
+	std::string extension;
+
+	if (str.find(".") != std::string::npos)
+	{
+		extension = str.substr(str.find(".")+1);
+	}
+	return extension;
+}
+
+std::string createUniqueName(std::string str)
+{
+	time_t timeNow = time(0);
+	struct tm *timeInfo;
+	std::string name;
+	std::string extension;
+	if (str.find(".") != std::string::npos)
+	{
+		name = str.substr(0, str.find("."));
+		extension = str.substr(str.find("."));
+	}
+	std::string fileName = "user_" + name + "_";
+	std::cout << fileName << std::endl;
+
+	timeInfo = localtime(&timeNow);
+	std::vector<int> timestamp;
+	timestamp.push_back(timeInfo->tm_year + 1900);
+	timestamp.push_back(timeInfo->tm_mon + 1);
+	timestamp.push_back(timeInfo->tm_mday);
+	timestamp.push_back(timeInfo->tm_hour);        
+	timestamp.push_back(timeInfo->tm_min);
+	timestamp.push_back(timeInfo->tm_sec);
+
+	std::ostringstream strStream;
+	for (int i = 0; i < 3; i++)
+	{
+		strStream << timestamp[i];
+	}
+	fileName += strStream.str() + "_";
+	strStream.str(""); //clear content
+	strStream.clear(); //clear
+	for (int i = 3; i < (int)timestamp.size(); i++)
+	{
+		strStream << timestamp[i];
+	}
+	fileName += strStream.str() + extension;
+	return (fileName);
+}
+
+std::string getFolder(std::string str)
+{
+	std::string	fileExtText[] = {"html", "css", "txt"};
+	std::string fileExtApp[] = {"json", "javascript", "pdf"};
+	std::string fileExtImg[] = {"png", "gif", "jpg"};
+	std::string fileType;
+	std::string ext;
+	if (str.find(".") != std::string::npos)
+	{
+		ext = str.substr(str.find(".")+1);
+	}
+	int i = 0;
+	
+	for(i = 0; i < 3; i++)
+	{
+		if (fileExtText[i] == ext)
+			fileType = "/docs/";
+		else if (fileExtApp[i] == ext)
+			fileType = "/applications/";
+		else if (fileExtImg[i] == ext)
+			fileType = "/images/";
+	}
+	return (fileType);
 }
 
 std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request, const char *buffer, int size)
@@ -227,25 +303,27 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		}
 
 		//build path where to store uploads/images/user_uploads
-		std::string pathToUploads = info.getServerRootPath() + "uploads/"; //it is a folder
+		std::string pathToUploads = info.getServerRootPath() + request["Request-target"]; //it is a folder /uploads
 		//check which kind of file it is: look for filename in content-disposition header of each section.
 		std::map<int, struct header>::iterator outerIt;
 		std::map<std::string, std::string>::iterator innerIt;
 		// int i = 0;
+		std::string fileName;
+		//printf("looking for filename0\n");
 		for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
 		{
 			// printf("i %d\n", i++);
 			//std::cout << "Index: " << outerIt->first << std::endl;
 			struct header section = outerIt->second;
-
-			std::string fileName;
 			for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
 			{
 				// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
 				if (innerIt->first == "Content-Disposition")
 				{
+					//printf("looking for filename1\n");
 					if (innerIt->second.find("filename") != std::string::npos)
 					{
+						//printf("looking for filename2\n");
 						std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
 						if (fileNameField.find('"') != std::string::npos)
 						{
@@ -258,18 +336,23 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 							//std::cout << indexFirstQuote << std::endl;
 							//std::cout << indexSecondQuote << std::endl;
 							fileName = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-							//std::cout << fileName << std::endl;
+							//std::cout << "file name: " << fileName << std::endl;
 						}
 					}
 				}
-				std::cout << innerIt->first << std::endl;
-				std::cout << innerIt->second << std::endl;
+				// std::cout << innerIt->first << std::endl;
+				// std::cout << innerIt->second << std::endl;
 			}
 		}
-		
 		//openfile
+		request["Request-target"].erase(request["Request-target"].begin());
 		std::cout << "\033[36mOpen file\033[0m" << std::endl;
-		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
+		//std::cout << fileName << std::endl;
+		std::string type = getFolder(fileName);
+		//std::cout << "type: " << type << std::endl;
+		std::string pathToFile = info.getServerRootPath() + request["Request-target"] + type;
+		std::string name = createUniqueName(fileName);
+		pathToFile += name;
 		std::cout << pathToFile << std::endl;
 		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (file < 0) {
