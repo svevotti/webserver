@@ -80,13 +80,12 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	ServerResponse serverResponse;
 	std::string response;
 
-	infoRequest = request.parseRequestHttp(str, info.getServerRootPath());
+	infoRequest = request.parseRequestHttp(str);
 	std::cout << "Responding" << std::endl;
 	if (infoRequest.find("Method") != infoRequest.end())
 	{
 		if (infoRequest["Method"] == "GET")
 		{
-			//std::cout << info.getServerDocumentRoot() << std::endl;
 			response = serverResponse.responseGetMethod(info, infoRequest);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
@@ -152,9 +151,6 @@ int readData(int fd, std::string &str, int &bytes)
 	int res = 0;
 	char buffer[BUFFER];
 
-	char *data = NULL;
-
-	int count = 0;
 	while (1)
 	{
 		ft_memset(buffer, 0, sizeof(buffer));

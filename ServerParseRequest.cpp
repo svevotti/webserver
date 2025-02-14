@@ -17,7 +17,7 @@ std::string findMethod(std::string inputStr)
 	return ("OTHER");
 }
 
-void ServerParseRequest::parseFirstLine(std::string str, std::string path)
+void ServerParseRequest::parseFirstLine(std::string str)
 {
 	std::string method;
 	std::string subStr;
@@ -27,7 +27,7 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 
 	method = findMethod(str);
 	requestParse["Method"] = method;
-	if (str.find("/") != std::string::npos) // "/" means server's root path
+	if (str.find("/") != std::string::npos) //
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
 		requestParse["Request-target"] = subStr;
@@ -61,7 +61,7 @@ void ServerParseRequest::parseHeaders(std::istringstream& str)
 	}
 }
 
-std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const char *str, std::string path)
+std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const char *str)
 {
 	std::string inputString(str);
 	std::istringstream request(inputString);
@@ -69,7 +69,7 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const ch
 	std::string key;
 	std::string value;
 
-	parseFirstLine(inputString, path);
+	parseFirstLine(inputString);
 	getline(request, line); //skipping first line
 	parseHeaders(request);
 	getline(request, line); //skip empty line
