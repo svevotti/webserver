@@ -13,44 +13,7 @@ typedef struct header
 {
 	std::map<std::string, std::string> myMap;
 	std::vector<char> binaryData;
-	// std::string value;
 } header;
-
-// struct Section
-// {
-// 	Header header;
-// 	std::string body;
-// };
-
-std::string	getHtmlPage(std::string path, std::string target)
-{
-	struct dirent *folder;
-	std::string page;
-	std::string str;
-	DIR *dir;
-
-	std::cout << "path - \n" << path << std::endl;
-	std::cout << "target - \n" << target << std::endl;
-	dir = opendir(path.c_str());
-	if (dir == NULL)
-		std::cerr << "Error in opening directory" << std::endl;
-	while ((folder = readdir(dir)) != NULL)
-	{
-		std::cout << "content: " << folder->d_name << std::endl;
-		std::cout << "target: " << target << std::endl;
-		std::string str(folder->d_name);
-		std::cout << "str: " << str << std::endl;
-		if (str == target)
-		{
-			std::cout << "here" << std::endl;
-			page = str;
-			break;
-		}
-	}
-	closedir(dir);
-	std::cout << "page before returning - " << page << std::endl;
-	return (page);
-}
 
 std::string getFileContent(std::string path)
 {
@@ -263,10 +226,51 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			indexBinary = 0;
 		}
 
+		//build path where to store uploads/images/user_uploads
+		std::string pathToUploads = info.getServerRootPath() + "uploads/"; //it is a folder
+		//check which kind of file it is: look for filename in content-disposition header of each section.
+		std::map<int, struct header>::iterator outerIt;
+		std::map<std::string, std::string>::iterator innerIt;
+		// int i = 0;
+		for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
+		{
+			// printf("i %d\n", i++);
+			//std::cout << "Index: " << outerIt->first << std::endl;
+			struct header section = outerIt->second;
+
+			std::string fileName;
+			for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+			{
+				// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
+				if (innerIt->first == "Content-Disposition")
+				{
+					if (innerIt->second.find("filename") != std::string::npos)
+					{
+						std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
+						if (fileNameField.find('"') != std::string::npos)
+						{
+							int indexFirstQuote = fileNameField.find('"');
+							int indexSecondQuote;
+							if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
+							{
+								indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
+							}
+							//std::cout << indexFirstQuote << std::endl;
+							//std::cout << indexSecondQuote << std::endl;
+							fileName = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
+							//std::cout << fileName << std::endl;
+						}
+					}
+				}
+				std::cout << innerIt->first << std::endl;
+				std::cout << innerIt->second << std::endl;
+			}
+		}
+		
 		//openfile
 		std::cout << "\033[36mOpen file\033[0m" << std::endl;
 		std::string pathToFile = info.getServerRootPath() + "images/data.jpg";
-		// std::cout << pathToFile << std::endl;
+		std::cout << pathToFile << std::endl;
 		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (file < 0) {
 			perror("Error opening file");
