@@ -18,6 +18,8 @@ void printFcntlFlag(int fd);
 
 int printRecvFlag(int result);
 
+void printReqHttpMap(std::map<std::string, std::string> myMap);
+
 // template<typename T, typename U, typename V>
 // void printMap(std::map<T, U> outerrMap, std::map<V, V> innerMap)
 // {

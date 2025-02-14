@@ -7,6 +7,7 @@
 #include <limits>
 #include <algorithm>
 #include <cctype>
+#include <sys/stat.h>
 
 typedef struct header
 {
@@ -51,17 +52,14 @@ std::string	getHtmlPage(std::string path, std::string target)
 	return (page);
 }
 
-std::string getFileContent(std::string fileName, std::string path)
+std::string getFileContent(std::string path)
 {
-	std::fstream file;
+	std::ifstream file;
 	std::string line;
 	std::string bodyHtml;
 	std::string temp;
-	
-	// std::cout << "path to index " << fileName << std::endl;
-	//TODO: build path to the correct page
-	path += fileName;
-	file.open(fileName.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
+
+	file.open(path.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
 	if (!file)
 	{
 		std::cerr << "Error in opening the file" << std::endl;
@@ -70,12 +68,10 @@ std::string getFileContent(std::string fileName, std::string path)
 	// get file content into string
 	while (std::getline(file, line))
 	{
-		// std::cout << "line: " << line << std::endl;
 		if (line.size() == 0)
 			continue;
 		else
 			bodyHtml = bodyHtml.append(line + "\r\n");
-		// std::cout << "string: " << toString << std::endl;
 	}
 	file.close();
 	return (bodyHtml);
@@ -147,24 +143,34 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 					"</html>\r\n";
 	if (!request["Request-target"].empty())
 	{
-		bodyHtml = getFileContent(request["Request-target"], info.getServerRootPath());
-		// std::cout << "bodyhtml: " << bodyHtml << std::endl;
+
+		std::string documentRootPath = info.getServerDocumentRoot();
+		std::string pathToTarget = documentRootPath.substr(0, documentRootPath.length() - 1) + request["Request-target"];
+
+		struct stat pathStat;
+
+		if (stat(pathToTarget.c_str(), &pathStat) != 0)
+			std::cout << "Error using stat" << std::endl;
+		
+		if (S_ISDIR(pathStat.st_mode))
+		{
+			if (pathToTarget[pathToTarget.length()-1] == '/')
+				pathToTarget += "index.html";
+			else
+			pathToTarget += "/index.html";
+		}
+		bodyHtml = getFileContent(pathToTarget);
 		if (bodyHtml.empty())
-			return (response); //error in opening file?
-		//get body size
+			return (response);
 		bodyHtmlLen = bodyHtml.length();
-		//convert from int to std::string
 		intermediatestream << bodyHtmlLen;
 		strbodyHtmlLen = intermediatestream.str();
-		// assemble response
 		headers = assembleHeaders(request["Protocol"], page, strbodyHtmlLen);
 		response.clear();
 		response += headers + bodyHtml;
-		// std::cout << "server response\n" << response << std::endl;
 	}
 	else
-		std::cout << "emptiness" << std::endl;
-	//it means page is empty and i should throw some error code
+		std::cout << "Missing request target" << std::endl;
 	return (response);
 }
 

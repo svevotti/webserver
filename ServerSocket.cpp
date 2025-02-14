@@ -74,24 +74,19 @@ int findMatchingSocket(int pollFd, int array[])
 
 void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size)
 {
-	std::cout << "Success reading - parsing" << std::endl;
+	std::cout << "Parsing headers HTTP" << std::endl;
 	ServerParseRequest request;
 	std::map<std::string, std::string> infoRequest;
-	infoRequest = request.parseRequestHttp(str, info.getServerRootPath());
-	std::map<std::string, std::string>::iterator element;
-	std::map<std::string, std::string>::iterator ite = infoRequest.end();
+	ServerResponse serverResponse;
+	std::string response;
 
-	// for(element = infoRequest.begin(); element != ite; element++)
-	// {
-	// 	std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
-	// }
-	std::cout << "Success reading - responding" << std::endl;
+	infoRequest = request.parseRequestHttp(str, info.getServerRootPath());
+	std::cout << "Responding" << std::endl;
 	if (infoRequest.find("Method") != infoRequest.end())
 	{
-		ServerResponse serverResponse;
-		std::string response;
 		if (infoRequest["Method"] == "GET")
 		{
+			//std::cout << info.getServerDocumentRoot() << std::endl;
 			response = serverResponse.responseGetMethod(info, infoRequest);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
@@ -188,8 +183,6 @@ void	Server::startServer(InfoServer info)
 	std::vector<pollfd>::iterator end;
 	int clientSocket;
 
-
-	/*array of sockets - needed?*/
 	for (i = 0; i < 2; i++)
 	{
 		arraySockets[i] = createServerSocket(info.getArrayPorts()[i].c_str());
@@ -207,7 +200,7 @@ void	Server::startServer(InfoServer info)
 	std::cout << "Waiting connections..." << std::endl;
 	while(1)
 	{
-		std::cout << "Set poll size: " << poll_sets.size() << std::endl;
+		std::cout << "Poll called" << std::endl;
 		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 60 * 1000);
         if (returnPoll == -1)
 		{
@@ -216,7 +209,7 @@ void	Server::startServer(InfoServer info)
         }
 		else if (returnPoll == 0)
 		{
-			printf("Waiting connections timeout 1 minute...\n");
+			printf("Waiting connections timeout 1 minute...closing server\n");
 			break ;
 		}
 		else
@@ -224,7 +217,7 @@ void	Server::startServer(InfoServer info)
 			end = poll_sets.end();
 			for (it = poll_sets.begin(); it != end; it++)
 			{
-				if (it->revents & POLLIN) //if there is data to read
+				if (it->revents & POLLIN)
 				{
 					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
 					if (it->fd == arraySockets[0] || it->fd == arraySockets[1])
@@ -244,8 +237,8 @@ void	Server::startServer(InfoServer info)
 						/*recv data*/
 						std::string full_buffer;
 						int totBytes = 0;
+						std::cout << "Recv client request" << std::endl;
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
-						std::cout << "After call readData" << std::endl;
 						if (bytesRecv == 0)
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 						else if (bytesRecv == -1)

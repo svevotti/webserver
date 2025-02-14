@@ -30,28 +30,6 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 	if (str.find("/") != std::string::npos) // "/" means server's root path
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		//std::cout << "substring: " << subStr << "." << std::endl;
-		//TODO: don't overwrite the request target, just parse first line
-		// look if directory exists
-		struct dirent *folder;
-		std::string page;
-		DIR *dir;
-
-		// std::cout << "path - \n" << path << std::endl;
-		// std::cout << "folder - \n" << subStr << std::endl;
-		/*dir = opendir(path.c_str());
-		if (dir == NULL)
-			std::cerr << "Error in opening directory" << std::endl;
-		while ((folder = readdir(dir)) != NULL)
-		{
-			// std::cout << "content: " << folder->d_name << std::endl;
-			// std::cout << "folder: " << subStr << std::endl;
-			std::string temp(folder->d_name);
-			// std::cout << "temp: " << temp << std::endl;
-			if ((temp + "/index.html")== subStr)
-				requestTarget = path + subStr;
-		}
-		closedir(dir);*/
 		requestParse["Request-target"] = subStr;
 	}
 	else

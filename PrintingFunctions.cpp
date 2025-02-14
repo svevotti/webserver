@@ -78,8 +78,6 @@ void infoRecvLoop(int number, int bytes, char *buffer, std::string full_str, int
 {
 	std::cout << "recv call number: " << number << std::endl;
 	std::cout << "- received bytes: " << bytes << std::endl;
-	// printf("- buffer %s\n", buffer);
-	// std::cout << "- appended string: " << full_str << std::endl;
 	std::cout << "- content-length: " << size << std::endl;
 	std::cout << "- message size so far: " << accumilating_size << std::endl;
 	(void)buffer;
@@ -124,10 +122,21 @@ int printRecvFlag(int error)
 			case ECONNRESET:
 				printf("Connection reset by peer\n");
 				break;
-			// Add more cases as needed
 			default:
 				printf("recv error: %s\n", strerror(errno));
 				break;
 		}
 	return 0;
+}
+
+void printReqHttpMap(std::map<std::string, std::string> myMap)
+{
+	std::map<std::string, std::string>::iterator element;
+	std::map<std::string, std::string>::iterator ite = myMap.end();
+
+	std::cout << "parsed item\n";
+	for(element = myMap.begin(); element != ite; element++)
+	{
+		std::cout << element->first << " : " <<element->second << std::endl;
+	}
 }
