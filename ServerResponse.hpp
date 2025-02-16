@@ -17,6 +17,7 @@
 #include "ServerParseRequest.hpp"
 #include "ServerStatusCode.hpp"
 #include "InfoServer.hpp"
+#include "PrintingFunctions.hpp"
 
 class ServerResponse
 {
@@ -24,16 +25,13 @@ class ServerResponse
 public:
 	// ServerResponse();
 	// // ServerResponse();
-	// // SocketServer(int);
+	// // Server(int);
 	// ~ServerResponse();
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
 	std::string responseGetMethod(InfoServer, std::map<std::string, std::string>);
-	std::string responsePostMethod(InfoServer, std::map<std::string, std::string>);
-	// int		getSocketServerPort();
-
-private:
-	std::map<std::string, std::string> requestParse;
+	std::string responsePostMethod(InfoServer, std::map<std::string, std::string>, const char *, int);
+	// int		getServerPort();
 
 };
 

@@ -5,6 +5,17 @@ void InfoServer::setServerRootPath(std::string path)
 {
     serverRootPath = path;
 }
+
+void InfoServer::setServerDocumentRoot(std::string path)
+{
+    serverDocumentRoot = path;
+}
+
+std::string InfoServer::getServerDocumentRoot(void)
+{
+   return serverDocumentRoot;
+}
+
 std::string InfoServer::getServerRootPath(void)
 {
     return serverRootPath;

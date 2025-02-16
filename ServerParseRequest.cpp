@@ -17,7 +17,7 @@ std::string findMethod(std::string inputStr)
 	return ("OTHER");
 }
 
-void ServerParseRequest::parseFirstLine(std::string str, std::string path)
+void ServerParseRequest::parseFirstLine(std::string str)
 {
 	std::string method;
 	std::string subStr;
@@ -25,42 +25,12 @@ void ServerParseRequest::parseFirstLine(std::string str, std::string path)
 	std::string protocol;
 
 
-	// std::cout << "Str: " << str << std::endl;
 	method = findMethod(str);
 	requestParse["Method"] = method;
-	if (str.find("/") != std::string::npos) // "/" means server's root path
+	if (str.find("/") != std::string::npos) //
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		// std::cout << "substring: " << subStr << "." << std::endl;
-		if (subStr == "/" || subStr == "/index.html") //asking for index.html at root
-			requestTarget = path + "index.html";
-		else
-		{
-			// look if directory exists
-			subStr.erase(0, 1);
-			struct dirent *folder;
-			std::string page;
-			DIR *dir;
-
-			// std::cout << "path - \n" << path << std::endl;
-			// std::cout << "folder - \n" << subStr << std::endl;
-			dir = opendir(path.c_str());
-			if (dir == NULL)
-				std::cerr << "Error in opening directory" << std::endl;
-			while ((folder = readdir(dir)) != NULL)
-			{
-				// std::cout << "content: " << folder->d_name << std::endl;
-				// std::cout << "folder: " << subStr << std::endl;
-				std::string temp(folder->d_name);
-				// std::cout << "temp: " << temp << std::endl;
-				if ((temp + "/index.html")== subStr)
-					requestTarget = path + subStr;
-			}
-			closedir(dir);
-			// if not return 404
-		}
-		requestParse["Request-target"] = requestTarget;
-		// std::cout << "path to index.html - " << requestTarget << std::endl;
+		requestParse["Request-target"] = subStr;
 	}
 	else
 		requestParse["Request-target"] = "target not defined"; //error
@@ -91,46 +61,17 @@ void ServerParseRequest::parseHeaders(std::istringstream& str)
 	}
 }
 
-std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(char *str, std::string path)
+std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const char *str)
 {
-	/*will use stream to extract information*/
 	std::string inputString(str);
 	std::istringstream request(inputString);
 	std::string line;
 	std::string key;
 	std::string value;
 
-	parseFirstLine(inputString, path);
-	//parsing headers
+	parseFirstLine(inputString);
 	getline(request, line); //skipping first line
 	parseHeaders(request);
-	getline(request, line);
-	//parsing body based on content lenght
-	std::map<std::string, std::string>::iterator it = requestParse.find("Content-Length");
-	if (it == requestParse.end())
-		return (requestParse);
-	else //parse body
-	{
-		std::string contentType = requestParse["Content-Type"];
-		if (contentType.find("text") != std::string::npos)
-		{
-			//store in one string
-			requestParse["Body"] = line;
-		}
-		// else if (contentType.find("multipart") != std::string::npos)
-		// {
-			
-		// }
-	}
-
-	// printing parse http request as map
-	// std::map<std::string, std::string>::iterator element;
-	// std::map<std::string, std::string>::iterator ite = requestParse.end();
-
-	// for(element = requestParse.begin(); element != ite; element++)
-	// {
-	// 	std::cout << "parsed item\nkey: " << element->first << " - value: " <<element->second << std::endl;
-	// }
-	// std::cout << "before returning" << std::endl;
+	getline(request, line); //skip empty line
 	return(requestParse);
 }
