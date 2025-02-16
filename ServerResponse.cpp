@@ -243,18 +243,13 @@ std::string getFolder(std::string str)
 std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request, const char *buffer, int size)
 {
 	
-	//parse body
-	std::cout << "\033[36mExtract data\033[0m" << std::endl;
 	std::string contentType = request["Content-Type"];
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		std::vector<int> boundariesIndexes;
-		//find boundary		
 		char *b;
-		std::cout << "\033[36mGet boundary\033[0m" << std::endl;
 		b = getBoundary(buffer);
 		int blen = strlen(b);
-		std::cout << "\033[36mGet boundary index in vector\033[0m" << std::endl;
 		for (int i = 0; i < size; i++) 
 		{
 			int diff = ft_memcmp(buffer + i, b, blen);
@@ -271,7 +266,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		std::string value;
 		std::vector<int> binaryDataIndex;
 		int indexBinary = 0;
-		std::cout << "\033[36mGet sections in body\033[0m" << std::endl;
 		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		{
 			std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
@@ -285,7 +279,6 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 					continue;
 				else
 				{
-					// printf("here\n");
 					if (line.find(":") != std::string::npos)
 						key = line.substr(0, line.find(":"));
 					if (line.find(" ") != std::string::npos)
@@ -302,89 +295,108 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			indexBinary = 0;
 		}
 
-		//build path where to store uploads/images/user_uploads
-		std::string pathToUploads = info.getServerRootPath() + request["Request-target"]; //it is a folder /uploads
-		//check which kind of file it is: look for filename in content-disposition header of each section.
+		//build path where to store-> root or /uploads?
+		std::string requestTarget = request["Request-target"];
+		requestTarget.erase(requestTarget.begin());
+		std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
+
+		//check which kind of file it is: just if there is one section
 		std::map<int, struct header>::iterator outerIt;
 		std::map<std::string, std::string>::iterator innerIt;
 		// int i = 0;
 		std::string fileName;
 		//printf("looking for filename0\n");
-		for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
+		std::string fileType;
+		if (bodySections.size() == 1)
 		{
-			// printf("i %d\n", i++);
-			//std::cout << "Index: " << outerIt->first << std::endl;
-			struct header section = outerIt->second;
-			for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+			for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
 			{
-				// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
-				if (innerIt->first == "Content-Disposition")
+				struct header section = outerIt->second;
+				for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
 				{
-					//printf("looking for filename1\n");
-					if (innerIt->second.find("filename") != std::string::npos)
+					//look for name of file
+					if (innerIt->first == "Content-Disposition")
 					{
-						//printf("looking for filename2\n");
-						std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
-						if (fileNameField.find('"') != std::string::npos)
+						if (innerIt->second.find("filename") != std::string::npos)
 						{
-							int indexFirstQuote = fileNameField.find('"');
-							int indexSecondQuote;
-							if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
+							std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
+							if (fileNameField.find('"') != std::string::npos)
 							{
-								indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
+								int indexFirstQuote = fileNameField.find('"');
+								int indexSecondQuote;
+								if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
+								{
+									indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
+								}
+								fileName = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
 							}
-							//std::cout << indexFirstQuote << std::endl;
-							//std::cout << indexSecondQuote << std::endl;
-							fileName = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-							//std::cout << "file name: " << fileName << std::endl;
 						}
 					}
+					else if (innerIt->first == "Content-Type")
+					{
+						fileType = innerIt->second;
+					}
 				}
-				// std::cout << innerIt->first << std::endl;
-				// std::cout << innerIt->second << std::endl;
 			}
 		}
+		else
+		{
+			std::string response = "HTTP/1.1 400 Bad Request\r\n"
+									"Content-Type: text/plain\r\n"
+									"Content-Length: 0\r\n"
+									"Connection: close\r\n"
+									"\r\n";
+		}
 		//openfile
-		request["Request-target"].erase(request["Request-target"].begin());
-		std::cout << "\033[36mOpen file\033[0m" << std::endl;
-		//std::cout << fileName << std::endl;
-		std::string type = getFolder(fileName);
-		//std::cout << "type: " << type << std::endl;
-		std::string pathToFile = info.getServerRootPath() + request["Request-target"] + type;
-		std::string name = createUniqueName(fileName);
-		pathToFile += name;
-		std::cout << pathToFile << std::endl;
-		int file = open(pathToFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		std::cout << "filename: " << fileName << std::endl;
+		std::cout << "filetype: " << fileType << std::endl;
+		//check if file exists already
+		DIR *folder;
+		struct dirent *info;
+		folder = opendir(pathFile.c_str());
+		std::string convStr;
+		if (folder == NULL)
+			printf("error opening folder\n");
+		while ((info = readdir(folder)))
+		{
+			convStr = info->d_name;
+			if (convStr == fileName)
+			{
+				std::cout << "File with name already existing, please change it\n";
+				std::string response = "HTTP/1.1 400 Bad Request\r\n"
+										"Content-Type: text/plain\r\n"
+										"Content-Length: 0\r\n"
+										"Connection: close\r\n"
+										"\r\n";
+				break;
+			}
+		}
+		closedir(folder);
+		pathFile += "/" + fileName;
+		std::cout << pathFile << std::endl;
+		int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (file < 0) {
 			perror("Error opening file");
 			exit(1);
 		}
 		//write to the file
-		// std::cout << binaryDataIndex[0] << std::endl;
-		std::cout << "\033[36mWrite to file\033[0m" << std::endl;
-		std::cout << size << std::endl;
 		ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
-		std::cout << "\033[36mAfter writing\033[0m" << std::endl;
 		if (written < 0) {
 			perror("Error writing to file");
 			close(file);
 			exit(1);
 		}
-		std::cout << "\033[36mBefore closing file\033[0m" << std::endl;
 		close(file);
-		std::cout << "\033[36mAfter closing file\033[0m" << std::endl;
 	}
 	else
 	{
 		//store in one string
 		std::cout << "message is " << request["Body"] << std::endl;
 	}	//we can fake i saved and store the image when it is already there
-	std::cout << "\033[36mBuilding response\033[0m" << std::endl;
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
 					"Content-Length: 0\r\n"
 					"Connection: keep-alive\r\n"
 					"\r\n"; //very imporant
-	std::cout << "\033[36mBefore returning statment parsing and responding\033[0m" << std::endl;
 	return (response);
 }
