@@ -44,7 +44,7 @@ std::string getFileContent(std::string path)
 	if (!file)
 	{
 		std::cerr << "Error in opening the file" << std::endl;
-		return (bodyHtml);
+		return (pageNotFound());
 	}
 	// get file content into string
 	while (std::getline(file, line))
@@ -113,12 +113,20 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	std::string pathToTarget;
 	struct stat pathStat;
 
+	std::map<std::string, std::string>::iterator it;
+	for (it = request.begin(); it != request.end(); it++)
+	{
+		std::cout << it->first << " : ";
+		std::cout << it->second << std::endl;
+	}
 	if (!request["Request-target"].empty())
 	{
-		documentRootPath = info.getServerDocumentRoot();
+		documentRootPath = info.getServerRootPath();
+		std::cout << "path: " << documentRootPath << std::endl;
 		pathToTarget = documentRootPath.substr(0, documentRootPath.length() - 1) + request["Request-target"];
+		ft_memset(&pathStat, 0, sizeof(pathStat));
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
-			std::cout << "Error using stat" << std::endl;
+			printf("Error getting file status: %s\n", strerror(errno));
 		if (S_ISDIR(pathStat.st_mode))
 		{
 			if (pathToTarget[pathToTarget.length()-1] == '/')
@@ -323,7 +331,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 							if (fileNameField.find('"') != std::string::npos)
 							{
 								int indexFirstQuote = fileNameField.find('"');
-								int indexSecondQuote;
+								int indexSecondQuote = 0;
 								if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
 								{
 									indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);

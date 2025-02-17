@@ -61,7 +61,12 @@ void ServerParseRequest::parseHeaders(std::istringstream& str)
 	}
 }
 
-std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const char *str)
+std::map<std::string, std::string> ServerParseRequest::GetHeaders(void)
+{
+	return requestParse;
+}
+
+void ServerParseRequest::parseRequestHttp(const char *str)
 {
 	std::string inputString(str);
 	std::istringstream request(inputString);
@@ -73,5 +78,4 @@ std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const ch
 	getline(request, line); //skipping first line
 	parseHeaders(request);
 	getline(request, line); //skip empty line
-	return(requestParse);
 }

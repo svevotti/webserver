@@ -80,7 +80,8 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	ServerResponse serverResponse;
 	std::string response;
 
-	infoRequest = request.parseRequestHttp(str);
+	request.parseRequestHttp(str);
+	infoRequest = request.GetHeaders();
 	std::cout << "Responding: " << size << std::endl;
 	if (infoRequest.find("Method") != infoRequest.end())
 	{

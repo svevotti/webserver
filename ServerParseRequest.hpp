@@ -18,16 +18,10 @@
 class ServerParseRequest : public std::map<std::string, std::string> {
 
 public:
-	// ServerResponse();
-	// // ServerResponse();
-	// // Server(int);
-	// ~ServerResponse();
-	// ServerResponse(const ServerResponse &);
-	// void	operator=(const ServerResponse &);
-	std::map<std::string, std::string>	parseRequestHttp(const char *);
+	void parseRequestHttp(const char *);
 	void parseFirstLine(std::string);
 	void parseHeaders(std::istringstream&);
-	// int		getServerPort();
+	std::map<std::string, std::string> GetHeaders(void);
 
 private:
 	std::map<std::string, std::string> requestParse;
