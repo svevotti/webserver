@@ -9,6 +9,7 @@
 #include <cctype>
 #include <sys/stat.h>
 #include <ctime>
+#include <cstdio>
 
 typedef struct header
 {
@@ -323,7 +324,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 							if (fileNameField.find('"') != std::string::npos)
 							{
 								int indexFirstQuote = fileNameField.find('"');
-								int indexSecondQuote;
+								int indexSecondQuote = 0;
 								if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
 								{
 									indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
@@ -399,4 +400,32 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 					"Connection: keep-alive\r\n"
 					"\r\n"; //very imporant
 	return (response);
+}
+
+std::string ServerResponse::responseDeleteMethod(InfoServer info, std::map<std::string, std::string> request)
+{
+	std::cout << "Delete method" << std::endl;
+
+	std::string response = pageNotFound();
+	std::map<std::string, std::string>::iterator it;
+	for (it = request.begin(); it != request.end(); it++)
+	{
+		std::cout << it->first << " : ";
+		std::cout << it->second << std::endl;
+	}
+	//check what is the resource to be delete (in target request)
+	std::cout << "target: " << request["Request-target"] << std::endl;
+	//TODO: check path to resource, if it exits delete, if not send negative response
+	std::string pathToResource = info.getServerRootPath() + request["Request-target"];
+	std::ifstream file(pathToResource.c_str());
+	if (!(file.good()))
+		return response;
+	remove(pathToResource.c_str());
+	response =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: keep-alive\r\n"
+				"\r\n"; //very imporant
+	//TODO: routing table or database on server side to easier retrieve resources?
+	return response;
 }
