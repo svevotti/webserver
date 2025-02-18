@@ -14,7 +14,7 @@
 #include <map>
 #include <cstdio>
 
-#include "ServerParseRequest.hpp"
+#include "ClientRequest.hpp"
 #include "ServerStatusCode.hpp"
 #include "InfoServer.hpp"
 #include "PrintingFunctions.hpp"

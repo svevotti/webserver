@@ -5,7 +5,7 @@ Creation of server that parses HTTP client request, and responses OK to any clie
 
 1. SocketServer: creation of server socket and all clients sockets. Handling multiple clients, able to receive and send data
 
-2. ServerParseRequest: parsing HTTP request from client
+2. ClientRequest: parsing HTTP request from client
 
 3. ServerResponse: validating request to any incoming client with GET request to localhost:8080 - html just syntax for header.
 

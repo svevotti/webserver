@@ -75,7 +75,7 @@ int findMatchingSocket(int pollFd, int array[])
 void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size)
 {
 	std::cout << "Parsing headers HTTP" << std::endl;
-	ServerParseRequest request;
+	ClientRequest request;
 	std::map<std::string, std::string> infoRequest;
 	ServerResponse serverResponse;
 	std::string response;

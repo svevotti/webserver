@@ -1,5 +1,5 @@
-#ifndef SERVER_PARSE_REQUEST_H
-#define SERVER_PARSE_REQUEST_H
+#ifndef CLIENT_REQUEST_H
+#define CLIENT_REQUEST_H
 
 #include <sys/socket.h>
 #include <iostream>
@@ -15,7 +15,7 @@
 
 #define PORT "8080"
 
-class ServerParseRequest : public std::map<std::string, std::string> {
+class ClientRequest : public std::map<std::string, std::string> {
 
 public:
 	// ServerResponse();

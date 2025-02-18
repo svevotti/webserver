@@ -1,4 +1,4 @@
-#include "ServerParseRequest.hpp"
+#include "ClientRequest.hpp"
 #include <vector>
 #include <sstream>
 #include <algorithm>
@@ -17,7 +17,7 @@ std::string findMethod(std::string inputStr)
 	return ("OTHER");
 }
 
-void ServerParseRequest::parseFirstLine(std::string str)
+void ClientRequest::parseFirstLine(std::string str)
 {
 	std::string method;
 	std::string subStr;
@@ -44,7 +44,7 @@ void ServerParseRequest::parseFirstLine(std::string str)
 		requestParse["Protocol"] = "protocol not defined";
 }
 
-void ServerParseRequest::parseHeaders(std::istringstream& str)
+void ClientRequest::parseHeaders(std::istringstream& str)
 {
 	std::string line;
 	std::string key;
@@ -61,7 +61,7 @@ void ServerParseRequest::parseHeaders(std::istringstream& str)
 	}
 }
 
-std::map<std::string, std::string> ServerParseRequest::parseRequestHttp(const char *str)
+std::map<std::string, std::string> ClientRequest::parseRequestHttp(const char *str)
 {
 	std::string inputString(str);
 	std::istringstream request(inputString);
