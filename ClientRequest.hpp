@@ -12,25 +12,29 @@
 #include <netdb.h>
 #include <poll.h>
 #include <map>
+#include "StringManipulations.hpp"
 
-#define PORT "8080"
+typedef struct header
+{
+	std::map<std::string, std::string> myMap;
+	std::vector<char> binaryData;
+} header;
 
 class ClientRequest : public std::map<std::string, std::string> {
 
 public:
-	// ServerResponse();
-	// // ServerResponse();
-	// // Server(int);
-	// ~ServerResponse();
-	// ServerResponse(const ServerResponse &);
-	// void	operator=(const ServerResponse &);
-	std::map<std::string, std::string>	parseRequestHttp(const char *);
+
+	void parseRequestHttp(const char *, int);
 	void parseFirstLine(std::string);
 	void parseHeaders(std::istringstream&);
+	std::map<int, struct header>  parseBody(const char *,int);
+	std::map<int, struct header> getBodySections();
+	std::map<std::string, std::string> getHeaders();
 	// int		getServerPort();
 
 private:
-	std::map<std::string, std::string> requestParse;
+	std::map<std::string, std::string> headers;
+	std::map<int, struct header> sections;
 
 };
 

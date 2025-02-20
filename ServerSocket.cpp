@@ -80,8 +80,8 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	ServerResponse serverResponse;
 	std::string response;
 
-	infoRequest = request.parseRequestHttp(str);
-	std::cout << "Responding: " << size << std::endl;
+	infoRequest = request.parseRequestHttp(str, size);
+	//std::cout << "Responding: " << size << std::endl;
 	if (infoRequest.find("Method") != infoRequest.end())
 	{
 		if (infoRequest["Method"] == "GET")
