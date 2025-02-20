@@ -37,6 +37,7 @@ public:
 	std::vector<int> getBinaryIndex();
 	std::string getBodyText();
 	int getTypeBody(void);
+	void setTypeBody(int);
 	// int		getServerPort();
 
 private:

@@ -91,6 +91,10 @@ int ClientRequest::getTypeBody(void)
 	return typeBody;
 }
 
+void ClientRequest::setTypeBody(int type)
+{
+	this->typeBody = type;
+}
 void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& str)
 {
 	std::string contentType = headers["Content-Type"];
@@ -103,7 +107,7 @@ void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& 
 	std::cout << "parsing body" << std::endl;
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
-		typeBody = MULTIPART;
+		this->typeBody = MULTIPART;
 		std::vector<int> boundariesIndexes;
 		char *b;
 		b = getBoundary(buffer);
@@ -154,7 +158,6 @@ void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& 
 		{
 			body.append(line);
 		}
-
 	}
 }
 

@@ -138,122 +138,153 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, const char *buffer, int size)
+std::string getFileType(ClientRequest request)
 {
-	
-	//TODO:make sure a string stores a body that is just text
-	if (request.getTypeBody() == MULTIPART)
+	std::map<int, struct header> sections = request.getBodySections();
+	std::map<int, struct header>::iterator outerIt;
+	std::map<std::string, std::string>::iterator innerIt;
+	std::string type;
+	for (outerIt = sections.begin(); outerIt != sections.end(); outerIt++)
 	{
-		struct header section;
-		std::map<int, struct header> httpBody;
-		std::map<std::string, std::string> httpHeaders;
-		std::vector<int> dataIndex;
-
-		httpHeaders = request.getHeaders();
-		httpBody = request.getBodySections();
-		dataIndex = request.getBinaryIndex();
-		//build path where to store-> root or /uploads?
-		std::string requestTarget = httpHeaders["Request-target"];
-		requestTarget.erase(requestTarget.begin());
-		std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
-
-		//check which kind of file it is: just if there is one section
-		std::map<int, struct header>::iterator outerIt;
-		std::map<std::string, std::string>::iterator innerIt;
-		// int i = 0;
-		std::string fileName;
-		//printf("looking for filename0\n");
-		std::string fileType;
-		if (httpBody.size() == 1)
+		struct header section = outerIt->second;
+		for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
 		{
-			for (outerIt = httpBody.begin(); outerIt != httpBody.end(); outerIt++)
+			if (innerIt->first == "Content-Type")
 			{
-				struct header section = outerIt->second;
-				for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+				type = innerIt->second;
+			}
+		}
+	}
+	return type;
+}
+
+std::string getFileName(ClientRequest request)
+{
+	std::map<int, struct header> sections = request.getBodySections();
+	std::map<int, struct header>::iterator outerIt;
+	std::map<std::string, std::string>::iterator innerIt;
+	std::string name;
+
+	for (outerIt = sections.begin(); outerIt != sections.end(); outerIt++)
+	{
+		struct header section = outerIt->second;
+		for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+		{
+			if (innerIt->first == "Content-Disposition")
+			{
+				if (innerIt->second.find("filename") != std::string::npos)
 				{
-					//look for name of file
-					if (innerIt->first == "Content-Disposition")
+					std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
+					if (fileNameField.find('"') != std::string::npos)
 					{
-						if (innerIt->second.find("filename") != std::string::npos)
+						int indexFirstQuote = fileNameField.find('"');
+						int indexSecondQuote = 0;
+						if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
 						{
-							std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
-							if (fileNameField.find('"') != std::string::npos)
-							{
-								int indexFirstQuote = fileNameField.find('"');
-								int indexSecondQuote = 0;
-								if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-								{
-									indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-								}
-								fileName = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-							}
+							indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
 						}
-					}
-					else if (innerIt->first == "Content-Type")
-					{
-						fileType = innerIt->second;
+						name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
 					}
 				}
 			}
 		}
-		else
-		{
-			std::string response = "HTTP/1.1 400 Bad Request\r\n"
-									"Content-Type: text/plain\r\n"
-									"Content-Length: 0\r\n"
-									"Connection: close\r\n"
-									"\r\n";
-		}
-		//openfile
-		std::cout << "filename: " << fileName << std::endl;
-		std::cout << "filetype: " << fileType << std::endl;
-		//check if file exists already
-		DIR *folder;
-		struct dirent *data;
-		folder = opendir(pathFile.c_str());
-		std::string convStr;
-		if (folder == NULL)
-			printf("error opening folder\n");
-		while ((data = readdir(folder)))
-		{
-			convStr = data->d_name;
-			if (convStr == fileName)
-			{
-				std::cout << "File with name already existing, please change it\n";
-				std::string response = "HTTP/1.1 400 Bad Request\r\n"
-										"Content-Type: text/plain\r\n"
-										"Content-Length: 0\r\n"
-										"Connection: close\r\n"
-										"\r\n";
-				break;
-			}
-		}
-		closedir(folder);
-		pathFile += "/" + fileName;
-		std::cout << pathFile << std::endl;
-		int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-		if (file < 0) {
-			perror("Error opening file");
-			exit(1);
-		}
-		//write to the file
-		ssize_t written = write(file, buffer + dataIndex[0] + 2, size - dataIndex[0] - 2);
-		if (written < 0) {
-			perror("Error writing to file");
-			close(file);
-			exit(1);
-		}
-		close(file);
 	}
+	return name;
+}
+
+int checkNameFile(std::string str, std::string path)
+{
+	DIR *folder;
+	struct dirent *data;
+
+	folder = opendir(path.c_str());
+	std::string convStr;
+	if (folder == NULL)
+		printf("error opening folder\n");
+	while ((data = readdir(folder)))
+	{
+		convStr = data->d_name;
+		if (convStr == str)
+			return (1);
+	}
+	closedir(folder);
+	return (0);
+}
+
+std::string handleFilesUploads(InfoServer info, ClientRequest request, const char *buffer, int size)
+{
+	struct header section;
+	std::map<int, struct header> httpBody;
+	std::map<std::string, std::string> httpHeaders;
+	std::vector<int> dataIndex;
+	std::string response;
+
+	if (httpBody.size() > 1)
+	{
+		response = "HTTP/1.1 400 Bad Request\r\n"
+								"Content-Type: text/plain\r\n"
+								"Content-Length: 0\r\n"
+								"Connection: close\r\n"
+								"\r\n";
+		return response;
+	}
+	httpHeaders = request.getHeaders();
+	httpBody = request.getBodySections();
+	dataIndex = request.getBinaryIndex();
+	std::string requestTarget = httpHeaders["Request-target"];
+	requestTarget.erase(requestTarget.begin());
+	std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
+	//openfile
+	std::string fileName = getFileName(request);
+	std::string fileType = getFileType(request);
+	//check if file exists already
+	if (checkNameFile(fileName, pathFile) != 0)
+	{
+		std::cout << "File with name already existing, please change it\n";
+		response = "HTTP/1.1 400 Bad Request\r\n"
+								"Content-Type: text/plain\r\n"
+								"Content-Length: 0\r\n"
+								"Connection: close\r\n"
+								"\r\n";
+		return (response);
+	}
+	pathFile += "/" + fileName;
+	//std::cout << pathFile << std::endl;
+	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (file < 0) {
+		perror("Error opening file");
+		exit(1);
+	}
+	//write to the file
+	ssize_t written = write(file, buffer + dataIndex[0] + 2, size - dataIndex[0] - 2);
+	if (written < 0) {
+		perror("Error writing to file");
+		close(file);
+		exit(1);
+	}
+	close(file);
+	response =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: keep-alive\r\n"
+				"\r\n"; //very imporant
+	return (response);
+}
+
+std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, const char *buffer, int size)
+{
+	std::string response;
+	if (request.getTypeBody() == MULTIPART)
+		response = handleFilesUploads(info, request, buffer, size);
 	else
 	{
+		response =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: keep-alive\r\n"
+				"\r\n"; //very imporan
 		printf("do something with text body\n");
 	}
-	std::string response =
-					"HTTP/1.1 200 OK\r\n"
-					"Content-Length: 0\r\n"
-					"Connection: keep-alive\r\n"
-					"\r\n"; //very imporant
 	return (response);
 }
 
