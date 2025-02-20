@@ -93,11 +93,11 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 	std::string line;
 	std::string key;
 	std::string value;
-	std::vector<int> binaryDataIndex;
 	struct header data;
 	int indexBinary = 0;
 
 	std::cout << "parsing body" << std::endl;
+	// printf("size vector: %d\n", binaryIndex.size());
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		std::vector<int> boundariesIndexes;
@@ -119,7 +119,6 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 			indexBinary = boundariesIndexes[i];
 			while (getline(streamHeaders, line))
 			{
-				std::cout << "line: " << line << std::endl;
 				if (line.find_first_not_of("\r\n") == std::string::npos)
 					break ;
 				indexBinary += line.length() + 1;
@@ -133,19 +132,17 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 						value = line.substr(line.find(" ") + 1);
 					data.myMap[key] = value;
 					sections[i] = data;
-					std::cout << key << std::endl;
-					std::cout << value << std::endl;
-					std::cout << "section size: " << sections.size() << std::endl;
 				}
 			}
-			binaryDataIndex.push_back(indexBinary);
+			// printf("index Binary: %d\n", indexBinary);
+			// printf("size vector: %d\n", binaryIndex.size());
+			binaryIndex.push_back(indexBinary);
 			streamHeaders.clear();
 			line.clear();
 			key.clear();
 			value.clear();
 			data.myMap.clear();
 			indexBinary = 0;
-			//ft_memset(&data, '\0', sizeof(data));
 		}
 	}
 	else
@@ -164,6 +161,11 @@ std::map<std::string, std::string> ClientRequest::getHeaders(void)
 {
 	return headers;
 }
+
+std::vector<int> ClientRequest::getBinaryIndex(void)
+{
+	return binaryIndex;
+}
 void ClientRequest::parseRequestHttp(const char *str, int size)
 {
 	std::string inputString(str);
@@ -176,6 +178,7 @@ void ClientRequest::parseRequestHttp(const char *str, int size)
 	getline(request, line); //skipping first line
 	parseHeaders(request);
 	//check for body
+	// printf("size vector: %d\n", binaryIndex.size());
 	std::map<std::string, std::string>::iterator it = headers.find("Content-Length");
 	if (it != headers.end())
 	{

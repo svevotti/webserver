@@ -12,15 +12,16 @@
 #include <netdb.h>
 #include <poll.h>
 #include <map>
+#include <vector>
 #include "StringManipulations.hpp"
 
 typedef struct header
 {
 	std::map<std::string, std::string> myMap;
-	std::vector<char> binaryData;
 } header;
 
-class ClientRequest : public std::map<std::string, std::string> {
+class ClientRequest
+{
 
 public:
 
@@ -30,11 +31,13 @@ public:
 	std::map<int, struct header>  parseBody(const char *,int);
 	std::map<int, struct header> getBodySections();
 	std::map<std::string, std::string> getHeaders();
+	std::vector<int> getBinaryIndex();
 	// int		getServerPort();
 
 private:
 	std::map<std::string, std::string> headers;
 	std::map<int, struct header> sections;
+	std::vector<int> binaryIndex;
 
 };
 

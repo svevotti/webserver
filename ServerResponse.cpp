@@ -144,91 +144,17 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 	return (response);
 }
 
-// char *getBoundary(const char *buffer)
-// {
-// 	char *b;
-// 	const char *result = strstr(buffer, "=");
-// 	result++;
-// 	int index_start = result - buffer;
-// 	int count = 0;
-// 	while (1)
-// 	{
-// 		if (*result == '\r')
-// 			break ;
-// 		count++;
-// 		result++;
-// 	}
-// 	int i = 0;
-// 	b = new char[count+1];
-// 	while (i < count)
-// 	{
-// 		b[i] = buffer[index_start];
-// 		i++;
-// 		index_start++;
-// 	}
-// 	b[i] = '\0';
-// 	return (b);
-// }
-
 std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, const char *buffer, int size)
 {
 	
-	// std::string contentType = request["Content-Type"];
-	// if (contentType.find("boundary") != std::string::npos) //multi format data
-	// {
-	// 	std::vector<int> boundariesIndexes;
-	// 	char *b;
-	// 	b = getBoundary(buffer);
-	// 	int blen = strlen(b);
-	// 	for (int i = 0; i < size; i++) 
-	// 	{
-	// 		int diff = ft_memcmp(buffer + i, b, blen);
-	// 		// printf("diff: %d")
-	// 		if (diff == 0) {
-	// 			boundariesIndexes.push_back(i);
-	// 			// printf("boundary index: %d for %s\n", i, buffer + i);
-	// 		}
-	// 	}
-	// 	std::string line;
-	// 	struct header data;
-	// 	std::map<int, struct header> bodySections;
-	// 	std::string key;
-	// 	std::string value;
-	// 	std::vector<int> binaryDataIndex;
-	// 	int indexBinary = 0;
-	// 	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
-	// 	{
-	// 		std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
-	// 		indexBinary = boundariesIndexes[i];
-	// 		while (getline(streamHeaders, line))
-	// 		{
-	// 			if (line.find_first_not_of("\r\n") == std::string::npos)
-	// 				break ;
-	// 			indexBinary += line.length() + 1;
-	// 			if (line.find(b) != std::string::npos)
-	// 				continue;
-	// 			else
-	// 			{
-	// 				if (line.find(":") != std::string::npos)
-	// 					key = line.substr(0, line.find(":"));
-	// 				if (line.find(" ") != std::string::npos)
-	// 					value = line.substr(line.find(" ") + 1);
-	// 				data.myMap[key] = value;
-	// 				bodySections[i] = data;
-	// 			}
-	// 		}
-	// 		binaryDataIndex.push_back(indexBinary);
-	// 		streamHeaders.clear();
-	// 		line.clear();
-	// 		key.clear();
-	// 		value.clear();
-	// 		indexBinary = 0;
-	// 	}
+		struct header section;
 		std::map<int, struct header> httpBody;
 		std::map<std::string, std::string> httpHeaders;
+		std::vector<int> dataIndex;
 
 		httpHeaders = request.getHeaders();
 		httpBody = request.getBodySections();
+		dataIndex = request.getBinaryIndex();
 		//build path where to store-> root or /uploads?
 		std::string requestTarget = httpHeaders["Request-target"];
 		requestTarget.erase(requestTarget.begin());
@@ -306,21 +232,21 @@ std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest re
 			}
 		}
 		closedir(folder);
-		// pathFile += "/" + fileName;
-		// std::cout << pathFile << std::endl;
-		// int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-		// if (file < 0) {
-		// 	perror("Error opening file");
-		// 	exit(1);
-		// }
-		// //write to the file
-		// ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
-		// if (written < 0) {
-		// 	perror("Error writing to file");
-		// 	close(file);
-		// 	exit(1);
-		// }
-		// close(file);
+		pathFile += "/" + fileName;
+		std::cout << pathFile << std::endl;
+		int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (file < 0) {
+			perror("Error opening file");
+			exit(1);
+		}
+		//write to the file
+		ssize_t written = write(file, buffer + dataIndex[0] + 2, size - dataIndex[0] - 2);
+		if (written < 0) {
+			perror("Error writing to file");
+			close(file);
+			exit(1);
+		}
+		close(file);
 	// }
 	// else
 	// {
@@ -341,15 +267,15 @@ std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest 
 
 	std::string response = pageNotFound();
 	std::map<std::string, std::string>::iterator it;
-	for (it = request.begin(); it != request.end(); it++)
+	for (it = request.getHeaders().begin(); it != request.getHeaders().end(); it++)
 	{
 		std::cout << it->first << " : ";
 		std::cout << it->second << std::endl;
 	}
 	//check what is the resource to be delete (in target request)
-	std::cout << "target: " << request["Request-target"] << std::endl;
+	std::cout << "target: " << request.getHeaders()["Request-target"] << std::endl;
 	//TODO: check path to resource, if it exits delete, if not send negative response
-	std::string pathToResource = info.getServerRootPath() + request["Request-target"];
+	std::string pathToResource = info.getServerRootPath() + request.getHeaders()["Request-target"];
 	std::ifstream file(pathToResource.c_str());
 	if (!(file.good()))
 		return response;
