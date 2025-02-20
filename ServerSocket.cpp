@@ -76,32 +76,34 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 {
 	std::cout << "Parsing headers HTTP" << std::endl;
 	ClientRequest request;
-	std::map<std::string, std::string> infoRequest;
+	std::map<std::string, std::string> httpHeaders;
 	ServerResponse serverResponse;
 	std::string response;
 
-	infoRequest = request.parseRequestHttp(str, size);
+	request.parseRequestHttp(str, size);
+	httpHeaders = request.getHeaders();
+	// infoRequest = request.getHeaders();
 	//std::cout << "Responding: " << size << std::endl;
-	if (infoRequest.find("Method") != infoRequest.end())
+	if (httpHeaders.find("Method") != httpHeaders.end())
 	{
-		if (infoRequest["Method"] == "GET")
+		if (httpHeaders["Method"] == "GET")
 		{
-			response = serverResponse.responseGetMethod(info, infoRequest);
+			response = serverResponse.responseGetMethod(info, request);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with GET response" << std::endl;
 		}
-		else if (infoRequest["Method"] == "POST")
+		else if (httpHeaders["Method"] == "POST")
 		{
-			response = serverResponse.responsePostMethod(info, infoRequest, str, size);
+			response = serverResponse.responsePostMethod(info, request, str, size);
 			//std::cout << "sending" << std::endl;
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with POST response" << std::endl;
 		}
-		else if (infoRequest["Method"] == "DELETE")
+		else if (httpHeaders["Method"] == "DELETE")
 		{
-			response = serverResponse.responseDeleteMethod(info, infoRequest);
+			response = serverResponse.responseDeleteMethod(info, request);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with DELETE response" << std::endl;

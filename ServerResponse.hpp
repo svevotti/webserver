@@ -29,9 +29,9 @@ public:
 	// ~ServerResponse();
 	// ServerResponse(const ServerResponse &);
 	// void	operator=(const ServerResponse &);
-	std::string responseGetMethod(InfoServer, std::map<std::string, std::string>);
-	std::string responsePostMethod(InfoServer, std::map<std::string, std::string>, const char *, int);
-	std::string responseDeleteMethod(InfoServer info, std::map<std::string, std::string> request);
+	std::string responseGetMethod(InfoServer, ClientRequest);
+	std::string responsePostMethod(InfoServer, ClientRequest, const char *, int);
+	std::string responseDeleteMethod(InfoServer info, ClientRequest);
 	// int		getServerPort();
 
 };

@@ -11,11 +11,11 @@
 #include <ctime>
 #include <cstdio>
 
-typedef struct header
-{
-	std::map<std::string, std::string> myMap;
-	std::vector<char> binaryData;
-} header;
+// typedef struct header
+// {
+// 	std::map<std::string, std::string> myMap;
+// 	std::vector<char> binaryData;
+// } header;
 
 std::string pageNotFound(void)
 {
@@ -102,7 +102,7 @@ std::string assembleHeaders(std::string protocol, std::string length)
 	return statusLine;
 }
 
-std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::string, std::string> request)
+std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest request)
 {
 	std::string response;
 	std::string bodyHtml;
@@ -113,11 +113,13 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	std::string documentRootPath;
 	std::string pathToTarget;
 	struct stat pathStat;
+	std::map<std::string, std::string> httpHeaders;
 
-	if (!request["Request-target"].empty())
+	httpHeaders = request.getHeaders();
+	if (!(httpHeaders["Request-target"].empty()))
 	{
 		documentRootPath = info.getServerDocumentRoot();
-		pathToTarget = documentRootPath.substr(0, documentRootPath.length() - 1) + request["Request-target"];
+		pathToTarget = documentRootPath + httpHeaders["Request-target"];
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
 			std::cout << "Error using stat" << std::endl;
 		if (S_ISDIR(pathStat.st_mode))
@@ -133,7 +135,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 		bodyHtmlLen = bodyHtml.length();
 		intermediatestream << bodyHtmlLen;
 		strbodyHtmlLen = intermediatestream.str();
-		headers = assembleHeaders(request["Protocol"], strbodyHtmlLen);
+		headers = assembleHeaders(httpHeaders["Protocol"], strbodyHtmlLen);
 		response.clear();
 		response += headers + bodyHtml;
 	}
@@ -142,89 +144,93 @@ std::string ServerResponse::responseGetMethod(InfoServer info, std::map<std::str
 	return (response);
 }
 
-char *getBoundary(const char *buffer)
-{
-	char *b;
-	const char *result = strstr(buffer, "=");
-	result++;
-	int index_start = result - buffer;
-	int count = 0;
-	while (1)
-	{
-		if (*result == '\r')
-			break ;
-		count++;
-		result++;
-	}
-	int i = 0;
-	b = new char[count+1];
-	while (i < count)
-	{
-		b[i] = buffer[index_start];
-		i++;
-		index_start++;
-	}
-	b[i] = '\0';
-	return (b);
-}
+// char *getBoundary(const char *buffer)
+// {
+// 	char *b;
+// 	const char *result = strstr(buffer, "=");
+// 	result++;
+// 	int index_start = result - buffer;
+// 	int count = 0;
+// 	while (1)
+// 	{
+// 		if (*result == '\r')
+// 			break ;
+// 		count++;
+// 		result++;
+// 	}
+// 	int i = 0;
+// 	b = new char[count+1];
+// 	while (i < count)
+// 	{
+// 		b[i] = buffer[index_start];
+// 		i++;
+// 		index_start++;
+// 	}
+// 	b[i] = '\0';
+// 	return (b);
+// }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::string, std::string> request, const char *buffer, int size)
+std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, const char *buffer, int size)
 {
 	
-	std::string contentType = request["Content-Type"];
-	if (contentType.find("boundary") != std::string::npos) //multi format data
-	{
-		std::vector<int> boundariesIndexes;
-		char *b;
-		b = getBoundary(buffer);
-		int blen = strlen(b);
-		for (int i = 0; i < size; i++) 
-		{
-			int diff = ft_memcmp(buffer + i, b, blen);
-			// printf("diff: %d")
-			if (diff == 0) {
-				boundariesIndexes.push_back(i);
-				// printf("boundary index: %d for %s\n", i, buffer + i);
-			}
-		}
-		std::string line;
-		struct header data;
-		std::map<int, struct header> bodySections;
-		std::string key;
-		std::string value;
-		std::vector<int> binaryDataIndex;
-		int indexBinary = 0;
-		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
-		{
-			std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
-			indexBinary = boundariesIndexes[i];
-			while (getline(streamHeaders, line))
-			{
-				if (line.find_first_not_of("\r\n") == std::string::npos)
-					break ;
-				indexBinary += line.length() + 1;
-				if (line.find(b) != std::string::npos)
-					continue;
-				else
-				{
-					if (line.find(":") != std::string::npos)
-						key = line.substr(0, line.find(":"));
-					if (line.find(" ") != std::string::npos)
-						value = line.substr(line.find(" ") + 1);
-					data.myMap[key] = value;
-					bodySections[i] = data;
-				}
-			}
-			binaryDataIndex.push_back(indexBinary);
-			streamHeaders.clear();
-			line.clear();
-			key.clear();
-			value.clear();
-			indexBinary = 0;
-		}
+	// std::string contentType = request["Content-Type"];
+	// if (contentType.find("boundary") != std::string::npos) //multi format data
+	// {
+	// 	std::vector<int> boundariesIndexes;
+	// 	char *b;
+	// 	b = getBoundary(buffer);
+	// 	int blen = strlen(b);
+	// 	for (int i = 0; i < size; i++) 
+	// 	{
+	// 		int diff = ft_memcmp(buffer + i, b, blen);
+	// 		// printf("diff: %d")
+	// 		if (diff == 0) {
+	// 			boundariesIndexes.push_back(i);
+	// 			// printf("boundary index: %d for %s\n", i, buffer + i);
+	// 		}
+	// 	}
+	// 	std::string line;
+	// 	struct header data;
+	// 	std::map<int, struct header> bodySections;
+	// 	std::string key;
+	// 	std::string value;
+	// 	std::vector<int> binaryDataIndex;
+	// 	int indexBinary = 0;
+	// 	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
+	// 	{
+	// 		std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
+	// 		indexBinary = boundariesIndexes[i];
+	// 		while (getline(streamHeaders, line))
+	// 		{
+	// 			if (line.find_first_not_of("\r\n") == std::string::npos)
+	// 				break ;
+	// 			indexBinary += line.length() + 1;
+	// 			if (line.find(b) != std::string::npos)
+	// 				continue;
+	// 			else
+	// 			{
+	// 				if (line.find(":") != std::string::npos)
+	// 					key = line.substr(0, line.find(":"));
+	// 				if (line.find(" ") != std::string::npos)
+	// 					value = line.substr(line.find(" ") + 1);
+	// 				data.myMap[key] = value;
+	// 				bodySections[i] = data;
+	// 			}
+	// 		}
+	// 		binaryDataIndex.push_back(indexBinary);
+	// 		streamHeaders.clear();
+	// 		line.clear();
+	// 		key.clear();
+	// 		value.clear();
+	// 		indexBinary = 0;
+	// 	}
+		std::map<int, struct header> httpBody;
+		std::map<std::string, std::string> httpHeaders;
 
+		httpHeaders = request.getHeaders();
+		httpBody = request.getBodySections();
 		//build path where to store-> root or /uploads?
-		std::string requestTarget = request["Request-target"];
+		std::string requestTarget = httpHeaders["Request-target"];
 		requestTarget.erase(requestTarget.begin());
 		std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
 
@@ -235,9 +241,9 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		std::string fileName;
 		//printf("looking for filename0\n");
 		std::string fileType;
-		if (bodySections.size() == 1)
+		if (httpBody.size() == 1)
 		{
-			for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
+			for (outerIt = httpBody.begin(); outerIt != httpBody.end(); outerIt++)
 			{
 				struct header section = outerIt->second;
 				for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
@@ -280,14 +286,14 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 		std::cout << "filetype: " << fileType << std::endl;
 		//check if file exists already
 		DIR *folder;
-		struct dirent *info;
+		struct dirent *data;
 		folder = opendir(pathFile.c_str());
 		std::string convStr;
 		if (folder == NULL)
 			printf("error opening folder\n");
-		while ((info = readdir(folder)))
+		while ((data = readdir(folder)))
 		{
-			convStr = info->d_name;
+			convStr = data->d_name;
 			if (convStr == fileName)
 			{
 				std::cout << "File with name already existing, please change it\n";
@@ -300,27 +306,27 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 			}
 		}
 		closedir(folder);
-		pathFile += "/" + fileName;
-		std::cout << pathFile << std::endl;
-		int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-		if (file < 0) {
-			perror("Error opening file");
-			exit(1);
-		}
-		//write to the file
-		ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
-		if (written < 0) {
-			perror("Error writing to file");
-			close(file);
-			exit(1);
-		}
-		close(file);
-	}
-	else
-	{
-		//store in one string
-		std::cout << "message is " << request["Body"] << std::endl;
-	}	//we can fake i saved and store the image when it is already there
+		// pathFile += "/" + fileName;
+		// std::cout << pathFile << std::endl;
+		// int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		// if (file < 0) {
+		// 	perror("Error opening file");
+		// 	exit(1);
+		// }
+		// //write to the file
+		// ssize_t written = write(file, buffer + binaryDataIndex[0] + 2, size - binaryDataIndex[0] - 2);
+		// if (written < 0) {
+		// 	perror("Error writing to file");
+		// 	close(file);
+		// 	exit(1);
+		// }
+		// close(file);
+	// }
+	// else
+	// {
+	// 	//store in one string
+	// 	std::cout << "message is " << request["Body"] << std::endl;
+	// }	//we can fake i saved and store the image when it is already there
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
 					"Content-Length: 0\r\n"
@@ -329,7 +335,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, std::map<std::st
 	return (response);
 }
 
-std::string ServerResponse::responseDeleteMethod(InfoServer info, std::map<std::string, std::string> request)
+std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest request)
 {
 	std::cout << "Delete method" << std::endl;
 

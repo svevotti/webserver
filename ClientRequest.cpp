@@ -91,10 +91,10 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 {
 	std::string contentType = headers["Content-Type"];
 	std::string line;
-	struct header data;
 	std::string key;
 	std::string value;
 	std::vector<int> binaryDataIndex;
+	struct header data;
 	int indexBinary = 0;
 
 	std::cout << "parsing body" << std::endl;
@@ -117,7 +117,6 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 		{
 			std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
 			indexBinary = boundariesIndexes[i];
-			//std::cout << "index " << boundariesIndexes[i] << std::endl;
 			while (getline(streamHeaders, line))
 			{
 				std::cout << "line: " << line << std::endl;
@@ -134,7 +133,9 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 						value = line.substr(line.find(" ") + 1);
 					data.myMap[key] = value;
 					sections[i] = data;
-					std::cout << sections[i] << std::endl;
+					std::cout << key << std::endl;
+					std::cout << value << std::endl;
+					std::cout << "section size: " << sections.size() << std::endl;
 				}
 			}
 			binaryDataIndex.push_back(indexBinary);
@@ -142,6 +143,7 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 			line.clear();
 			key.clear();
 			value.clear();
+			data.myMap.clear();
 			indexBinary = 0;
 			//ft_memset(&data, '\0', sizeof(data));
 		}
