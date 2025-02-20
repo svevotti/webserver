@@ -96,7 +96,6 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 		else if (httpHeaders["Method"] == "POST")
 		{
 			response = serverResponse.responsePostMethod(info, request, str, size);
-			//std::cout << "sending" << std::endl;
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with POST response" << std::endl;

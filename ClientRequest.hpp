@@ -15,6 +15,9 @@
 #include <vector>
 #include "StringManipulations.hpp"
 
+#define TEXT 0
+#define MULTIPART 1
+
 typedef struct header
 {
 	std::map<std::string, std::string> myMap;
@@ -28,16 +31,20 @@ public:
 	void parseRequestHttp(const char *, int);
 	void parseFirstLine(std::string);
 	void parseHeaders(std::istringstream&);
-	std::map<int, struct header>  parseBody(const char *,int);
+	void parseBody(const char *,int, std::istringstream&);
 	std::map<int, struct header> getBodySections();
 	std::map<std::string, std::string> getHeaders();
 	std::vector<int> getBinaryIndex();
+	std::string getBodyText();
+	int getTypeBody(void);
 	// int		getServerPort();
 
 private:
 	std::map<std::string, std::string> headers;
 	std::map<int, struct header> sections;
 	std::vector<int> binaryIndex;
+	std::string body;
+	int typeBody;
 
 };
 

@@ -11,12 +11,6 @@
 #include <ctime>
 #include <cstdio>
 
-// typedef struct header
-// {
-// 	std::map<std::string, std::string> myMap;
-// 	std::vector<char> binaryData;
-// } header;
-
 std::string pageNotFound(void)
 {
     std::string str =   "HTTP/1.1 404 Not Found\r\n"
@@ -89,13 +83,13 @@ std::string assembleHeaders(std::string protocol, std::string length)
 	std::string fileExtension;
 
 	statusLine += protocol + " " + CodeNumber.getStatusCode(200) + "\r\n";
-	statusLine += "Content-Type: ";
+	// statusLine += "Content-Type: ";
 	// if (fileName.find(".") != std::string::npos)
 	// {
 	// 	fileExtension = fileName.substr(fileName.find(".") + 1);
 	// 	contentType = getContentType(fileExtension);
 	// }
-	statusLine += contentType + "\r\n";
+	// statusLine += contentType + "\r\n";
 	statusLine += "Content-Length: " + length + "\r\n";
 	statusLine += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
 	statusLine += "\r\n";
@@ -147,6 +141,9 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, const char *buffer, int size)
 {
 	
+	//TODO:make sure a string stores a body that is just text
+	if (request.getTypeBody() == MULTIPART)
+	{
 		struct header section;
 		std::map<int, struct header> httpBody;
 		std::map<std::string, std::string> httpHeaders;
@@ -247,12 +244,11 @@ std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest re
 			exit(1);
 		}
 		close(file);
-	// }
-	// else
-	// {
-	// 	//store in one string
-	// 	std::cout << "message is " << request["Body"] << std::endl;
-	// }	//we can fake i saved and store the image when it is already there
+	}
+	else
+	{
+		printf("do something with text body\n");
+	}
 	std::string response =
 					"HTTP/1.1 200 OK\r\n"
 					"Content-Length: 0\r\n"

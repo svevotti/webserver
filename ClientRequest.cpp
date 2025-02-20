@@ -86,8 +86,12 @@ char *getBoundary(const char *buffer)
 	b[i] = '\0';
 	return (b);
 }
+int ClientRequest::getTypeBody(void)
+{
+	return typeBody;
+}
 
-std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int size)
+void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& str)
 {
 	std::string contentType = headers["Content-Type"];
 	std::string line;
@@ -97,9 +101,9 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 	int indexBinary = 0;
 
 	std::cout << "parsing body" << std::endl;
-	// printf("size vector: %d\n", binaryIndex.size());
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
+		typeBody = MULTIPART;
 		std::vector<int> boundariesIndexes;
 		char *b;
 		b = getBoundary(buffer);
@@ -107,10 +111,8 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 		for (int i = 0; i < size; i++) 
 		{
 			int diff = ft_memcmp(buffer + i, b, blen);
-			// printf("diff: %d")
 			if (diff == 0) {
 				boundariesIndexes.push_back(i);
-				//printf("boundary index: %d\n", i);
 			}
 		}
 		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
@@ -134,8 +136,6 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 					sections[i] = data;
 				}
 			}
-			// printf("index Binary: %d\n", indexBinary);
-			// printf("size vector: %d\n", binaryIndex.size());
 			binaryIndex.push_back(indexBinary);
 			streamHeaders.clear();
 			line.clear();
@@ -147,9 +147,15 @@ std::map<int, struct header>  ClientRequest::parseBody(const char *buffer, int s
 	}
 	else
 	{
-		printf("take care of text\n");
+		typeBody = TEXT;
+		std::string line;
+		getline(str,line);
+		while (getline(str, line))
+		{
+			body.append(line);
+		}
+
 	}
-	return (sections);
 }
 
 std::map<int, struct header> ClientRequest::getBodySections(void)
@@ -166,6 +172,11 @@ std::vector<int> ClientRequest::getBinaryIndex(void)
 {
 	return binaryIndex;
 }
+
+std::string ClientRequest::getBodyText(void)
+{
+	return body;
+}
 void ClientRequest::parseRequestHttp(const char *str, int size)
 {
 	std::string inputString(str);
@@ -177,12 +188,10 @@ void ClientRequest::parseRequestHttp(const char *str, int size)
 	parseFirstLine(inputString);
 	getline(request, line); //skipping first line
 	parseHeaders(request);
-	//check for body
-	// printf("size vector: %d\n", binaryIndex.size());
 	std::map<std::string, std::string>::iterator it = headers.find("Content-Length");
 	if (it != headers.end())
 	{
 		printf("before body parse\n");
-		parseBody(str, size);
+		parseBody(str, size, request);
 	}
 }
