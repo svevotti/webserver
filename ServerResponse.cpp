@@ -107,13 +107,14 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 	std::string documentRootPath;
 	std::string pathToTarget;
 	struct stat pathStat;
-	std::map<std::string, std::string> httpHeaders;
+	std::map<std::string, std::string> httpRequestLine;
 
-	httpHeaders = request.getHeaders();
-	if (!(httpHeaders["Request-target"].empty()))
+	response = pageNotFound();
+	httpRequestLine = request.getRequestLine();
+	if (!(httpRequestLine["Request-target"].empty()))
 	{
 		documentRootPath = info.getServerDocumentRoot();
-		pathToTarget = documentRootPath + httpHeaders["Request-target"];
+		pathToTarget = documentRootPath + httpRequestLine["Request-target"];
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
 			std::cout << "Error using stat" << std::endl;
 		if (S_ISDIR(pathStat.st_mode))
@@ -129,12 +130,10 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 		bodyHtmlLen = bodyHtml.length();
 		intermediatestream << bodyHtmlLen;
 		strbodyHtmlLen = intermediatestream.str();
-		headers = assembleHeaders(httpHeaders["Protocol"], strbodyHtmlLen);
+		headers = assembleHeaders(httpRequestLine["Protocol"], strbodyHtmlLen);
 		response.clear();
 		response += headers + bodyHtml;
 	}
-	else
-		response = pageNotFound();
 	return (response);
 }
 
@@ -215,7 +214,7 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 {
 	struct header section;
 	std::map<int, struct header> httpBody;
-	std::map<std::string, std::string> httpHeaders;
+	std::map<std::string, std::string> httpRequestLine;
 	std::vector<int> dataIndex;
 	std::string response;
 
@@ -228,10 +227,10 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 								"\r\n";
 		return response;
 	}
-	httpHeaders = request.getHeaders();
+	httpRequestLine = request.getRequestLine();
 	httpBody = request.getBodySections();
 	dataIndex = request.getBinaryIndex();
-	std::string requestTarget = httpHeaders["Request-target"];
+	std::string requestTarget = httpRequestLine["Request-target"];
 	requestTarget.erase(requestTarget.begin());
 	std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
 	//openfile
@@ -248,6 +247,7 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 								"\r\n";
 		return (response);
 	}
+	//std::cout << "file name: " << fileName << std::endl;
 	pathFile += "/" + fileName;
 	//std::cout << pathFile << std::endl;
 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -293,16 +293,8 @@ std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest 
 	std::cout << "Delete method" << std::endl;
 
 	std::string response = pageNotFound();
-	std::map<std::string, std::string>::iterator it;
-	for (it = request.getHeaders().begin(); it != request.getHeaders().end(); it++)
-	{
-		std::cout << it->first << " : ";
-		std::cout << it->second << std::endl;
-	}
-	//check what is the resource to be delete (in target request)
-	std::cout << "target: " << request.getHeaders()["Request-target"] << std::endl;
 	//TODO: check path to resource, if it exits delete, if not send negative response
-	std::string pathToResource = info.getServerRootPath() + request.getHeaders()["Request-target"];
+	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-target"];
 	std::ifstream file(pathToResource.c_str());
 	if (!(file.good()))
 		return response;

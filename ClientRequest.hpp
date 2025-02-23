@@ -29,18 +29,18 @@ class ClientRequest
 public:
 
 	void parseRequestHttp(const char *, int);
-	void parseFirstLine(std::string);
+	void parseRequestLine(std::string);
 	void parseHeaders(std::istringstream&);
 	void parseBody(const char *,int, std::istringstream&);
 	std::map<int, struct header> getBodySections();
 	std::map<std::string, std::string> getHeaders();
+	std::map<std::string, std::string> getRequestLine();
 	std::vector<int> getBinaryIndex();
 	std::string getBodyText();
 	int getTypeBody(void);
-	void setTypeBody(int);
-	// int		getServerPort();
 
 private:
+	std::map<std::string, std::string> requestLine;
 	std::map<std::string, std::string> headers;
 	std::map<int, struct header> sections;
 	std::vector<int> binaryIndex;

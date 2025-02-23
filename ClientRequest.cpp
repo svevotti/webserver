@@ -5,6 +5,7 @@
 #include <cctype>
 #include <dirent.h>
 #include <sstream>
+#include <cstdio>
 
 std::string findMethod(std::string inputStr)
 {
@@ -17,7 +18,7 @@ std::string findMethod(std::string inputStr)
 	return ("OTHER");
 }
 
-void ClientRequest::parseFirstLine(std::string str)
+void ClientRequest::parseRequestLine(std::string str)
 {
 	std::string method;
 	std::string subStr;
@@ -26,22 +27,23 @@ void ClientRequest::parseFirstLine(std::string str)
 
 
 	method = findMethod(str);
-	headers["Method"] = method;
+	requestLine["Method"] = method;
 	if (str.find("/") != std::string::npos) //
 	{
+		//TODO: check for query string
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		headers["Request-target"] = subStr;
+		requestLine["Request-target"] = subStr;
 	}
 	else
-		headers["Request-target"] = "target not defined"; //error
+		requestLine["Request-target"] = "target not defined"; //error
 	if (str.find("HTTP") != std::string::npos)
 	{
 		std::size_t protocol_index_start = str.find("HTTP");
 		protocol = str.substr(protocol_index_start, (str.find("\n", protocol_index_start) - 1) - protocol_index_start);
-		headers["Protocol"] = protocol;
+		requestLine["Protocol"] = protocol;
 	}
 	else
-		headers["Protocol"] = "protocol not defined";
+		requestLine["Protocol"] = "protocol not defined";
 }
 
 void ClientRequest::parseHeaders(std::istringstream& str)
@@ -91,10 +93,6 @@ int ClientRequest::getTypeBody(void)
 	return typeBody;
 }
 
-void ClientRequest::setTypeBody(int type)
-{
-	this->typeBody = type;
-}
 void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& str)
 {
 	std::string contentType = headers["Content-Type"];
@@ -166,6 +164,11 @@ std::map<int, struct header> ClientRequest::getBodySections(void)
 	return sections;
 }
 
+std::map<std::string, std::string> ClientRequest::getRequestLine(void)
+{
+	return requestLine;
+}
+
 std::map<std::string, std::string> ClientRequest::getHeaders(void)
 {
 	return headers;
@@ -188,7 +191,7 @@ void ClientRequest::parseRequestHttp(const char *str, int size)
 	std::string key;
 	std::string value;
 
-	parseFirstLine(inputString);
+	parseRequestLine(inputString);
 	getline(request, line); //skipping first line
 	parseHeaders(request);
 	std::map<std::string, std::string>::iterator it = headers.find("Content-Length");
