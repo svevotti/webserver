@@ -1,9 +1,12 @@
 GNU = c++
 FLAGS = -Wall -Wextra #-Werror
 C_98 = -std=c++98
+OBJ_DIR = obj
 CPP_FILES = ServerSocket.cpp main.cpp ClientRequest.cpp ServerResponse.cpp InfoServer.cpp \
 			ServerStatusCode.cpp StringManipulations.cpp PrintingFunctions.cpp
-CPP_OBJ = $(CPP_FILES:.cpp=.o)
+CPP_OBJ = $(OBJ_DIR)/ServerSocket.o $(OBJ_DIR)/main.o $(OBJ_DIR)/ClientRequest.o \
+          $(OBJ_DIR)/ServerResponse.o $(OBJ_DIR)/InfoServer.o $(OBJ_DIR)/ServerStatusCode.o \
+          $(OBJ_DIR)/StringManipulations.o $(OBJ_DIR)/PrintingFunctions.o
 NAME = server
 
 all: $(NAME)
@@ -11,12 +14,15 @@ all: $(NAME)
 $(NAME): $(CPP_OBJ)
 	$(GNU) $(CPP_OBJ) -o $(NAME)
 
-%.o: %.cpp
-	$(GNU) $(FLAGS) $(C_98) -c $^
+$(OBJ_DIR)/%.o: %.cpp
+	@mkdir -p $(OBJ_DIR)
+	$(GNU) $(FLAGS) $(C_98) -c $< -o $@
 
 clean:
-	rm -f $(CPP_OBJ)
+	rm -f $(OBJ_DIR)/*.o
+
 fclean: clean
 	rm -f $(NAME)
+	rm -rf $(OBJ_DIR)
 re: fclean all
 .PHONY: clean fclean re all
