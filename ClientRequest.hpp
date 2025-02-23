@@ -35,18 +35,19 @@ public:
 	std::map<int, struct header> getBodySections();
 	std::map<std::string, std::string> getHeaders();
 	std::map<std::string, std::string> getRequestLine();
+	std::map<std::string, std::string> getQueryMap();
 	std::vector<int> getBinaryIndex();
 	std::string getBodyText();
 	int getTypeBody(void);
 
 private:
 	std::map<std::string, std::string> requestLine;
+	std::map<std::string, std::string> query;
 	std::map<std::string, std::string> headers;
 	std::map<int, struct header> sections;
 	std::vector<int> binaryIndex;
 	std::string body;
 	int typeBody;
-
 };
 
 #endif

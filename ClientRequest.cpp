@@ -24,15 +24,51 @@ void ClientRequest::parseRequestLine(std::string str)
 	std::string subStr;
 	std::string requestTarget;
 	std::string protocol;
-
+	std::string queryString;
+	std::string url;
 
 	method = findMethod(str);
 	requestLine["Method"] = method;
 	if (str.find("/") != std::string::npos) //
 	{
-		//TODO: check for query string
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		requestLine["Request-target"] = subStr;
+		requestLine["Request-target"] = subStr; //request-target: full url+query
+		if (subStr.find("?") != std::string::npos) //query
+		{
+			url = subStr.substr(0, subStr.find("?"));
+			requestLine["Url"] = url; //url : only url
+			queryString = subStr.substr(subStr.find("?") + 1, subStr.length() - subStr.find("?"));
+			requestLine["Query-string"] = queryString; //query-string only query
+			std::string key;
+			std::string value;
+			int i = 0;
+			while (i < queryString.length())
+			{
+				while (queryString[i] != '=')
+				{
+					if (i == queryString.length())
+						break;
+					key.append(1, queryString[i]);
+					i++;
+				}
+				if (i == queryString.length())
+					break;
+				i++;
+				while (queryString[i] != '&')
+				{
+					if (i == queryString.length())
+						break;
+					value.append(1, queryString[i]);
+					i++;
+				}
+				query[key] = value;
+				if (i == queryString.length())
+					break;
+				key.clear();
+				value.clear();
+				i++;
+			}
+		}
 	}
 	else
 		requestLine["Request-target"] = "target not defined"; //error
@@ -172,6 +208,11 @@ std::map<std::string, std::string> ClientRequest::getRequestLine(void)
 std::map<std::string, std::string> ClientRequest::getHeaders(void)
 {
 	return headers;
+}
+
+std::map<std::string, std::string> ClientRequest::getQueryMap(void)
+{
+	return query;
 }
 
 std::vector<int> ClientRequest::getBinaryIndex(void)
