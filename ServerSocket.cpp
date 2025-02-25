@@ -240,14 +240,13 @@ void	Server::startServer(InfoServer info)
 						printf("bytesRecv %d\n", bytesRecv);
 						if (bytesRecv == 0)
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-						else //no need to check for errno since i call recv in poll and poll checks if sockets is ready
+						else
 						{
 							if (!full_buffer.empty())
 								serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
 						}
 						close(it->fd);
 						it = poll_sets.erase(it);
-						// }
 					}
 				}
 			}

@@ -250,10 +250,18 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 	//std::cout << "file name: " << fileName << std::endl;
 	pathFile += "/" + fileName;
 	//std::cout << pathFile << std::endl;
+	//TODO: if not able to recv full request, can't get correct path: throw error
 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0) {
-		perror("Error opening file");
-		exit(1);
+		std::cout << pathFile << std::endl;
+		perror("Error opening file in upload");
+		response = "HTTP/1.1 400 Bad Request\r\n"
+								"Content-Type: text/plain\r\n"
+								"Content-Length: 0\r\n"
+								"Connection: close\r\n"
+								"\r\n";
+		return response;
+		return(response);
 	}
 	//write to the file
 	ssize_t written = write(file, buffer + dataIndex[0] + 2, size - dataIndex[0] - 2);
