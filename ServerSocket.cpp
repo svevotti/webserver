@@ -246,6 +246,7 @@ void	Server::startServer(InfoServer info)
 						std::string full_buffer;
 						int totBytes = 0;
 						std::cout << "Recv client request" << std::endl;
+						sleep(10);
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
 						//printf("bytesRecv %d\n", bytesRecv);
 						if (bytesRecv == 0)
