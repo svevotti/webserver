@@ -156,7 +156,7 @@ int readData(int fd, std::string &str, int &bytes)
 	while (1)
 	{
 		ft_memset(buffer, 0, sizeof(buffer));
-		res = recv(fd, buffer, BUFFER, 0);
+		res = recv(fd, buffer, BUFFER, MSG_WAITALL);
 		if (res <= 0)
 		{
 			//printRecvFlag(errno);
@@ -237,20 +237,17 @@ void	Server::startServer(InfoServer info)
 						int totBytes = 0;
 						std::cout << "Recv client request" << std::endl;
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
+						printf("bytesRecv %d\n", bytesRecv);
 						if (bytesRecv == 0)
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-						else if (bytesRecv == -1)
-							bytesRecv = printRecvFlag(errno);
-						if (bytesRecv == 1)
+						else //no need to check for errno since i call recv in poll and poll checks if sockets is ready
 						{
 							if (!full_buffer.empty())
 								serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
 						}
-						else
-						{
-							close(it->fd);
-							it = poll_sets.erase(it);
-						}
+						close(it->fd);
+						it = poll_sets.erase(it);
+						// }
 					}
 				}
 			}
