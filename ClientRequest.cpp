@@ -42,27 +42,27 @@ void ClientRequest::parseRequestLine(std::string str)
 			std::string key;
 			std::string value;
 			int i = 0;
-			while (i < queryString.length())
+			while (i < (int)queryString.length())
 			{
 				while (queryString[i] != '=')
 				{
-					if (i == queryString.length())
+					if (i ==  (int)queryString.length())
 						break;
 					key.append(1, queryString[i]);
 					i++;
 				}
-				if (i == queryString.length())
+				if (i ==  (int)queryString.length())
 					break;
 				i++;
 				while (queryString[i] != '&')
 				{
-					if (i == queryString.length())
+					if (i ==  (int)queryString.length())
 						break;
 					value.append(1, queryString[i]);
 					i++;
 				}
 				query[key] = value;
-				if (i == queryString.length())
+				if (i == (int)queryString.length())
 					break;
 				key.clear();
 				value.clear();
@@ -224,6 +224,7 @@ std::string ClientRequest::getBodyText(void)
 {
 	return body;
 }
+
 void ClientRequest::parseRequestHttp(const char *str, int size)
 {
 	std::string inputString(str);
@@ -233,6 +234,7 @@ void ClientRequest::parseRequestHttp(const char *str, int size)
 	std::string value;
 
 	parseRequestLine(inputString);
+	std::cout << "parse headers" << std::endl;
 	getline(request, line); //skipping first line
 	parseHeaders(request);
 	std::map<std::string, std::string>::iterator it = headers.find("Content-Length");
