@@ -84,6 +84,10 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	httpRequestLine = request.getRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
+		//response
+		//TODO: for GET and POST need to check for cgi->look for extension .py?
+		//TODO: add cgi logic after GET and POST
+		//TODO:create error page if it is not .py
 		if (httpRequestLine["Method"] == "GET")
 		{
 			response = serverResponse.responseGetMethod(info, request);
@@ -93,6 +97,7 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 		}
 		else if (httpRequestLine["Method"] == "POST")
 		{
+			//TODO: need to store in std::string body the request's body
 			response = serverResponse.responsePostMethod(info, request, str, size);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
@@ -108,6 +113,7 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	}
 	else
 	{
+		//TODO: return proper page/error
 		std::cout << "method not found" << std::endl;
 	}
 }
@@ -181,6 +187,8 @@ void	Server::startServer(InfoServer info)
 	std::vector<pollfd>::iterator end;
 	int clientSocket;
 
+	//server sockets
+	//TODO:need not to hardcode size of array
 	for (i = 0; i < 2; i++)
 	{
 		arraySockets[i] = createServerSocket(info.getArrayPorts()[i].c_str());
@@ -218,6 +226,8 @@ void	Server::startServer(InfoServer info)
 				if (it->revents & POLLIN)
 				{
 					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
+					//if revents is on server socket: new client
+					//TODO:need not to hardcode this
 					if (it->fd == arraySockets[0] || it->fd == arraySockets[1])
 					{
 						clientSocket = createClientSocket(it->fd);
@@ -230,19 +240,20 @@ void	Server::startServer(InfoServer info)
 						poll_sets.push_back(clientFd);
 						std::cout << "client created: " <<  clientSocket << std::endl;
 					}
-					else
+					else //revents on client fds
 					{
 						/*recv data*/
 						std::string full_buffer;
 						int totBytes = 0;
 						std::cout << "Recv client request" << std::endl;
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
-						printf("bytesRecv %d\n", bytesRecv);
+						//printf("bytesRecv %d\n", bytesRecv);
 						if (bytesRecv == 0)
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 						else
 						{
-							if (!full_buffer.empty())
+							//TODO: seperate parsing and response. Parsing, check CGI, response
+							if (!full_buffer.empty()) //i think useless
 								serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
 						}
 						close(it->fd);
