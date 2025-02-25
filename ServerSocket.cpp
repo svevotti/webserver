@@ -74,34 +74,33 @@ int findMatchingSocket(int pollFd, int array[])
 
 void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size)
 {
-	std::cout << "Parsing headers HTTP" << std::endl;
-	ServerParseRequest request;
-	std::map<std::string, std::string> infoRequest;
+	std::cout << "Parsing" << std::endl;
+	ClientRequest request;
+	std::map<std::string, std::string> httpRequestLine;
 	ServerResponse serverResponse;
 	std::string response;
 
-	infoRequest = request.parseRequestHttp(str);
-	std::cout << "Responding: " << size << std::endl;
-	if (infoRequest.find("Method") != infoRequest.end())
+	request.parseRequestHttp(str, size);
+	httpRequestLine = request.getRequestLine();
+	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
-		if (infoRequest["Method"] == "GET")
+		if (httpRequestLine["Method"] == "GET")
 		{
-			response = serverResponse.responseGetMethod(info, infoRequest);
+			response = serverResponse.responseGetMethod(info, request);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with GET response" << std::endl;
 		}
-		else if (infoRequest["Method"] == "POST")
+		else if (httpRequestLine["Method"] == "POST")
 		{
-			response = serverResponse.responsePostMethod(info, infoRequest, str, size);
-			//std::cout << "sending" << std::endl;
+			response = serverResponse.responsePostMethod(info, request, str, size);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with POST response" << std::endl;
 		}
-		else if (infoRequest["Method"] == "DELETE")
+		else if (httpRequestLine["Method"] == "DELETE")
 		{
-			response = serverResponse.responseDeleteMethod(info, infoRequest);
+			response = serverResponse.responseDeleteMethod(info, request);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with DELETE response" << std::endl;

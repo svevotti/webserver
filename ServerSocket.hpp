@@ -12,7 +12,7 @@
 #include <netdb.h>
 #include <poll.h>
 
-#include "ServerParseRequest.hpp"
+#include "ClientRequest.hpp"
 #include "ServerResponse.hpp"
 #include "InfoServer.hpp"
 #include "ServerStatusCode.hpp"
