@@ -129,7 +129,7 @@ int ClientRequest::getTypeBody(void)
 	return typeBody;
 }
 
-void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& str)
+void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& str)
 {
 	std::string contentType = headers["Content-Type"];
 	std::string line;
@@ -144,18 +144,22 @@ void ClientRequest::parseBody(const char *buffer, int size, std::istringstream& 
 		this->typeBody = MULTIPART;
 		std::vector<int> boundariesIndexes;
 		char *b;
-		b = getBoundary(buffer);
+		b = getBoundary(buffer.c_str());
 		int blen = strlen(b);
 		for (int i = 0; i < size; i++) 
 		{
-			int diff = ft_memcmp(buffer + i, b, blen);
+			int diff = ft_memcmp(buffer.c_str() + i, b, blen);
 			if (diff == 0) {
 				boundariesIndexes.push_back(i);
 			}
 		}
+		// std::cout << (int)boundariesIndexes.size() << std::endl;
+		// for (int i = 0; i < boundariesIndexes.size(); i++)
+		// 	std::cout << boundariesIndexes[i] << std::endl;
+		// std::cout << buffer << std::endl;
 		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		{
-			std::istringstream streamHeaders(buffer + boundariesIndexes[i]);
+			std::istringstream streamHeaders(buffer.c_str() + boundariesIndexes[i]);
 			indexBinary = boundariesIndexes[i];
 			while (getline(streamHeaders, line))
 			{
@@ -225,7 +229,7 @@ std::string ClientRequest::getBodyText(void)
 	return body;
 }
 
-void ClientRequest::parseRequestHttp(const char *str, int size)
+void ClientRequest::parseRequestHttp(std::string str, int size)
 {
 	std::string inputString(str);
 	std::istringstream request(inputString);

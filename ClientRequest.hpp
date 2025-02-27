@@ -28,10 +28,10 @@ class ClientRequest
 
 public:
 
-	void parseRequestHttp(const char *, int);
+	void parseRequestHttp(std::string, int);
 	void parseRequestLine(std::string);
 	void parseHeaders(std::istringstream&);
-	void parseBody(const char *,int, std::istringstream&);
+	void parseBody(std::string,int, std::istringstream&);
 	std::map<int, struct header> getBodySections();
 	std::map<std::string, std::string> getHeaders();
 	std::map<std::string, std::string> getRequestLine();
