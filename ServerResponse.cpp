@@ -210,7 +210,7 @@ int checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-std::string handleFilesUploads(InfoServer info, ClientRequest request, const char *buffer, int size)
+std::string handleFilesUploads(InfoServer info, ClientRequest request, std::string buffer, int size)
 {
 	struct header section;
 	std::map<int, struct header> httpBody;
@@ -218,6 +218,7 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 	std::vector<int> dataIndex;
 	std::string response;
 
+	//printf("upload file %s\n", buffer);
 	if (httpBody.size() > 1)
 	{
 		response = "HTTP/1.1 400 Bad Request\r\n"
@@ -229,6 +230,22 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 	}
 	httpRequestLine = request.getRequestLine();
 	httpBody = request.getBodySections();
+	// std::map<int, struct header>::iterator outerIt;
+	// std::map<std::string, std::string>::iterator innerIt;
+	// printf("body section print\n");
+	// for (outerIt = httpBody.begin(); outerIt != httpBody.end(); outerIt++)
+	// {
+	// 	// printf("i %d\n", i++);
+	// 	// std::cout << "Index: " << outerIt->first << std::endl;
+	// 	struct header section = outerIt->second;
+
+	// 	for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+	// 	{
+	// 		// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
+	// 		std::cout << innerIt->first << std::endl;
+	// 		std::cout << innerIt->second << std::endl;
+	// 	}
+	// }
 	dataIndex = request.getBinaryIndex();
 	std::string requestTarget = httpRequestLine["Request-target"];
 	requestTarget.erase(requestTarget.begin());
@@ -249,14 +266,15 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 	}
 	//std::cout << "file name: " << fileName << std::endl;
 	pathFile += "/" + fileName;
-	//std::cout << pathFile << std::endl;
+	std::cout << pathFile << std::endl;
 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0) {
 		perror("Error opening file");
-		exit(1);
+		return (response);
+		//exit(1);
 	}
 	//write to the file
-	ssize_t written = write(file, buffer + dataIndex[0] + 2, size - dataIndex[0] - 2);
+	ssize_t written = write(file, buffer.c_str() + dataIndex[0] + 2, size - dataIndex[0] - 2);
 	if (written < 0) {
 		perror("Error writing to file");
 		close(file);
@@ -271,7 +289,7 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, const cha
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, const char *buffer, int size)
+std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, std::string buffer, int size)
 {
 	std::string response;
 	if (request.getTypeBody() == MULTIPART)

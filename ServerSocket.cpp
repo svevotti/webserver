@@ -29,6 +29,13 @@
 #define POLL -10
 #define BUFFER 1024
 
+typedef struct client
+{
+	int fds;
+	std::string buffer;
+	int bytes;
+} client;
+
 int createServerSocket(const char* portNumber)
 {
 	int _serverFds;
@@ -44,14 +51,11 @@ int createServerSocket(const char* portNumber)
 	if (error == -1)
 		std::cout << "Error getaddrinfo" << std::endl;
 	/*note: loop to check socket availabilyt or not*/
-	_serverFds = socket(serverInfo->ai_family, serverInfo->ai_socktype, 0); //create socket
+	_serverFds = socket(serverInfo->ai_family, serverInfo->ai_socktype | SOCK_NONBLOCK, 0); //create socket
 	if (_serverFds == -1)
 		printError(SOCKET);
 	if (setsockopt(_serverFds, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) //make the address reusable
 		printError(SETSOCKET);
-	// int status = fcntl(_serverFds, F_SETFL, O_NONBLOCK); //making socket non-blocking
-	// if (status == -1)
-	// 	printError(FCNTL);
 	if (bind(_serverFds, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) //binding address to port number
 		printError(BIND);
 	/*till here the loop*/
@@ -72,7 +76,7 @@ int findMatchingSocket(int pollFd, int array[])
 	return -1;
 }
 
-std::string serverParsingAndResponse(const char *str, InfoServer info, int fd, int size)
+std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, int size)
 {
 	std::cout << "Parsing headers HTTP" << std::endl;
 	ClientRequest request;
@@ -81,12 +85,15 @@ std::string serverParsingAndResponse(const char *str, InfoServer info, int fd, i
 	std::string response;
 
 	request.parseRequestHttp(str, size);
+	std::cout << "done parsing HTTP" << std::endl;
 	httpRequestLine = request.getRequestLine();
+	std::cout << httpRequestLine["Method"] << std::endl;
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
 		if (httpRequestLine["Method"] == "GET")
 		{
 			response = serverResponse.responseGetMethod(info, request);
+			std::cout << response << std::endl;
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with GET response" << std::endl;
@@ -94,17 +101,19 @@ std::string serverParsingAndResponse(const char *str, InfoServer info, int fd, i
 		else if (httpRequestLine["Method"] == "POST")
 		{
 			response = serverResponse.responsePostMethod(info, request, str, size);
-			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-			// 	printError(SEND);
+			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+				printError(SEND);
 			std::cout << "done with POST response" << std::endl;
 		}
 		else if (httpRequestLine["Method"] == "DELETE")
 		{
 			response = serverResponse.responseDeleteMethod(info, request);
-			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-			// 	printError(SEND);
+			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+				printError(SEND);
 			std::cout << "done with DELETE response" << std::endl;
 		}
+		else
+		std::cout << "method not found" << std::endl;
 	}
 	else
 	{
@@ -143,9 +152,6 @@ int createClientSocket(int fd)
 	clientFd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize); //client socket
 	if (clientFd == -1)
 		printError(ACCEPT);
-	// int status = fcntl(clientFd, F_SETFL, O_NONBLOCK); /*no need since it inherits from server socoet passed in accept*/
-	// if (status == -1)
-	// 	printError(FCNTL);
 	return (clientFd);
 }
 
@@ -160,7 +166,6 @@ int readData(int fd, std::string &str, int &bytes)
 		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
 		if (res <= 0)
 		{
-			//printRecvFlag(errno);
 			break;
 		}
 		str.append(buffer, res);
@@ -181,7 +186,10 @@ void	Server::startServer(InfoServer info)
 	std::vector<pollfd>::iterator it;
 	std::vector<pollfd>::iterator end;
 	int clientSocket;
+	std::string full_buffer;
 	std::string response;
+	int totBytes = 0;
+	struct client client_info;
 
 	for (i = 0; i < 2; i++)
 	{
@@ -201,7 +209,7 @@ void	Server::startServer(InfoServer info)
 	while(1)
 	{
 		std::cout << "Poll called" << std::endl;
-		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 5 * 1000);
+		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 20 * 1000);
         if (returnPoll == -1)
 		{
             printError(POLL);
@@ -225,7 +233,8 @@ void	Server::startServer(InfoServer info)
 						clientSocket = createClientSocket(it->fd);
 						if (clientSocket == -1)
 							continue;
-
+						client_info.fds = clientSocket;
+						client_info.bytes = 0;
 						struct pollfd clientFd;
 						clientFd.fd = clientSocket;
 						clientFd.events = POLLIN;
@@ -235,16 +244,36 @@ void	Server::startServer(InfoServer info)
 					else
 					{
 						/*recv data*/
-						std::string full_buffer;
-						int totBytes = 0;
 						std::cout << "Recv client request" << std::endl;
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
 						if (bytesRecv == 0)
+						{
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-						if (!full_buffer.empty())
-							response = serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
-						close(it->fd);
-						it = poll_sets.erase(it);
+							close(it->fd);
+							it = poll_sets.erase(it);
+						}
+						if (totBytes > 0)
+						{
+							if (full_buffer.find("Content-Length") == std::string::npos)
+							{
+								response = serverParsingAndResponse(full_buffer, info, it->fd, totBytes);
+								totBytes = 0;
+								full_buffer.clear();
+								close(it->fd);
+								it = poll_sets.erase(it);
+							}
+							else
+							{
+								if (totBytes > atoi(full_buffer.substr(full_buffer.find("Content-Length") + 16).c_str()))
+								{
+									response = serverParsingAndResponse(full_buffer, info, it->fd, totBytes);
+									totBytes = 0;
+									full_buffer.clear();
+									close(it->fd);
+									it = poll_sets.erase(it);
+								}
+							}
+						}
 					}
 				}
 			}
