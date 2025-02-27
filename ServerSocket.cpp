@@ -92,22 +92,22 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 		if (httpRequestLine["Method"] == "GET")
 		{
 			response = serverResponse.responseGetMethod(info, request);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+			// 	printError(SEND);
 			std::cout << "done with GET response" << std::endl;
 		}
 		else if (httpRequestLine["Method"] == "POST")
 		{
 			response = serverResponse.responsePostMethod(info, request, str, size);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+			// 	printError(SEND);
 			std::cout << "done with POST response" << std::endl;
 		}
 		else if (httpRequestLine["Method"] == "DELETE")
 		{
 			response = serverResponse.responseDeleteMethod(info, request);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+			// 	printError(SEND);
 			std::cout << "done with DELETE response" << std::endl;
 		}
 		else
@@ -274,6 +274,7 @@ void	Server::startServer(InfoServer info)
 						}
 					}
 				}
+				//TODO:implement POLLOUT for send function
 			}
 		}
 	}
