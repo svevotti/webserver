@@ -49,9 +49,9 @@ int createServerSocket(const char* portNumber)
 		printError(SOCKET);
 	if (setsockopt(_serverFds, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) //make the address reusable
 		printError(SETSOCKET);
-	int status = fcntl(_serverFds, F_SETFL, O_NONBLOCK); //making socket non-blocking
-	if (status == -1)
-		printError(FCNTL);
+	// int status = fcntl(_serverFds, F_SETFL, O_NONBLOCK); //making socket non-blocking
+	// if (status == -1)
+	// 	printError(FCNTL);
 	if (bind(_serverFds, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) //binding address to port number
 		printError(BIND);
 	/*till here the loop*/
@@ -72,7 +72,7 @@ int findMatchingSocket(int pollFd, int array[])
 	return -1;
 }
 
-void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size)
+std::string serverParsingAndResponse(const char *str, InfoServer info, int fd, int size)
 {
 	std::cout << "Parsing headers HTTP" << std::endl;
 	ClientRequest request;
@@ -94,15 +94,15 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 		else if (httpRequestLine["Method"] == "POST")
 		{
 			response = serverResponse.responsePostMethod(info, request, str, size);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+			// 	printError(SEND);
 			std::cout << "done with POST response" << std::endl;
 		}
 		else if (httpRequestLine["Method"] == "DELETE")
 		{
 			response = serverResponse.responseDeleteMethod(info, request);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			// if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
+			// 	printError(SEND);
 			std::cout << "done with DELETE response" << std::endl;
 		}
 	}
@@ -110,6 +110,7 @@ void serverParsingAndResponse(const char *str, InfoServer info, int fd, int size
 	{
 		std::cout << "method not found" << std::endl;
 	}
+	return response;
 }
 
 int getRequestContentLength(std::string buffer)
@@ -142,9 +143,9 @@ int createClientSocket(int fd)
 	clientFd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize); //client socket
 	if (clientFd == -1)
 		printError(ACCEPT);
-	int status = fcntl(clientFd, F_SETFL, O_NONBLOCK); /*no need since it inherits from server socoet passed in accept*/
-	if (status == -1)
-		printError(FCNTL);
+	// int status = fcntl(clientFd, F_SETFL, O_NONBLOCK); /*no need since it inherits from server socoet passed in accept*/
+	// if (status == -1)
+	// 	printError(FCNTL);
 	return (clientFd);
 }
 
@@ -156,7 +157,7 @@ int readData(int fd, std::string &str, int &bytes)
 	while (1)
 	{
 		ft_memset(buffer, 0, sizeof(buffer));
-		res = recv(fd, buffer, BUFFER, 0);
+		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
 		if (res <= 0)
 		{
 			//printRecvFlag(errno);
@@ -180,6 +181,7 @@ void	Server::startServer(InfoServer info)
 	std::vector<pollfd>::iterator it;
 	std::vector<pollfd>::iterator end;
 	int clientSocket;
+	std::string response;
 
 	for (i = 0; i < 2; i++)
 	{
@@ -199,7 +201,7 @@ void	Server::startServer(InfoServer info)
 	while(1)
 	{
 		std::cout << "Poll called" << std::endl;
-		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 60 * 1000);
+		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 5 * 1000);
         if (returnPoll == -1)
 		{
             printError(POLL);
@@ -207,8 +209,8 @@ void	Server::startServer(InfoServer info)
         }
 		else if (returnPoll == 0)
 		{
-			printf("Waiting connections timeout 1 minute...closing server\n");
-			break ;
+			printf("Waiting connections\n");
+			continue;
 		}
 		else
 		{
@@ -239,18 +241,10 @@ void	Server::startServer(InfoServer info)
 						bytesRecv = readData(it->fd, full_buffer, totBytes);
 						if (bytesRecv == 0)
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-						else if (bytesRecv == -1)
-							bytesRecv = printRecvFlag(errno);
-						if (bytesRecv == 1)
-						{
-							if (!full_buffer.empty())
-								serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
-						}
-						else
-						{
-							close(it->fd);
-							it = poll_sets.erase(it);
-						}
+						if (!full_buffer.empty())
+							response = serverParsingAndResponse(full_buffer.c_str(), info, it->fd, totBytes);
+						close(it->fd);
+						it = poll_sets.erase(it);
 					}
 				}
 			}
