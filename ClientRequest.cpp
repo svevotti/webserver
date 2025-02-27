@@ -32,7 +32,7 @@ void ClientRequest::parseRequestLine(std::string str)
 	if (str.find("/") != std::string::npos) //
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		requestLine["Request-target"] = subStr; //request-target: full url+query
+		requestLine["Request-URI"] = subStr; //Request-URI: full url+query
 		if (subStr.find("?") != std::string::npos) //query
 		{
 			url = subStr.substr(0, subStr.find("?"));
@@ -71,7 +71,7 @@ void ClientRequest::parseRequestLine(std::string str)
 		}
 	}
 	else
-		requestLine["Request-target"] = "target not defined"; //error
+		requestLine["Request-URI"] = "target not defined"; //error
 	if (str.find("HTTP") != std::string::npos)
 	{
 		std::size_t protocol_index_start = str.find("HTTP");

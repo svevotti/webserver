@@ -111,10 +111,10 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 
 	response = pageNotFound();
 	httpRequestLine = request.getRequestLine();
-	if (!(httpRequestLine["Request-target"].empty()))
+	if (!(httpRequestLine["Request-URI"].empty()))
 	{
 		documentRootPath = info.getServerDocumentRoot();
-		pathToTarget = documentRootPath + httpRequestLine["Request-target"];
+		pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
 			std::cout << "Error using stat" << std::endl;
 		if (S_ISDIR(pathStat.st_mode))
@@ -247,7 +247,7 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 	// 	}
 	// }
 	dataIndex = request.getBinaryIndex();
-	std::string requestTarget = httpRequestLine["Request-target"];
+	std::string requestTarget = httpRequestLine["Request-URI"];
 	requestTarget.erase(requestTarget.begin());
 	std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
 	//openfile
@@ -312,7 +312,7 @@ std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest 
 
 	std::string response = pageNotFound();
 	//TODO: check path to resource, if it exits delete, if not send negative response
-	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-target"];
+	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-URI"];
 	std::ifstream file(pathToResource.c_str());
 	if (!(file.good()))
 		return response;

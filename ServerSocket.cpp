@@ -87,13 +87,11 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 	request.parseRequestHttp(str, size);
 	std::cout << "done parsing HTTP" << std::endl;
 	httpRequestLine = request.getRequestLine();
-	std::cout << httpRequestLine["Method"] << std::endl;
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
 		if (httpRequestLine["Method"] == "GET")
 		{
 			response = serverResponse.responseGetMethod(info, request);
-			std::cout << response << std::endl;
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with GET response" << std::endl;
