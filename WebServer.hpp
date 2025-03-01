@@ -29,6 +29,7 @@ public:
     void    ReadClientRequest(int, InfoServer);
     int     readData(int, std::string&, int&);
     void    handleReadEvents(int, InfoServer);
+    int     callPoll(InfoServer, std::vector<int>);
 
 private:
 

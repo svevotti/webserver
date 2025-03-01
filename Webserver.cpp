@@ -175,30 +175,35 @@ void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets
     }
 }
 
+int	Webserver::callPoll(InfoServer info, std::vector<int> serverFds)
+{
+	int returnPoll;
+
+	std::cout << "Poll called" << std::endl;
+	returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 20 * 1000);
+	if (returnPoll == -1)
+		printError(POLL);
+	else if (returnPoll == 0)
+		std::cout << "No events\n";
+	else
+		dispatchEvents(info, serverFds);
+	return returnPoll;
+}
+
 void	Webserver::startServer(InfoServer info)
 {
 	ServerSockets serverFds(info);
 
-	int returnPoll;
 	this->totBytes = 0;
 	//std::cout << "before clearing: " << this->full_buffer << std::endl;
 	this->full_buffer.clear(); //if i don't clean it, i get the path to the server root..?
 
 	this->poll_sets.reserve(100); //why setting memory beforehand
 	addServerSocketsToPoll(serverFds.getServerSockets());
-	while(1)
+	while (1)
 	{
-		std::cout << "Poll called" << std::endl;
-		returnPoll = poll(poll_sets.data(), poll_sets.size(), 1 * 20 * 1000);
-        if (returnPoll == -1)
-		{
-            printError(POLL);
-            break ;
-        }
-		else if (returnPoll == 0)
-			continue;
-		else
-			dispatchEvents(info, serverFds.getServerSockets());
+		if (callPoll(info, serverFds.getServerSockets()) == -1)
+			break;
 	}
 	for (int i = 0; i < 2; i++)
 	{
