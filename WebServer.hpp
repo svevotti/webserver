@@ -21,9 +21,12 @@
 
 class Webserver
 {
-    public:
+public:
     void	startServer(InfoServer);
+    void    addServerSocketsToPoll(std::vector<int>);
 
-    private:
+private:
+
+    std::vector<struct pollfd> poll_sets;
 };
 #endif

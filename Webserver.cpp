@@ -115,8 +115,7 @@ int readData(int fd, std::string &str, int &bytes)
 void	Webserver::startServer(InfoServer info)
 {
 	ServerSockets serverFds(info);
-	std::vector<struct pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
-	struct pollfd myPoll[200]; //which size to give? there should be a max - client max
+
 	int returnPoll;
 	int bytesRecv;
 	std::vector<pollfd>::iterator it;
@@ -127,14 +126,8 @@ void	Webserver::startServer(InfoServer info)
 	int totBytes = 0;
 	struct client client_info;
 
-	/*fill in poll strcut with my server sockets*/
-	poll_sets.reserve(100);
-	for (int i = 0; i < 2; i++)
-	{
-		myPoll[i].fd = serverFds.getServerSockets()[i];
-		myPoll[i].events = POLLIN;
-		poll_sets.push_back(myPoll[i]);
-	}
+	this->poll_sets.reserve(100); //why setting memory beforehand
+	addServerSocketsToPoll(serverFds.getServerSockets());
 	while(1)
 	{
 		std::cout << "Poll called" << std::endl;
@@ -148,13 +141,13 @@ void	Webserver::startServer(InfoServer info)
 			continue;
 		else
 		{
-			end = poll_sets.end();
-			for (it = poll_sets.begin(); it != end; it++)
+			end = this->poll_sets.end();
+			for (it = this->poll_sets.begin(); it != end; it++)
 			{
 				if (it->revents & POLLIN)
 				{
 					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
-					if (it->fd == serverFds.getServerSockets()[0] || it->fd == serverFds.getServerSockets()[0])
+					if (it->fd == serverFds.getServerSockets()[0] || it->fd == serverFds.getServerSockets()[1])
 					{
 						clientSocket = createClientSocket(it->fd);
 						if (clientSocket == -1)
@@ -164,7 +157,8 @@ void	Webserver::startServer(InfoServer info)
 						struct pollfd clientFd;
 						clientFd.fd = clientSocket;
 						clientFd.events = POLLIN;
-						poll_sets.push_back(clientFd);
+						this->poll_sets.push_back(clientFd);
+						//clean struct pollfd?
 						std::cout << "client created: " <<  clientSocket << std::endl;
 					}
 					else
@@ -176,7 +170,7 @@ void	Webserver::startServer(InfoServer info)
 						{
 							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
 							close(it->fd);
-							it = poll_sets.erase(it);
+							it = this->poll_sets.erase(it);
 						}
 						if (totBytes > 0)
 						{
@@ -186,7 +180,7 @@ void	Webserver::startServer(InfoServer info)
 								totBytes = 0;
 								full_buffer.clear();
 								close(it->fd);
-								it = poll_sets.erase(it);
+								it = this->poll_sets.erase(it);
 							}
 							else
 							{
@@ -196,7 +190,7 @@ void	Webserver::startServer(InfoServer info)
 									totBytes = 0;
 									full_buffer.clear();
 									close(it->fd);
-									it = poll_sets.erase(it);
+									it = this->poll_sets.erase(it);
 								}
 							}
 						}
@@ -207,7 +201,19 @@ void	Webserver::startServer(InfoServer info)
 	}
 	for (int i = 0; i < 2; i++)
 	{
-		if(myPoll[i].fd >= 0)
-			close(myPoll[i].fd);
+		if(poll_sets[i].fd >= 0)
+			close(poll_sets[i].fd);
 	}
+}
+
+void Webserver::addServerSocketsToPoll(std::vector<int> fds)
+{
+    struct pollfd serverPoll[200];
+	for (int i = 0; i < 2; i++)
+	{
+		serverPoll[i].fd = fds[i];
+		serverPoll[i].events = POLLIN;
+		this->poll_sets.push_back(serverPoll[i]);
+	}
+	//clean struct pollfd?
 }
