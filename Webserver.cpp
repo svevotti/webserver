@@ -29,13 +29,6 @@
 #define POLL -10
 #define BUFFER 1024
 
-typedef struct client
-{
-	int fds;
-	std::string buffer;
-	int bytes;
-} client;
-
 std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, int size)
 {
 	std::cout << "Parsing" << std::endl;
@@ -98,7 +91,7 @@ int Webserver::createNewClient(int fd)
 	return (fd);
 }
 
-int readData(int fd, std::string &str, int &bytes)
+int Webserver::readData(int fd, std::string &str, int &bytes)
 {
 	int res = 0;
 	char buffer[BUFFER];
@@ -117,17 +110,79 @@ int readData(int fd, std::string &str, int &bytes)
 	return res;
 }
 
+void Webserver::handleReadEvents(int fd, InfoServer info)
+{
+	int bytesRecv;
+	std::string response;
+
+	std::cout << "Recv client request" << std::endl;
+	bytesRecv = readData(fd, this->full_buffer, this->totBytes);
+	if (bytesRecv == 0)
+	{
+		std::cout << "socket number " << fd << " closed connection" << std::endl;
+		close(fd);
+		this->it = this->poll_sets.erase(this->it);
+	}
+	if (this->totBytes > 0)
+	{
+		if (this->full_buffer.find("Content-Length") == std::string::npos)
+		{
+			response = serverParsingAndResponse(this->full_buffer, info, fd, this->totBytes);
+			this->totBytes = 0;
+			this->full_buffer.clear();
+			close(fd);
+			this->it = this->poll_sets.erase(this->it);
+		}
+		else
+		{
+			if (this->totBytes > atoi(this->full_buffer.substr(this->full_buffer.find("Content-Length") + 16).c_str()))
+			{
+				response = serverParsingAndResponse(this->full_buffer, info, fd, this->totBytes);
+				this->totBytes = 0;
+				this->full_buffer.clear();
+				close(fd);
+				this->it = this->poll_sets.erase(this->it);
+			}
+		}
+	}
+}
+
+void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets)
+{
+	end = this->poll_sets.end();
+    for (this->it = poll_sets.begin(); this->it != end; this->it++) 
+    {
+        if (this->it->revents & (POLLIN | POLLOUT)) 
+        {
+			if (this->it->revents & (POLLIN | POLLOUT)) 
+			{
+				if (this->it->fd == serverSockets[0] || it->fd == serverSockets[1])
+					createNewClient(this->it->fd);
+				// else if (cgi_map.find(it->fd) != cgi_map.end()) 
+				// {
+				//     CGITracker& tracker = cgi_map[it->fd];
+				//     if (it->revents & POLLOUT && it->fd == tracker.cgi->getInPipeWriteFd())
+				//         handleCGIInput(tracker, it);
+				//     else if (it->revents & POLLIN && it->fd == tracker.cgi->getOutPipeReadFd())
+				//         handleCGIOutput(tracker, it);
+				// } 
+				else if (it->revents & POLLIN)
+					handleReadEvents(this->it->fd, server);
+				// else if (this->it->revents & POLLOUT)
+				// 	handleSendEvents(it);
+        	}
+		}
+    }
+}
+
 void	Webserver::startServer(InfoServer info)
 {
 	ServerSockets serverFds(info);
 
 	int returnPoll;
-	int bytesRecv;
-	std::string full_buffer;
-	std::string response;
-	int totBytes = 0;
-	std::vector<struct pollfd>::iterator it;
-	std::vector<struct pollfd>::iterator end;
+	this->totBytes = 0;
+	//std::cout << "before clearing: " << this->full_buffer << std::endl;
+	this->full_buffer.clear(); //if i don't clean it, i get the path to the server root..?
 
 	this->poll_sets.reserve(100); //why setting memory beforehand
 	addServerSocketsToPoll(serverFds.getServerSockets());
@@ -143,53 +198,7 @@ void	Webserver::startServer(InfoServer info)
 		else if (returnPoll == 0)
 			continue;
 		else
-		{
-			//dispatchEvents(info, serverFds.getServerSockets());
-			end = this->poll_sets.end();
-			for (it = this->poll_sets.begin(); it != end; it++)
-			{
-				if (it->revents & POLLIN)
-				{
-					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
-					if (it->fd == serverFds.getServerSockets()[0] || it->fd == serverFds.getServerSockets()[1])
-						createNewClient(it->fd);
-					else
-					{
-						/*recv data*/
-						std::cout << "Recv client request" << std::endl;
-						bytesRecv = readData(it->fd, full_buffer, totBytes);
-						if (bytesRecv == 0)
-						{
-							std::cout << "socket number " << it->fd << " closed connection" << std::endl;
-							close(it->fd);
-							it = this->poll_sets.erase(it);
-						}
-						if (totBytes > 0)
-						{
-							if (full_buffer.find("Content-Length") == std::string::npos)
-							{
-								response = serverParsingAndResponse(full_buffer, info, it->fd, totBytes);
-								totBytes = 0;
-								full_buffer.clear();
-								close(it->fd);
-								it = this->poll_sets.erase(it);
-							}
-							else
-							{
-								if (totBytes > atoi(full_buffer.substr(full_buffer.find("Content-Length") + 16).c_str()))
-								{
-									response = serverParsingAndResponse(full_buffer, info, it->fd, totBytes);
-									totBytes = 0;
-									full_buffer.clear();
-									close(it->fd);
-									it = this->poll_sets.erase(it);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+			dispatchEvents(info, serverFds.getServerSockets());
 	}
 	for (int i = 0; i < 2; i++)
 	{

@@ -27,9 +27,15 @@ public:
     void    dispatchEvents(InfoServer, std::vector<int>);
     int     createNewClient(int);
     void    ReadClientRequest(int, InfoServer);
+    int     readData(int, std::string&, int&);
+    void    handleReadEvents(int, InfoServer);
 
 private:
 
     std::vector<struct pollfd> poll_sets;
+    std::vector<struct pollfd>::iterator it;
+	std::vector<struct pollfd>::iterator end;
+    int totBytes;
+    std::string full_buffer;
 };
 #endif
