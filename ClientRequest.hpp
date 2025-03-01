@@ -32,13 +32,13 @@ public:
 	void parseRequestLine(std::string);
 	void parseHeaders(std::istringstream&);
 	void parseBody(std::string,int, std::istringstream&);
-	std::map<int, struct header> getBodySections();
-	std::map<std::string, std::string> getHeaders();
-	std::map<std::string, std::string> getRequestLine();
-	std::map<std::string, std::string> getQueryMap();
-	std::vector<int> getBinaryIndex();
-	std::string getBodyText();
-	int getTypeBody(void);
+	std::map<int, struct header> getBodySections() const;
+	std::map<std::string, std::string> getHeaders() const;
+	std::map<std::string, std::string> getRequestLine() const;
+	std::map<std::string, std::string> getQueryMap() const;
+	std::vector<int> getBinaryIndex() const;
+	std::string getBodyText() const;
+	int getTypeBody(void) const;
 
 private:
 	std::map<std::string, std::string> requestLine;

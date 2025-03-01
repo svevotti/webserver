@@ -124,7 +124,7 @@ char *getBoundary(const char *buffer)
 	b[i] = '\0';
 	return (b);
 }
-int ClientRequest::getTypeBody(void)
+int ClientRequest::getTypeBody(void) const
 {
 	return typeBody;
 }
@@ -199,32 +199,32 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 	}
 }
 
-std::map<int, struct header> ClientRequest::getBodySections(void)
+std::map<int, struct header> ClientRequest::getBodySections(void) const
 {
 	return sections;
 }
 
-std::map<std::string, std::string> ClientRequest::getRequestLine(void)
+std::map<std::string, std::string> ClientRequest::getRequestLine(void) const
 {
 	return requestLine;
 }
 
-std::map<std::string, std::string> ClientRequest::getHeaders(void)
+std::map<std::string, std::string> ClientRequest::getHeaders(void) const
 {
 	return headers;
 }
 
-std::map<std::string, std::string> ClientRequest::getQueryMap(void)
+std::map<std::string, std::string> ClientRequest::getQueryMap(void) const
 {
 	return query;
 }
 
-std::vector<int> ClientRequest::getBinaryIndex(void)
+std::vector<int> ClientRequest::getBinaryIndex(void) const
 {
 	return binaryIndex;
 }
 
-std::string ClientRequest::getBodyText(void)
+std::string ClientRequest::getBodyText(void) const
 {
 	return body;
 }
