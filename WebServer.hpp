@@ -24,6 +24,9 @@ class Webserver
 public:
     void	startServer(InfoServer);
     void    addServerSocketsToPoll(std::vector<int>);
+    void    dispatchEvents(InfoServer, std::vector<int>);
+    int     createNewClient(int);
+    void    ReadClientRequest(int, InfoServer);
 
 private:
 

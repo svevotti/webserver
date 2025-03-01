@@ -80,17 +80,22 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 	return response;
 }
 
-int createClientSocket(int fd)
+int Webserver::createNewClient(int fd)
 {
-	int clientFd;
 	socklen_t clientSize;
 	struct sockaddr_storage clientStruct;
+	struct pollfd clientPoll;
 
 	clientSize = sizeof(clientStruct);
-	clientFd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize); //client socket
-	if (clientFd == -1)
+	fd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize); //client socket
+	if (fd == -1)
 		printError(ACCEPT);
-	return (clientFd);
+	clientPoll.fd = fd;
+	clientPoll.events = POLLIN;
+	this->poll_sets.push_back(clientPoll);
+	//clean struct pollfd?
+	std::cout << "client created: " <<  fd << std::endl;
+	return (fd);
 }
 
 int readData(int fd, std::string &str, int &bytes)
@@ -118,13 +123,11 @@ void	Webserver::startServer(InfoServer info)
 
 	int returnPoll;
 	int bytesRecv;
-	std::vector<pollfd>::iterator it;
-	std::vector<pollfd>::iterator end;
-	int clientSocket;
 	std::string full_buffer;
 	std::string response;
 	int totBytes = 0;
-	struct client client_info;
+	std::vector<struct pollfd>::iterator it;
+	std::vector<struct pollfd>::iterator end;
 
 	this->poll_sets.reserve(100); //why setting memory beforehand
 	addServerSocketsToPoll(serverFds.getServerSockets());
@@ -141,6 +144,7 @@ void	Webserver::startServer(InfoServer info)
 			continue;
 		else
 		{
+			//dispatchEvents(info, serverFds.getServerSockets());
 			end = this->poll_sets.end();
 			for (it = this->poll_sets.begin(); it != end; it++)
 			{
@@ -148,19 +152,7 @@ void	Webserver::startServer(InfoServer info)
 				{
 					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
 					if (it->fd == serverFds.getServerSockets()[0] || it->fd == serverFds.getServerSockets()[1])
-					{
-						clientSocket = createClientSocket(it->fd);
-						if (clientSocket == -1)
-							continue;
-						client_info.fds = clientSocket;
-						client_info.bytes = 0;
-						struct pollfd clientFd;
-						clientFd.fd = clientSocket;
-						clientFd.events = POLLIN;
-						this->poll_sets.push_back(clientFd);
-						//clean struct pollfd?
-						std::cout << "client created: " <<  clientSocket << std::endl;
-					}
+						createNewClient(it->fd);
 					else
 					{
 						/*recv data*/
