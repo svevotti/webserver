@@ -30,3 +30,12 @@ std::vector<std::string> InfoServer::getArrayPorts(void)
 {
     return arrayPorts;
 }
+
+void InfoServer::setServerNumber(int number)
+{
+    this->serverNumbers = number;
+}
+int InfoServer::getServerNumber() const
+{
+        return serverNumbers;
+}

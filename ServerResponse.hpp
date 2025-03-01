@@ -23,16 +23,9 @@ class ServerResponse
 {
 
 public:
-	// ServerResponse();
-	// // ServerResponse();
-	// // Server(int);
-	// ~ServerResponse();
-	// ServerResponse(const ServerResponse &);
-	// void	operator=(const ServerResponse &);
 	std::string responseGetMethod(InfoServer, ClientRequest);
 	std::string responsePostMethod(InfoServer, ClientRequest, std::string, int);
 	std::string responseDeleteMethod(InfoServer info, ClientRequest);
-	// int		getServerPort();
 
 };
 

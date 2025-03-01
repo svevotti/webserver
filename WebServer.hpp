@@ -1,0 +1,29 @@
+#ifndef WEBSERVER_H
+#define WEBSERVER_H
+
+#include <sys/socket.h>
+#include <iostream>
+#include <sys/types.h> 
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <cstring>
+#include <fcntl.h>
+#include <netdb.h>
+#include <poll.h>
+
+#include "ClientRequest.hpp"
+#include "ServerResponse.hpp"
+#include "InfoServer.hpp"
+#include "ServerStatusCode.hpp"
+#include "StringManipulations.hpp"
+#include "PrintingFunctions.hpp"
+
+class Webserver
+{
+    public:
+    void	startServer(InfoServer);
+
+    private:
+};
+#endif

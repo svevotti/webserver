@@ -178,7 +178,7 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 					sections[i] = data;
 				}
 			}
-			binaryIndex.push_back(indexBinary);
+			binaryIndex.push_back(indexBinary);//
 			streamHeaders.clear();
 			line.clear();
 			key.clear();

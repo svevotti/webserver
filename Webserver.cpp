@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <map>
-#include "ServerSocket.hpp"
+#include "WebServer.hpp"
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
@@ -35,46 +35,6 @@ typedef struct client
 	std::string buffer;
 	int bytes;
 } client;
-
-int createServerSocket(const char* portNumber)
-{
-	int _serverFds;
-	struct addrinfo hints, *serverInfo; //struct info about server address
-	int error;
-	int opt = 1;
-
-	ft_memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET6; //flag to set iPV6
-	hints.ai_socktype = SOCK_STREAM; //type of socket, we need TCP, stream socket
-	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
-	error = getaddrinfo(NULL, portNumber, &hints, &serverInfo);
-	if (error == -1)
-		std::cout << "Error getaddrinfo" << std::endl;
-	/*note: loop to check socket availabilyt or not*/
-	_serverFds = socket(serverInfo->ai_family, serverInfo->ai_socktype | SOCK_NONBLOCK, 0); //create socket
-	if (_serverFds == -1)
-		printError(SOCKET);
-	if (setsockopt(_serverFds, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) //make the address reusable
-		printError(SETSOCKET);
-	if (bind(_serverFds, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) //binding address to port number
-		printError(BIND);
-	/*till here the loop*/
-	freeaddrinfo(serverInfo);
-	if (listen(_serverFds, 5) == -1) //make server socket listenning to incoming connections
-		printError(LISTEN);
-	return (_serverFds);
-}
-
-int findMatchingSocket(int pollFd, int array[])
-{
-	int i = 0;
-	for (i = 0; i < 2; i++)
-	{
-		if (pollFd == array[i])
-			return(i);
-	}
-	return -1;
-}
 
 std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, int size)
 {
@@ -120,26 +80,6 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 	return response;
 }
 
-int getRequestContentLength(std::string buffer)
-{
-	std::string content_str = "Content-Length: ";
-	int len = content_str.size();
-	int contentLength = 0;
-	if (buffer.find(content_str) != std::string::npos)
-	{
-		if (buffer.find("\r\n", buffer.find(content_str)) != std::string::npos)
-		{
-			len = buffer.find("\r\n", buffer.find(content_str)) - buffer.find(content_str);
-			std::string size_str = buffer.substr(buffer.find(content_str) + content_str.size(), len - content_str.size());
-			std::stringstream ss;
-			ss << size_str;
-			ss >> contentLength;
-			return contentLength;
-		}
-	}
-	return -1;
-}
-
 int createClientSocket(int fd)
 {
 	int clientFd;
@@ -172,13 +112,11 @@ int readData(int fd, std::string &str, int &bytes)
 	return res;
 }
 
-void	Server::startServer(InfoServer info)
+void	Webserver::startServer(InfoServer info)
 {
-
+	ServerSockets serverFds(info);
 	std::vector<struct pollfd> poll_sets; //using vector to store fds in poll struct, it could have been an array
 	struct pollfd myPoll[200]; //which size to give? there should be a max - client max
-	int arraySockets[2];
-	int i;
 	int returnPoll;
 	int bytesRecv;
 	std::vector<pollfd>::iterator it;
@@ -189,21 +127,14 @@ void	Server::startServer(InfoServer info)
 	int totBytes = 0;
 	struct client client_info;
 
-	for (i = 0; i < 2; i++)
-	{
-		arraySockets[i] = createServerSocket(info.getArrayPorts()[i].c_str());
-		if (arraySockets[i] < 0)
-			printError(arraySockets[i]);
-	}
 	/*fill in poll strcut with my server sockets*/
 	poll_sets.reserve(100);
-	for (i = 0; i < 2; i++)
+	for (int i = 0; i < 2; i++)
 	{
-		myPoll[i].fd = arraySockets[i];
+		myPoll[i].fd = serverFds.getServerSockets()[i];
 		myPoll[i].events = POLLIN;
 		poll_sets.push_back(myPoll[i]);
 	}
-	std::cout << "Waiting connections..." << std::endl;
 	while(1)
 	{
 		std::cout << "Poll called" << std::endl;
@@ -214,10 +145,7 @@ void	Server::startServer(InfoServer info)
             break ;
         }
 		else if (returnPoll == 0)
-		{
-			printf("Waiting connections\n");
 			continue;
-		}
 		else
 		{
 			end = poll_sets.end();
@@ -226,7 +154,7 @@ void	Server::startServer(InfoServer info)
 				if (it->revents & POLLIN)
 				{
 					std::cout << "poll event POLLIN on fd: " << it->fd << std::endl;
-					if (it->fd == arraySockets[0] || it->fd == arraySockets[1])
+					if (it->fd == serverFds.getServerSockets()[0] || it->fd == serverFds.getServerSockets()[0])
 					{
 						clientSocket = createClientSocket(it->fd);
 						if (clientSocket == -1)
@@ -277,7 +205,7 @@ void	Server::startServer(InfoServer info)
 			}
 		}
 	}
-	for (i = 0; i < 2; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		if(myPoll[i].fd >= 0)
 			close(myPoll[i].fd);
