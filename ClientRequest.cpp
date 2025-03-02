@@ -135,7 +135,7 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 	std::string line;
 	std::string key;
 	std::string value;
-	struct header data;
+	struct section data;
 	int indexBinary = 0;
 
 	std::cout << "parsing body" << std::endl;
@@ -150,13 +150,10 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 		{
 			int diff = ft_memcmp(buffer.c_str() + i, b, blen);
 			if (diff == 0) {
-				boundariesIndexes.push_back(i);
+				boundariesIndexes.push_back(i-2); //correct?
 			}
 		}
-		// std::cout << (int)boundariesIndexes.size() << std::endl;
-		// for (int i = 0; i < boundariesIndexes.size(); i++)
-		// 	std::cout << boundariesIndexes[i] << std::endl;
-		// std::cout << buffer << std::endl;
+		std::string headers = buffer.substr(0, boundariesIndexes[1]);
 		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		{
 			std::istringstream streamHeaders(buffer.c_str() + boundariesIndexes[i]);
@@ -165,7 +162,7 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 			{
 				if (line.find_first_not_of("\r\n") == std::string::npos)
 					break ;
-				indexBinary += line.length() + 1;
+				indexBinary += line.length() + 1; //ADD \n in the count
 				if (line.find(b) != std::string::npos)
 					continue;
 				else
@@ -178,13 +175,17 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 					sections[i] = data;
 				}
 			}
+			data.indexBinary = indexBinary+2;
 			binaryIndex.push_back(indexBinary);
+			data.body.append(buffer.c_str() + indexBinary+2, buffer.c_str() + boundariesIndexes[i+1]-2);
+			sectionsVec.push_back(data);
 			streamHeaders.clear();
 			line.clear();
 			key.clear();
 			value.clear();
 			data.myMap.clear();
 			indexBinary = 0;
+			data.body.clear();
 		}
 	}
 	else
@@ -199,7 +200,7 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 	}
 }
 
-std::map<int, struct header> ClientRequest::getBodySections(void) const
+std::map<int, struct section> ClientRequest::getBodySections(void) const
 {
 	return sections;
 }
@@ -229,6 +230,10 @@ std::string ClientRequest::getBodyText(void) const
 	return body;
 }
 
+std::vector<struct section> ClientRequest::getSections(void) const
+{
+	return this->sectionsVec;
+}
 void ClientRequest::parseRequestHttp(std::string str, int size)
 {
 	std::string inputString(str);
