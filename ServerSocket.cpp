@@ -86,7 +86,7 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 
 	request.parseRequestHttp(str, size);
 	std::cout << "done parsing HTTP" << std::endl;
-	httpRequestLine = request.getRequestLine();
+	httpRequestLine = request.getHttpRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
 		if (httpRequestLine["Method"] == "GET")

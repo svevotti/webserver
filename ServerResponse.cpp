@@ -110,7 +110,7 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 	std::map<std::string, std::string> httpRequestLine;
 
 	response = pageNotFound();
-	httpRequestLine = request.getRequestLine();
+	httpRequestLine = request.getHttpRequestLine();
 	if (!(httpRequestLine["Request-URI"].empty()))
 	{
 		documentRootPath = info.getServerDocumentRoot();
@@ -205,7 +205,7 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 	std::string binaryBody;
 	std::vector<struct section> sectionBodies;
 
-	httpRequestLine = request.getRequestLine();
+	httpRequestLine = request.getHttpRequestLine();
 	sectionBodies = request.getSections();
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
@@ -280,7 +280,7 @@ std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest 
 
 	std::string response = pageNotFound();
 	//TODO: check path to resource, if it exits delete, if not send negative response
-	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-URI"];
+	std::string pathToResource = info.getServerRootPath() + request.getHttpRequestLine()["Request-URI"];
 	std::ifstream file(pathToResource.c_str());
 	if (!(file.good()))
 		return response;

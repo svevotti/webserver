@@ -137,12 +137,12 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 	std::string value;
 	struct section data;
 	int indexBinary = 0;
+	std::vector<int> boundariesIndexes;
 
 	std::cout << "parsing body" << std::endl;
 	if (contentType.find("boundary") != std::string::npos) //multi format data
 	{
 		this->typeBody = MULTIPART;
-		std::vector<int> boundariesIndexes;
 		char *b;
 		b = getBoundary(buffer.c_str());
 		int blen = strlen(b);
@@ -153,7 +153,6 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 				boundariesIndexes.push_back(i-2); //correct?
 			}
 		}
-		std::string headers = buffer.substr(0, boundariesIndexes[1]);
 		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		{
 			std::istringstream streamHeaders(buffer.c_str() + boundariesIndexes[i]);
@@ -172,12 +171,10 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 					if (line.find(" ") != std::string::npos)
 						value = line.substr(line.find(" ") + 1);
 					data.myMap[key] = value;
-					sections[i] = data;
 				}
 			}
 			data.indexBinary = indexBinary+2;
-			binaryIndex.push_back(indexBinary);
-			data.body.append(buffer.c_str() + indexBinary+2, buffer.c_str() + boundariesIndexes[i+1]-2);
+			data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + boundariesIndexes[i+1]-2);
 			sectionsVec.push_back(data);
 			streamHeaders.clear();
 			line.clear();
@@ -195,34 +192,26 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 		getline(str,line);
 		while (getline(str, line))
 		{
-			body.append(line);
+			data.body.append(line);
 		}
+		data.indexBinary = 0;
+		sectionsVec.push_back(data);
 	}
 }
 
-std::map<int, struct section> ClientRequest::getBodySections(void) const
-{
-	return sections;
-}
-
-std::map<std::string, std::string> ClientRequest::getRequestLine(void) const
+std::map<std::string, std::string> ClientRequest::getHttpRequestLine(void) const
 {
 	return requestLine;
 }
 
-std::map<std::string, std::string> ClientRequest::getHeaders(void) const
+std::map<std::string, std::string> ClientRequest::getHttpHeaders(void) const
 {
 	return headers;
 }
 
-std::map<std::string, std::string> ClientRequest::getQueryMap(void) const
+std::map<std::string, std::string> ClientRequest::getUriQueryMap(void) const
 {
 	return query;
-}
-
-std::vector<int> ClientRequest::getBinaryIndex(void) const
-{
-	return binaryIndex;
 }
 
 std::string ClientRequest::getBodyText(void) const
