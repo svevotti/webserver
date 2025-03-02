@@ -1,5 +1,5 @@
-#ifndef SERVER_SOCKET_H
-#define SERVER_SOCKET_H
+#ifndef SERVER_SOCKETS_H
+#define SERVER_SOCKETS_H
 
 #include <sys/socket.h>
 #include <iostream>
@@ -8,9 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <cstring>
-#include <fcntl.h>
-#include <netdb.h>
-#include <poll.h>
+#include <vector>
 
 #include "ClientRequest.hpp"
 #include "ServerResponse.hpp"
@@ -21,16 +19,15 @@
 #include "HttpRequest.hpp"
 
 
-#define PORT "8080"
-
-class Server {
-
+class ServerSockets
+{
 public:
-	void	startServer(InfoServer);
-	// int		getServerPort();
-
+	ServerSockets(InfoServer);
+	void initSockets(InfoServer);
+	int createSocket(const char*);
+	std::vector<int> getServerSockets() const;
 private:
-	int _serverFds;
+	std::vector<int> _serverFds;
 };
 
 #endif

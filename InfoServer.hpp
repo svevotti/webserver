@@ -14,10 +14,13 @@ class InfoServer
         std::string getServerRootPath();
         void setServerDocumentRoot(std::string);
         std::string getServerDocumentRoot();
+        int getServerNumber() const;
+        void setServerNumber(int);
     private:
         std::vector<std::string> arrayPorts;
         std::string serverRootPath;
         std::string serverDocumentRoot;
+        int         serverNumbers;
 };
 
 

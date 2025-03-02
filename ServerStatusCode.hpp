@@ -1,7 +1,7 @@
 #ifndef SERVER_STATUS_CODE_H
 #define SERVER_STATUS_CODE_H
 
-#include "ServerSocket.hpp"
+#include "ServerSockets.hpp"
 
 
 class ServerStatusCode

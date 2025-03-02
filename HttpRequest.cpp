@@ -7,7 +7,7 @@
 #include <sstream>
 #include <cstdio>
 
-std::string findMethod(std::string inputStr)
+std::string HttpRequest::findMethod(std::string inputStr)
 {
 	if (inputStr.find("GET") != std::string::npos)
 		return ("GET");

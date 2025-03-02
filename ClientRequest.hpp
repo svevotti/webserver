@@ -21,7 +21,7 @@
 
 class ClientRequest
 {
-
+//TODO mettere const get
 public:
 	void parseRequestHttp(std::string, int);
 	
