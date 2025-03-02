@@ -18,6 +18,7 @@
 #include "ServerStatusCode.hpp"
 #include "StringManipulations.hpp"
 #include "PrintingFunctions.hpp"
+#include "HttpRequest.hpp"
 
 
 #define PORT "8080"
