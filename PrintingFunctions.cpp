@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-typedef struct header
+typedef struct section
 {
 	std::map<std::string, std::string> myMap;
 	// std::string value;
@@ -93,14 +93,14 @@ void printFcntlFlag(int fd)
 		printf("Socket is not set to non-blocking\n");
 }
 
-	// std::map<int, struct header>::iterator outerIt;
+	// std::map<int, struct section>::iterator outerIt;
 		// std::map<std::string, std::string>::iterator innerIt;
 		// // int i = 0;
 		// for (outerIt = bodySections.begin(); outerIt != bodySections.end(); outerIt++)
 		// {
 		// 	// printf("i %d\n", i++);
 		// 	// std::cout << "Index: " << outerIt->first << std::endl;
-		// 	struct header section = outerIt->second;
+		// 	struct section section = outerIt->second;
 
 		// 	for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
 		// 	{
