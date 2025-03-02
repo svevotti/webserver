@@ -22,14 +22,18 @@
 class Webserver
 {
 public:
-    void	startServer(InfoServer);
-    void    addServerSocketsToPoll(std::vector<int>);
-    void    dispatchEvents(InfoServer, std::vector<int>);
-    int     createNewClient(int);
-    void    ReadClientRequest(int, InfoServer);
-    int     readData(int, std::string&, int&);
-    void    handleReadEvents(int, InfoServer);
-    int     callPoll(InfoServer, std::vector<int>);
+                Webserver(InfoServer);
+    void	    startServer(InfoServer);
+    void        addServerSocketsToPoll(std::vector<int>);
+    void        dispatchEvents(InfoServer, std::vector<int>);
+    int         createNewClient(int);
+    void        ReadClientRequest(int, InfoServer);
+    int         readData(int, std::string&, int&);
+    void        handleReadEvents(int, InfoServer);
+    int         callPoll(InfoServer, std::vector<int>);
+    void        ParsingRequest(std::string, InfoServer, int);
+    std::string getFullBuffer() const;
+    void        closeSockets();
 
 private:
 
@@ -38,5 +42,8 @@ private:
 	std::vector<struct pollfd>::iterator end;
     int totBytes;
     std::string full_buffer;
+    ClientRequest   request;
+    std::vector<int>    serverFds;
+
 };
 #endif

@@ -54,7 +54,7 @@ int ServerSockets::createSocket(const char* portNumber)
 	if (error == -1)
 		std::cout << "Error getaddrinfo" << std::endl;
 	/*note: loop to check socket availabilyt or not*/
-	fd = socket(serverInfo->ai_family, serverInfo->ai_socktype | SOCK_NONBLOCK, 0); //create socket
+	fd = socket(serverInfo->ai_family, serverInfo->ai_socktype, 0); //create socket
 	if (fd == -1)
 		printError(SOCKET);
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) //make the address reusable

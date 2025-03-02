@@ -186,6 +186,7 @@ void ClientRequest::parseBody(std::string buffer, int size, std::istringstream& 
 			data.myMap.clear();
 			indexBinary = 0;
 		}
+		delete b;
 	}
 	else
 	{
