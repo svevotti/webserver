@@ -137,53 +137,40 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 	return (response);
 }
 
-std::string getFileType(ClientRequest request)
+std::string getFileType(std::map<std::string, std::string> headers)
 {
-	std::map<int, struct header> sections = request.getBodySections();
-	std::map<int, struct header>::iterator outerIt;
-	std::map<std::string, std::string>::iterator innerIt;
+	std::map<std::string, std::string>::iterator it;
 	std::string type;
-	for (outerIt = sections.begin(); outerIt != sections.end(); outerIt++)
+
+	for (it = headers.begin(); it != headers.end(); it++)
 	{
-		struct header section = outerIt->second;
-		for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
-		{
-			if (innerIt->first == "Content-Type")
-			{
-				type = innerIt->second;
-			}
-		}
+		if (it->first == "Content-Type")
+			type = it->second;
 	}
 	return type;
 }
 
-std::string getFileName(ClientRequest request)
+std::string getFileName(std::map<std::string, std::string> headers)
 {
-	std::map<int, struct header> sections = request.getBodySections();
-	std::map<int, struct header>::iterator outerIt;
-	std::map<std::string, std::string>::iterator innerIt;
+	std::map<std::string, std::string>::iterator it;
 	std::string name;
 
-	for (outerIt = sections.begin(); outerIt != sections.end(); outerIt++)
+	for (it = headers.begin(); it != headers.end(); it++)
 	{
-		struct header section = outerIt->second;
-		for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
+		if (it->first == "Content-Disposition")
 		{
-			if (innerIt->first == "Content-Disposition")
+			if (it->second.find("filename") != std::string::npos)
 			{
-				if (innerIt->second.find("filename") != std::string::npos)
+				std::string fileNameField = it->second.substr(it->second.find("filename"));
+				if (fileNameField.find('"') != std::string::npos)
 				{
-					std::string fileNameField = innerIt->second.substr(innerIt->second.find("filename"));
-					if (fileNameField.find('"') != std::string::npos)
+					int indexFirstQuote = fileNameField.find('"');
+					int indexSecondQuote = 0;
+					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
 					{
-						int indexFirstQuote = fileNameField.find('"');
-						int indexSecondQuote = 0;
-						if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-						{
-							indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-						}
-						name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
+						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
 					}
+					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
 				}
 			}
 		}
@@ -212,14 +199,17 @@ int checkNameFile(std::string str, std::string path)
 
 std::string handleFilesUploads(InfoServer info, ClientRequest request, std::string buffer, int size)
 {
-	struct header section;
-	std::map<int, struct header> httpBody;
 	std::map<std::string, std::string> httpRequestLine;
-	std::vector<int> dataIndex;
 	std::string response;
+	std::map<std::string, std::string> headersBody;
+	std::string binaryBody;
+	std::vector<struct section> sectionBodies;
 
-	//printf("upload file %s\n", buffer);
-	if (httpBody.size() > 1)
+	httpRequestLine = request.getRequestLine();
+	sectionBodies = request.getSections();
+	headersBody = sectionBodies[0].myMap;
+	binaryBody = sectionBodies[0].body;
+	if (sectionBodies.size() > 1)
 	{
 		response = "HTTP/1.1 400 Bad Request\r\n"
 								"Content-Type: text/plain\r\n"
@@ -228,32 +218,12 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 								"\r\n";
 		return response;
 	}
-	httpRequestLine = request.getRequestLine();
-	httpBody = request.getBodySections();
-	// std::map<int, struct header>::iterator outerIt;
-	// std::map<std::string, std::string>::iterator innerIt;
-	// printf("body section print\n");
-	// for (outerIt = httpBody.begin(); outerIt != httpBody.end(); outerIt++)
-	// {
-	// 	// printf("i %d\n", i++);
-	// 	// std::cout << "Index: " << outerIt->first << std::endl;
-	// 	struct header section = outerIt->second;
 
-	// 	for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
-	// 	{
-	// 		// std::cout << "index in vector: " << binaryDataIndex[0] << std::endl;
-	// 		std::cout << innerIt->first << std::endl;
-	// 		std::cout << innerIt->second << std::endl;
-	// 	}
-	// }
-	dataIndex = request.getBinaryIndex();
 	std::string requestTarget = httpRequestLine["Request-URI"];
 	requestTarget.erase(requestTarget.begin());
 	std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
-	//openfile
-	std::string fileName = getFileName(request);
-	std::string fileType = getFileType(request);
-	//check if file exists already
+	std::string fileName = getFileName(headersBody);
+	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, pathFile) != 0)
 	{
 		std::cout << "File with name already existing, please change it\n";
@@ -264,17 +234,15 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 								"\r\n";
 		return (response);
 	}
-	//std::cout << "file name: " << fileName << std::endl;
 	pathFile += "/" + fileName;
 	std::cout << pathFile << std::endl;
 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (file < 0) {
+	if (file < 0)
+	{
 		perror("Error opening file");
 		return (response);
-		//exit(1);
 	}
-	//write to the file
-	ssize_t written = write(file, buffer.c_str() + dataIndex[0] + 2, size - dataIndex[0] - 2);
+	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
 	if (written < 0) {
 		perror("Error writing to file");
 		close(file);
@@ -322,6 +290,5 @@ std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest 
 				"Content-Length: 0\r\n"
 				"Connection: keep-alive\r\n"
 				"\r\n"; //very imporant
-	//TODO: routing table or database on server side to easier retrieve resources?
 	return response;
 }

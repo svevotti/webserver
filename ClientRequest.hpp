@@ -14,39 +14,31 @@
 #include <map>
 #include <vector>
 #include "StringManipulations.hpp"
+#include "HttpRequest.hpp"
 
 #define TEXT 0
 #define MULTIPART 1
-
-typedef struct header
-{
-	std::map<std::string, std::string> myMap;
-} header;
 
 class ClientRequest
 {
 //TODO mettere const get
 public:
-
 	void parseRequestHttp(std::string, int);
-	void parseRequestLine(std::string);
-	void parseHeaders(std::istringstream&);
-	void parseBody(std::string,int, std::istringstream&);
-	std::map<int, struct header> getBodySections();
-	std::map<std::string, std::string> getHeaders();
-	std::map<std::string, std::string> getRequestLine();
-	std::map<std::string, std::string> getQueryMap();
-	std::vector<int> getBinaryIndex();
-	std::string getBodyText();
-	int getTypeBody(void);
+	
+	std::map<std::string, std::string> getHeaders() const;
+	std::map<std::string, std::string> getRequestLine() const;
+	std::map<std::string, std::string> getUriQueryMap() const;
+	std::string getBodyText() const;
+	int getTypeBody(void) const;
+	std::vector<struct section> getSections() const;
+	std::map<std::string, std::string> getSectionHeaders(int) const;
+	std::string getSectionBody(int) const;
 
 private:
 	std::map<std::string, std::string> requestLine;
 	std::map<std::string, std::string> query;
 	std::map<std::string, std::string> headers;
-	std::map<int, struct header> sections;
-	std::vector<int> binaryIndex;
-	std::string body;
+	std::vector<struct section> sectionsVec;
 	int typeBody;
 };
 

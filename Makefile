@@ -4,11 +4,12 @@ C_98 = -std=c++98
 OBJ_DIR = obj
 CPP_FILES = ServerSockets.cpp main.cpp ClientRequest.cpp ServerResponse.cpp InfoServer.cpp \
 			ServerStatusCode.cpp StringManipulations.cpp PrintingFunctions.cpp \
-			Webserver.cpp
+			Webserver.cpp HttpRequest.cpp
 CPP_OBJ = $(OBJ_DIR)/ServerSockets.o $(OBJ_DIR)/main.o $(OBJ_DIR)/ClientRequest.o \
           $(OBJ_DIR)/ServerResponse.o $(OBJ_DIR)/InfoServer.o $(OBJ_DIR)/ServerStatusCode.o \
           $(OBJ_DIR)/StringManipulations.o $(OBJ_DIR)/PrintingFunctions.o \
-		  $(OBJ_DIR)/Webserver.o
+		  $(OBJ_DIR)/Webserver.o $(OBJ_DIR)/HttpRequest.o
+
 NAME = server
 
 all: $(NAME)
