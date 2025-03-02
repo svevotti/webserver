@@ -55,7 +55,7 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 		}
 		else if (httpRequestLine["Method"] == "POST")
 		{
-			response = serverResponse.responsePostMethod(info, request, str, size);
+			response = serverResponse.responsePostMethod(info, request);
 			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
 				printError(SEND);
 			std::cout << "done with POST response" << std::endl;

@@ -191,13 +191,16 @@ int checkNameFile(std::string str, std::string path)
 	{
 		convStr = data->d_name;
 		if (convStr == str)
+		{
+			closedir(folder);
 			return (1);
+		}
 	}
 	closedir(folder);
 	return (0);
 }
 
-std::string handleFilesUploads(InfoServer info, ClientRequest request, std::string buffer, int size)
+std::string handleFilesUploads(InfoServer info, ClientRequest request)
 {
 	std::map<std::string, std::string> httpRequestLine;
 	std::string response;
@@ -243,10 +246,10 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 		return (response);
 	}
 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
-	if (written < 0) {
+	if (written < 0)
+	{
 		perror("Error writing to file");
 		close(file);
-		exit(1);
 	}
 	close(file);
 	response =
@@ -257,11 +260,11 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, std::string buffer, int size)
+std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request)
 {
 	std::string response;
 	if (request.getTypeBody() == MULTIPART)
-		response = handleFilesUploads(info, request, buffer, size);
+		response = handleFilesUploads(info, request);
 	else
 	{
 		response =

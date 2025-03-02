@@ -180,6 +180,7 @@ void HttpRequest::parseBody(std::string buffer, int size, std::istringstream& st
 			indexBinary = 0;
 			data.body.clear();
 		}
+		delete[] b;
 	}
 	else
 	{
