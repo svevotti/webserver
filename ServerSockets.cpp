@@ -27,6 +27,7 @@ ServerSockets::ServerSockets(InfoServer info)
 {
 	initSockets(info);
 }
+
 void	ServerSockets::initSockets(InfoServer info)
 {
 	int serverNumber = info.getServerNumber();

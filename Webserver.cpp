@@ -76,8 +76,8 @@ std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, i
 	}
 	return response;
 }
-
-int isStatic(std::string str)
+//work in progress
+/*int isStatic(std::string str)
 {
 	if (str.find(".py") == std::string::npos)
 		return true;
@@ -99,7 +99,7 @@ void Webserver::ParsingRequest(std::string str, InfoServer info, int size)
 	// 	if (method == "GET")
 
 	// }
-}
+}*/
 int Webserver::createNewClient(int fd)
 {
 	socklen_t clientSize;
@@ -228,7 +228,6 @@ void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 		serverPoll[i].events = POLLIN;
 		this->poll_sets.push_back(serverPoll[i]);
 	}
-	//clean struct pollfd?
 }
 
 void	Webserver::closeSockets()

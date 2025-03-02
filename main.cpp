@@ -15,10 +15,10 @@ int main(void)
 	info.setArrayPorts("8080");
 	info.setArrayPorts("9090");
 	info.setServerNumber(2);
-	// server.setServerRootPath("/home/smazzari/repos/Github/Circle5/webserver/server_root"); //folder
-	// server.setServerDocumentRoot("/home/smazzari/repos/Github/Circle5/webserver/server_root/public_html"); //folder
-	info.setServerRootPath("/Users/sveva/repos/Circle5/webserver/server_root"); //test on my laptop
-	info.setServerDocumentRoot("/Users/sveva/repos/Circle5/webserver/server_root/public_html");
+	info.setServerRootPath("/home/smazzari/repos/Github/Circle5/webserver/server_root"); //folder
+	info.setServerDocumentRoot("/home/smazzari/repos/Github/Circle5/webserver/server_root/public_html"); //folder
+	// info.setServerRootPath("/Users/sveva/repos/Circle5/webserver/server_root"); //test on my laptop
+	// info.setServerDocumentRoot("/Users/sveva/repos/Circle5/webserver/server_root/public_html");
 	//std::cout << server.getServerDocumentRoot();
 	Webserver 	server(info);
 
