@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <sstream>
 #include <stdexcept>
+#include <dirent.h>
 
 #include "PrintingFunctions.hpp"
 
@@ -33,6 +34,7 @@ Webserver::Webserver(InfoServer info)
 	this->poll_sets.reserve(100); //why setting memory beforehand
 	addServerSocketsToPoll(this->serverFds);
 }
+
 std::string prepareResponse(ClientRequest *request, InfoServer info)
 {
 	std::cout << "Response" << std::endl;
@@ -69,17 +71,57 @@ std::string prepareResponse(ClientRequest *request, InfoServer info)
 	return response;
 }
 
-int isStatic(std::string str)
+int	searchPage(std::string path, std::string target)
 {
-	if (str.find(".py") == std::string::npos)
+	DIR *folder;
+	struct dirent *data;
+	std::string strC;
+
+	folder = opendir(path.c_str());
+	if (folder == NULL)
+		printf("error opening folder\n");
+	std::cout << target << std::endl;
+	while ((data = readdir(folder)))
+	{
+		strC = data->d_name;
+		if (strC == "." || strC == "..")
+			continue;
+		std::string newPath = path + strC;
+		if (strC == target)
+		{
+			closedir(folder);
+			return false;
+		}
+		if (data->d_type == DT_DIR)
+		{
+			if (searchPage(path, target) == false)
+			{
+				closedir(folder);
+				return false;
+			}
+		}
+		
+	}
+	closedir(folder);
+	return true;
+}
+int isCgi(std::string str, InfoServer info)
+{
+	printf("isCgi\n");
+	if (str.find(".py") != std::string::npos)
 		return true;
-	return false;
+	if (str == "/")
+	{
+		str.clear();
+		str = "/index.html";
+	}
+	if (searchPage(info.getServerDocumentRoot(), str) == 0)
+		return false;
+	return true;
 }
 
 ClientRequest *Webserver::ParsingRequest(std::string str, int size)
 {
-	std::string uri;
-	std::string method;
 
 	std::cout << "Parsing" << std::endl;
 	this->request = new ClientRequest();
@@ -133,7 +175,6 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 	int flag = -1;
 	std::cout << "handle read events\n";
 	bytesRecv = readData(fd, this->full_buffer, this->totBytes);
-	printf("tot bytes %d\n", this->totBytes);
 	if (bytesRecv == 0)
 	{
 		std::cout << "socket number " << fd << " closed connection" << std::endl;
@@ -153,15 +194,22 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 		if (this->totBytes > contentLength && flag == 0)
 		{
 			this->request = ParsingRequest(this->full_buffer, this->totBytes);
-			response = prepareResponse(this->request, info);
-			delete this->request;
-			this->full_buffer.clear();
-			this->totBytes = 0;
-			struct client infoC;
-			infoC.fd = fd;
-			infoC.response = response;
-			this->clientsQueue.push_back(infoC);
-			this->it->events = POLLOUT;
+			if (isCgi(this->request->getRequestLine()["Request-URI"], info) == true)
+			{
+				printf("send to CGI\n");
+			}
+			else
+			{
+				response = prepareResponse(this->request, info);
+				delete this->request;
+				this->full_buffer.clear();
+				this->totBytes = 0;
+				struct client infoC;
+				infoC.fd = fd;
+				infoC.response = response;
+				this->clientsQueue.push_back(infoC);
+				this->it->events = POLLOUT;
+			}
 		}
 	}
 }
