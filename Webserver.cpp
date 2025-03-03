@@ -177,25 +177,23 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets)
 {
 	end = this->poll_sets.end();
+	std::string response;
     for (this->it = poll_sets.begin(); this->it != end; this->it++) 
     {
-        if (this->it->revents & (POLLIN | POLLOUT)) 
+        if (this->it->revents & POLLIN)
         {
+			//TODO not fix array of server sockets
 			if (this->it->fd == serverSockets[0] || it->fd == serverSockets[1])
 				createNewClient(this->it->fd);
-			// else if (cgi_map.find(it->fd) != cgi_map.end()) 
-			// {
-			//     CGITracker& tracker = cgi_map[it->fd];
-			//     if (it->revents & POLLOUT && it->fd == tracker.cgi->getInPipeWriteFd())
-			//         handleCGIInput(tracker, it);
-			//     else if (it->revents & POLLIN && it->fd == tracker.cgi->getOutPipeReadFd())
-			//         handleCGIOutput(tracker, it);
-			// } 
 			else
-				handleReadEvents(this->it->fd, server);
-			// else if (this->it->revents & POLLOUT)
-			// 	handleSendEvents(it);
+				response = handleReadEvents(this->it->fd, server);
         }
+		else if (this->it->revents & POLLOUT)
+		{
+			send(this->it->fd, response.c_str(), strlen(response.c_str()), 0);
+			this->it->events = POLLIN;
+			response.clear();
+		}
 	}
 }
 

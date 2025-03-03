@@ -19,6 +19,12 @@
 #include "StringManipulations.hpp"
 #include "PrintingFunctions.hpp"
 
+typedef struct client
+{
+    int fd;
+    std::string response;
+} client;
+
 class Webserver
 {
 public:
@@ -34,6 +40,7 @@ public:
     void        ParsingRequest(std::string, InfoServer, int);
     std::string getFullBuffer() const;
     void        closeSockets();
+    int        recvInChunks(int, std::string&, int&);
 
 private:
 
@@ -44,6 +51,7 @@ private:
     std::string full_buffer;
     ClientRequest   request;
     std::vector<int>    serverFds;
+    std::vector<struct client> clientsQueue;
 
 };
 #endif
