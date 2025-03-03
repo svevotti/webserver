@@ -197,7 +197,7 @@ int checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-std::string handleFilesUploads(InfoServer info, ClientRequest request, std::string buffer, int size)
+std::string handleFilesUploads(InfoServer info, ClientRequest request)
 {
 	std::map<std::string, std::string> httpRequestLine;
 	std::string response;
@@ -257,11 +257,11 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request, std::stri
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request, std::string buffer, int size)
+std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request)
 {
 	std::string response;
 	if (request.getTypeBody() == MULTIPART)
-		response = handleFilesUploads(info, request, buffer, size);
+		response = handleFilesUploads(info, request);
 	else
 	{
 		response =

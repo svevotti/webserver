@@ -33,38 +33,30 @@ Webserver::Webserver(InfoServer info)
 	this->poll_sets.reserve(100); //why setting memory beforehand
 	addServerSocketsToPoll(this->serverFds);
 }
-std::string serverParsingAndResponse(std::string str, InfoServer info, int fd, int size)
+std::string prepareResponse(ClientRequest *request, InfoServer info)
 {
-	std::cout << "Parsing" << std::endl;
-	ClientRequest request;
-	std::map<std::string, std::string> httpRequestLine;
-	ServerResponse serverResponse;
+	std::cout << "Response" << std::endl;
 	std::string response;
+	ServerResponse serverResponse;
 
-	request.parseRequestHttp(str, size);
-	std::cout << "done parsing HTTP" << std::endl;
-	httpRequestLine = request.getRequestLine();
+	std::map<std::string, std::string> httpRequestLine;
+	httpRequestLine = request->getRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
+		ClientRequest lazyRequest(*request);
 		if (httpRequestLine["Method"] == "GET")
 		{
-			response = serverResponse.responseGetMethod(info, request);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			response = serverResponse.responseGetMethod(info, lazyRequest);
 			std::cout << "done with GET response" << std::endl;
 		}
 		else if (httpRequestLine["Method"] == "POST")
 		{
-			response = serverResponse.responsePostMethod(info, request, str, size);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			response = serverResponse.responsePostMethod(info, lazyRequest);
 			std::cout << "done with POST response" << std::endl;
 		}
 		else if (httpRequestLine["Method"] == "DELETE")
 		{
-			response = serverResponse.responseDeleteMethod(info, request);
-			if (send(fd, response.c_str(), strlen(response.c_str()), 0) == -1)
-				printError(SEND);
+			response = serverResponse.responseDeleteMethod(info, lazyRequest);
 			std::cout << "done with DELETE response" << std::endl;
 		}
 		else
@@ -84,22 +76,17 @@ int isStatic(std::string str)
 	return false;
 }
 
-void Webserver::ParsingRequest(std::string str, InfoServer info, int size)
+ClientRequest *Webserver::ParsingRequest(std::string str, int size)
 {
-	ClientRequest request;
 	std::string uri;
 	std::string method;
 
 	std::cout << "Parsing" << std::endl;
-	request.parseRequestHttp(str, size);
-	// uri = request.getHeaders()["Request-URI"];
-	// method = request.getHeaders()["Method"];
-	// if (isStatic(uri) == true || method == "DELETE")
-	// {
-	// 	if (method == "GET")
-
-	// }
+	this->request = new ClientRequest();
+	this->request->parseRequestHttp(str, size);
+	return this->request;
 }
+
 int Webserver::createNewClient(int fd)
 {
 	socklen_t clientSize;
@@ -139,60 +126,77 @@ int Webserver::readData(int fd, std::string &str, int &bytes)
 
 void Webserver::handleReadEvents(int fd, InfoServer info)
 {
-	int bytesRecv;
 	std::string response;
 
-	std::cout << "Recv client request" << std::endl;
+	int contentLength = -1;
+	int bytesRecv;
+	int flag = -1;
+	std::cout << "handle read events\n";
 	bytesRecv = readData(fd, this->full_buffer, this->totBytes);
+	printf("tot bytes %d\n", this->totBytes);
 	if (bytesRecv == 0)
 	{
 		std::cout << "socket number " << fd << " closed connection" << std::endl;
 		close(fd);
 		this->it = this->poll_sets.erase(this->it);
 	}
+	//TODO: check by deafult if the http headers is always sent
 	if (this->totBytes > 0)
 	{
-		if (this->full_buffer.find("Content-Length") == std::string::npos)
+		if (this->full_buffer.find("Content-Length") == std::string::npos && this->full_buffer.find("POST") == std::string::npos)
+			flag = 0;
+		else if (this->full_buffer.find("Content-Length") != std::string::npos)
 		{
-			response = serverParsingAndResponse(this->full_buffer, info, fd, this->totBytes);
-			this->totBytes = 0;
-			this->full_buffer.clear();
-			close(fd);
-			this->it = this->poll_sets.erase(this->it);
+			flag = 0;
+			contentLength = atoi(this->full_buffer.substr(this->full_buffer.find("Content-Length") + 16).c_str());
 		}
-		else
+		if (this->totBytes > contentLength && flag == 0)
 		{
-			if (this->totBytes > atoi(this->full_buffer.substr(this->full_buffer.find("Content-Length") + 16).c_str()))
-			{
-				response = serverParsingAndResponse(this->full_buffer, info, fd, this->totBytes);
-				this->totBytes = 0;
-				this->full_buffer.clear();
-				close(fd);
-				this->it = this->poll_sets.erase(this->it);
-			}
+			this->request = ParsingRequest(this->full_buffer, this->totBytes);
+			response = prepareResponse(this->request, info);
+			delete this->request;
+			this->full_buffer.clear();
+			this->totBytes = 0;
+			struct client info;
+			info.fd = fd;
+			info.response = response;
+			this->clientsQueue.push_back(info);
+			this->it->events = POLLOUT;
 		}
 	}
+	printf("after check bytes\n");
 }
 
 void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets)
 {
 	end = this->poll_sets.end();
-	std::string response;
     for (this->it = poll_sets.begin(); this->it != end; this->it++) 
     {
         if (this->it->revents & POLLIN)
         {
+			std::cout << "pollin" << std::endl;
 			//TODO not fix array of server sockets
 			if (this->it->fd == serverSockets[0] || it->fd == serverSockets[1])
 				createNewClient(this->it->fd);
 			else
-				response = handleReadEvents(this->it->fd, server);
+				handleReadEvents(this->it->fd, server);
         }
 		else if (this->it->revents & POLLOUT)
 		{
-			send(this->it->fd, response.c_str(), strlen(response.c_str()), 0);
-			this->it->events = POLLIN;
-			response.clear();
+			std::cout << "pollout" << std::endl;
+			std::vector<struct client>::iterator iterClient;
+			std::vector<struct client>::iterator endClient = this->clientsQueue.end();
+			for (iterClient = this->clientsQueue.begin(); iterClient != endClient; it++)
+			{
+				if (iterClient->fd == this->it->fd)
+				{
+					send(this->it->fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), 0);
+					this->it->events = POLLIN;
+					iterClient->response.clear();
+					clientsQueue.erase(iterClient);
+					break;
+				}
+			}
 		}
 	}
 }

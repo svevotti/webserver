@@ -34,13 +34,13 @@ public:
     void        dispatchEvents(InfoServer, std::vector<int>);
     int         createNewClient(int);
     void        ReadClientRequest(int, InfoServer);
-    int         readData(int, std::string&, int&);
+    int        readData(int, std::string&, int&);
     void        handleReadEvents(int, InfoServer);
     int         callPoll(InfoServer, std::vector<int>);
-    void        ParsingRequest(std::string, InfoServer, int);
+    ClientRequest        *ParsingRequest(std::string, int);
     std::string getFullBuffer() const;
     void        closeSockets();
-    int        recvInChunks(int, std::string&, int&);
+    int        readInChunks(int, std::string&, int&);
 
 private:
 
@@ -49,7 +49,7 @@ private:
 	std::vector<struct pollfd>::iterator end;
     int totBytes;
     std::string full_buffer;
-    ClientRequest   request;
+    ClientRequest   *request;
     std::vector<int>    serverFds;
     std::vector<struct client> clientsQueue;
 

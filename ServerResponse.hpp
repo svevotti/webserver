@@ -24,8 +24,8 @@ class ServerResponse
 
 public:
 	std::string responseGetMethod(InfoServer, ClientRequest);
-	std::string responsePostMethod(InfoServer, ClientRequest, std::string, int);
-	std::string responseDeleteMethod(InfoServer info, ClientRequest);
+	std::string responsePostMethod(InfoServer, ClientRequest);
+	std::string responseDeleteMethod(InfoServer, ClientRequest);
 
 };
 
