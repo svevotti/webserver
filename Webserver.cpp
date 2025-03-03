@@ -157,14 +157,13 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 			delete this->request;
 			this->full_buffer.clear();
 			this->totBytes = 0;
-			struct client info;
-			info.fd = fd;
-			info.response = response;
-			this->clientsQueue.push_back(info);
+			struct client infoC;
+			infoC.fd = fd;
+			infoC.response = response;
+			this->clientsQueue.push_back(infoC);
 			this->it->events = POLLOUT;
 		}
 	}
-	printf("after check bytes\n");
 }
 
 void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets)
