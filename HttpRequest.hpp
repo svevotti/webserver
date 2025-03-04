@@ -34,7 +34,7 @@ public:
 	void parseRequestHttp();
 	void parseRequestLine(std::string);
 	void parseHeaders(std::istringstream&);
-	void parseBody(std::string,int, std::istringstream&);
+	void parseBody(std::string, int);
 
 	std::map<std::string, std::string> getHttpHeaders() const;
 	std::map<std::string, std::string> getHttpRequestLine() const;

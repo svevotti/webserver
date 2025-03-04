@@ -125,7 +125,7 @@ char *getBoundary(const char *buffer)
 	return (b);
 }
 
-void HttpRequest::parseBody(std::string buffer, int size, std::istringstream& str)
+void HttpRequest::parseBody(std::string buffer, int size)
 {
 	std::string contentType = headers["Content-Type"];
 	std::string line;
@@ -184,14 +184,9 @@ void HttpRequest::parseBody(std::string buffer, int size, std::istringstream& st
 	else
 	{
 		typeBody = TEXT;
-		std::string line;
-		getline(str,line);
-		while (getline(str, line))
-		{
-			data.body.append(line);
-		}
 		data.indexBinary = 0;
-		sectionsVec.push_back(data);
+		data.body = "";
+		sectionsVec.push_back(data);	
 	}
 }
 
@@ -235,7 +230,7 @@ void HttpRequest::parseRequestHttp(void)
 	if (it != headers.end())
 	{
 		printf("before body parse\n");
-		parseBody(this->str, this->size, request);
+		parseBody(this->str, this->size);
 	}
 }
 

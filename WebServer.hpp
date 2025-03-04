@@ -29,6 +29,7 @@ class Webserver
 {
 public:
                 Webserver(InfoServer);
+                ~Webserver();
     void	    startServer(InfoServer);
     void        addServerSocketsToPoll(std::vector<int>);
     void        dispatchEvents(InfoServer, std::vector<int>);
@@ -41,6 +42,9 @@ public:
     std::string getFullBuffer() const;
     void        closeSockets();
     int        readInChunks(int, std::string&, int&);
+    int         isCgi(std::string, InfoServer);
+    int         searchPage(std::string path);
+    std::string prepareResponse(ClientRequest *request, InfoServer info);
 
 private:
 
