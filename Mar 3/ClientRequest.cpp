@@ -1,0 +1,69 @@
+#include "ClientRequest.hpp"
+#include <vector>
+#include <sstream>
+#include <algorithm>
+#include <cctype>
+#include <dirent.h>
+#include <sstream>
+#include <cstdio>
+
+std::map<std::string, std::string> ClientRequest::getRequestLine(void) const
+{
+	return this->requestLine;
+}
+
+std::map<std::string, std::string> ClientRequest::getHeaders(void) const
+{
+	return this->headers;
+}
+
+std::map<std::string, std::string> ClientRequest::getUriQueryMap(void) const
+{
+	return this->query;
+}
+
+std::vector<struct section> ClientRequest::getSections(void) const
+{
+	return this->sectionsVec;
+}
+
+int ClientRequest::getTypeBody(void) const
+{
+	return this->typeBody;
+}
+
+std::map<std::string, std::string> ClientRequest::getSectionHeaders(int i) const
+{
+	return(this->sectionsVec[i].myMap);
+}
+
+std::string ClientRequest::getSectionBody(int i) const
+{
+	return(this->sectionsVec[i].body);
+}
+
+std::string ClientRequest::getBodyText() const
+{
+    if (sectionsVec.empty()) 
+    {
+        return "";
+    }
+    std::string body;
+    for (size_t i = 0; i < sectionsVec.size(); ++i) 
+    {
+        body += sectionsVec[i].body;
+    }
+    return body;
+}
+
+void ClientRequest::parseRequestHttp(std::string str, int size)
+{
+	HttpRequest request;
+	
+	request.HttpParse(str, size);
+	this->requestLine = request.getHttpRequestLine();
+	this->query = request.getHttpUriQueryMap();
+	this->headers = request.getHttpHeaders();
+	this->sectionsVec = request.getHttpSections();
+	this->typeBody = request.getHttpTypeBody();
+}

@@ -1,0 +1,80 @@
+MAR3
+
+chmod +x ./cgi_bin/test.py
+
+g++ -Wall -Wextra -Werror -std=c++98 *.cpp -o webserv && ./webserv
+
+Run: ./webserv config.conf
+
+
+--------------------------------
+1) PASSED
+
+curl -v http://localhost:8080/test.py
+
+------------
+2) NOT PASSED
+TEST MULTIPLE REQUESTS
+curl -v http://localhost:8080/test.py
+curl -v -X POST -d "hello" http://localhost:8080/test.py
+
+3)
+GET
+curl -v http://localhost:8080/test.py
+
+POST (ALONE OK)
+curl -v -X POST -d "hello" http://localhost:8080/test.py
+------------------------------------------------------------
+
+c++ -o test_server test_server.cpp CGI.cpp ClientRequest.cpp HttpRequest.cpp InfoServer.cpp ServerSockets.cpp StringManipulations.cpp PrintingFunctions.cpp ServerResponse.cpp -std=c++98
+./test_server
+
+
+TERMINAL 3 STATIC GET
+curl http://localhost:8080/static.txt
+
+TERMING 2 CGI POST
+curl -X POST -d 'Hello, World!' http://localhost:8080/cgi_bin/test.py &
+
+///
+
+Issue 
+The server socket (FD 3) must remain in poll_sets at all times.
+But handleSendResponse erases the client FD (FD 4) and doesn’t ensure FD 3 stays
+
+////
+TO DO
+-- In  dispatchEvents function, ensure poll_sets is updated correctly
+-- handleReadEvents function, ensure the CGI output is read incrementally
+
+
+  //it->revents & POLLIN: Checks if the file descriptor (FD) has a POLLIN event (data available to read) in the events returned by poll.
+    //it->revents & it->events: Ensures the POLLIN event matches an event the FD was explicitly set to monitor (i.e., POLLIN is in it->events).
+    
+
+CURRENT ISSUE: making two requests in a row
+
+POST Request:
+FD 4 reads 159 bytes (POST request with "hello").
+CGI starts (PID 86794), FD 6 writes "hello", FD 7 reads output, POLLHUP triggers, response queued and sent (200 OK).
+FD 6 erased (writeCGIInput): size: 3, FD 3 remains.
+FD 7 erased (handleCGIOutputHup): size: 2, FD 3 remains.
+FD 4 erased (handleSendResponse): size: 0, FD 3 disappears.
+Issue:
+After handleSendResponse erases FD 4, poll_sets becomes empty, losing FD 3. 
+
+This shouldn’t happen, as FD 3 (server socket) should persist.
+
+Key issue: FD3 disappears from poll_sets
+
+- handleSendResponse issue?
+
+In handleSendResponse, it = poll_sets.erase(it) removes FD 4, 
+but the logs suggest FD 3 is also lost. 
+
+This could be due to:
+Iterator Misuse: If it is incorrectly positioned or the vector shifts
+ unexpectedly, erasing FD 4 might corrupt poll_sets.
+Vector State: poll_sets might be in an unexpected state 
+(e.g., FD 3 was already removed earlier, but logs suggest otherwise 
+until this point).
