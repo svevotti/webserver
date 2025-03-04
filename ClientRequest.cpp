@@ -7,6 +7,7 @@
 #include <sstream>
 #include <cstdio>
 
+//setter and getters
 std::map<std::string, std::string> ClientRequest::getRequestLine(void) const
 {
 	return this->requestLine;
@@ -42,6 +43,7 @@ std::string ClientRequest::getSectionBody(int i) const
 	return(this->sectionsVec[i].body);
 }
 
+//main function
 void ClientRequest::parseRequestHttp(std::string str, int size)
 {
 	HttpRequest request;

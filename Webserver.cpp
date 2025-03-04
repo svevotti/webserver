@@ -54,7 +54,6 @@ void	Webserver::startServer(InfoServer info)
 
 	while (1)
 	{
-		std::cout << "Poll called" << std::endl;
 		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 20 * 1000);
 		if (returnPoll == -1)
 		{
@@ -75,7 +74,6 @@ void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets
     {
         if (this->it->revents & POLLIN)
         {
-			 std::cout << "pollin" << std::endl;
 			//TODO not fix array of server sockets
 			if (this->it->fd == serverSockets[0] || it->fd == serverSockets[1])
 				createNewClient(this->it->fd);
@@ -84,7 +82,6 @@ void Webserver::dispatchEvents(InfoServer server, std::vector<int> serverSockets
         }
 		else if (this->it->revents & POLLOUT)
 		{
-			std::cout << "pollout" << std::endl;
 			std::vector<struct client>::iterator iterClient;
 			std::vector<struct client>::iterator endClient = this->clientsQueue.end();
 			for (iterClient = this->clientsQueue.begin(); iterClient != endClient; it++)
@@ -109,7 +106,6 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 	int contentLength = -1;
 	int bytesRecv;
 	int flag = -1;
-	std::cout << "handle read events\n";
 	bytesRecv = readData(fd, this->full_buffer, this->totBytes);
 	if (bytesRecv == 0)
 	{
@@ -153,7 +149,6 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 ClientRequest *Webserver::ParsingRequest(std::string str, int size)
 {
 
-	std::cout << "Parsing" << std::endl;
 	this->request = new ClientRequest();
 	this->request->parseRequestHttp(str, size);
 	return this->request;
@@ -162,7 +157,6 @@ ClientRequest *Webserver::ParsingRequest(std::string str, int size)
 
 std::string Webserver::prepareResponse(ClientRequest *request, InfoServer info)
 {
-	std::cout << "Response" << std::endl;
 	std::string response;
 	ServerResponse serverResponse;
 
@@ -172,27 +166,16 @@ std::string Webserver::prepareResponse(ClientRequest *request, InfoServer info)
 	{
 		ClientRequest lazyRequest(*request);
 		if (httpRequestLine["Method"] == "GET")
-		{
 			response = serverResponse.responseGetMethod(info, lazyRequest);
-			std::cout << "done with GET response" << std::endl;
-		}
 		else if (httpRequestLine["Method"] == "POST")
-		{
 			response = serverResponse.responsePostMethod(info, lazyRequest);
-			std::cout << "done with POST response" << std::endl;
-		}
 		else if (httpRequestLine["Method"] == "DELETE")
-		{
 			response = serverResponse.responseDeleteMethod(info, lazyRequest);
-			std::cout << "done with DELETE response" << std::endl;
-		}
 		else
 		std::cout << "method not found" << std::endl;
 	}
 	else
-	{
 		std::cout << "method not found" << std::endl;
-	}
 	return response;
 }
 
@@ -223,7 +206,6 @@ int Webserver::createNewClient(int fd)
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
 	//clean struct pollfd?
-	std::cout << "client created: " <<  fd << std::endl;
 	return (fd);
 }
 
@@ -252,10 +234,7 @@ int	Webserver::searchPage(std::string path)
 
 	folder = fopen(path.c_str(), "rb");
 	if (folder == NULL)
-	{
-		printf("folder not found\n");
 		return false;
-	}
 	fclose(folder);
 	return true;
 }

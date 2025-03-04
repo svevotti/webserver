@@ -23,10 +23,19 @@
 #define BIND -5
 #define LISTEN -6
 
+//constructor and destructor
 ServerSockets::ServerSockets(InfoServer info)
 {
 	initSockets(info);
 }
+
+//setter and getters
+std::vector<int>	ServerSockets::getServerSockets(void) const
+{
+	return this->_serverFds;
+}
+
+//main functions
 void	ServerSockets::initSockets(InfoServer info)
 {
 	int serverNumber = info.getServerNumber();
@@ -66,9 +75,4 @@ int ServerSockets::createSocket(const char* portNumber)
 	if (listen(fd, 5) == -1) //make server socket listenning to incoming connections
 		printError(LISTEN);
 	return (fd);
-}
-
-std::vector<int>	ServerSockets::getServerSockets(void) const
-{
-	return this->_serverFds;
 }

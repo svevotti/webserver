@@ -143,8 +143,6 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	std::string line;
 	std::string key;
 	std::string value;
-	struct section data;
-	int indexBinary = 0;
 	std::vector<int> boundariesIndexes;
 
 	b = getBoundary(buffer.c_str());
@@ -190,13 +188,13 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	data.indexBinary = indexBinary+2;
 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
 	sectionsVec.push_back(data);
-	streamHeaders.clear();
-	line.clear();
-	key.clear();
-	value.clear();
-	data.myMap.clear();
-	indexBinary = 0;
-	data.body.clear();
+	// streamHeaders.clear();
+	// line.clear();
+	// key.clear();
+	// value.clear();
+	// data.myMap.clear();
+	// indexBinary = 0;
+	// data.body.clear();
 }
 
 //utilis

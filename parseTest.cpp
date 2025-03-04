@@ -21,28 +21,27 @@ int main() {
 	// std::map<std::string, std::string> headers;
 	client.parseRequestHttp(httpRequest.c_str(), httpRequest.length());
 	// headers = client.getHttpHeaders();
-	std::map<std::string, std::string>::iterator it;
 	// std::cout << "headers\n";
 	// for (it = headers.begin(); it != headers.end(); it++)
 	// {
 	// 		std::cout << it->first << " : ";
 	// 		std::cout << it->second << std::endl;
 	// }
-	// std::cout << "sections\n";
-	// sections = client.getBodySections();
-	// std::map<int, struct section>::iterator outerIt;
+	std::cout << "sections\n";
+	std::vector<struct section> sections;
+	sections = client.getSections();
+	std::vector<struct section>::iterator it;
 	// std::map<std::string, std::string>::iterator innerIt;
 	// //printf("here\n");
-	// for (outerIt = sections.begin(); outerIt != sections.end(); outerIt++)
-	// {
-	// 	//printf("in loop\n");
-	// 	struct section section = outerIt->second;
-	// 	std::cout << "section size: " << section.myMap.size() << std::endl;
-	// 	for (innerIt = section.myMap.begin(); innerIt != section.myMap.end(); innerIt++)
-	// 	{
-	// 		std::cout << innerIt->first << " : ";
-	// 		std::cout << innerIt->second << std::endl;
-	// 	}
-	// }
+	int i = 0;
+	for (it = sections.begin(); it != sections.end(); it++)
+	{
+		//printf("in loop\n");
+		for (std::map<std::string, std::string>::iterator mapIt = it->myMap.begin(); mapIt != it->myMap.end(); ++mapIt) {
+            std::cout << mapIt->first << ": " << mapIt->second << std::endl;
+        }
+		std::cout << it->body << std::endl;
+		std::cout << it->indexBinary << std::endl;
+	}
     return 0;
 }

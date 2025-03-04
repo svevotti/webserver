@@ -11,91 +11,11 @@
 #include <ctime>
 #include <cstdio>
 
-std::string pageNotFound(void)
-{
-    std::string str =   "HTTP/1.1 404 Not Found\r\n"
-					    "Content-Type: text/html\r\n"
-					    "Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
-					    "\r\n"
-					    "<html>\r\n"
-					    "<header>\r\n"
-					    "<title>Not Found</title>\r\n"
-					    "</header>\r\n"
-					    "<body>\r\n"
-					    "<h1>Not Found!!</h1>\r\n"
-					    "</body>\r\n"
-					    "</html>\r\n";
-    return (str);
-}
+//constructor and destructor
 
-std::string getFileContent(std::string path)
-{
-	std::ifstream file;
-	std::string line;
-	std::string bodyHtml;
-	std::string temp;
+//setters and getters
 
-	file.open(path.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
-	if (!file)
-	{
-		std::cerr << "Error in opening the file" << std::endl;
-		return (bodyHtml);
-	}
-	// get file content into string
-	while (std::getline(file, line))
-	{
-		if (line.size() == 0)
-			continue;
-		else
-			bodyHtml = bodyHtml.append(line + "\r\n");
-	}
-	file.close();
-	return (bodyHtml);
-}
-//TODO: review this function
-std::string getContentType(std::string str)
-{
-	std::string	fileExtText[] = {"html", "css", "txt"};
-	std::string fileExtApp[] = {"json", "javascript", "pdf"};
-	std::string fileExtImg[] = {"png", "gif", "jpg"};
-	std::string fileType;
-	int i = 0;
-	
-	for(i = 0; i < 3; i++)
-	{
-		if (fileExtText[i] == str)
-			fileType = "text/" + str;
-		else if (fileExtApp[i] == str)
-			fileType = "application/" + str;
-		else if (fileExtImg[i] == str)
-			fileType = "image/" + str;
-	}
-	return (fileType);
-}
-
-//TODO: review this function
-std::string assembleHeaders(std::string protocol, std::string length)
-{
-	std::string statusLine;
-	ServerStatusCode CodeNumber;
-	std::string contentType;
-	std::string fileType;
-	std::string fileExtension;
-
-	statusLine += protocol + " " + CodeNumber.getStatusCode(200) + "\r\n";
-	// statusLine += "Content-Type: ";
-	// if (fileName.find(".") != std::string::npos)
-	// {
-	// 	fileExtension = fileName.substr(fileName.find(".") + 1);
-	// 	contentType = getContentType(fileExtension);
-	// }
-	// statusLine += contentType + "\r\n";
-	statusLine += "Content-Length: " + length + "\r\n";
-	statusLine += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
-	statusLine += "\r\n";
-	return statusLine;
-}
-
+//main functions
 std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest request)
 {
 	std::string response;
@@ -137,67 +57,41 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 	return (response);
 }
 
-std::string getFileType(std::map<std::string, std::string> headers)
+std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request)
 {
-	std::map<std::string, std::string>::iterator it;
-	std::string type;
-
-	for (it = headers.begin(); it != headers.end(); it++)
+	std::string response;
+	if (request.getTypeBody() == MULTIPART)
+		response = handleFilesUploads(info, request);
+	else
 	{
-		if (it->first == "Content-Type")
-			type = it->second;
+		response =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: keep-alive\r\n"
+				"\r\n"; //very imporan
+		printf("do something with text body\n");
 	}
-	return type;
+	return (response);
 }
 
-std::string getFileName(std::map<std::string, std::string> headers)
+std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest request)
 {
-	std::map<std::string, std::string>::iterator it;
-	std::string name;
-
-	for (it = headers.begin(); it != headers.end(); it++)
-	{
-		if (it->first == "Content-Disposition")
-		{
-			if (it->second.find("filename") != std::string::npos)
-			{
-				std::string fileNameField = it->second.substr(it->second.find("filename"));
-				if (fileNameField.find('"') != std::string::npos)
-				{
-					int indexFirstQuote = fileNameField.find('"');
-					int indexSecondQuote = 0;
-					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-					{
-						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-					}
-					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-				}
-			}
-		}
-	}
-	return name;
+	std::string response = pageNotFound();
+	//TODO: check path to resource, if it exits delete, if not send negative response
+	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-URI"];
+	std::ifstream file(pathToResource.c_str());
+	if (!(file.good()))
+		return response;
+	remove(pathToResource.c_str());
+	response =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: keep-alive\r\n"
+				"\r\n"; //very imporant
+	return response;
 }
 
-int checkNameFile(std::string str, std::string path)
-{
-	DIR *folder;
-	struct dirent *data;
-
-	folder = opendir(path.c_str());
-	std::string convStr;
-	if (folder == NULL)
-		printf("error opening folder\n");
-	while ((data = readdir(folder)))
-	{
-		convStr = data->d_name;
-		if (convStr == str)
-			return (1);
-	}
-	closedir(folder);
-	return (0);
-}
-
-std::string handleFilesUploads(InfoServer info, ClientRequest request)
+std::string ServerResponse::handleFilesUploads(InfoServer info, ClientRequest request)
 {
 	std::map<std::string, std::string> httpRequestLine;
 	std::string response;
@@ -235,7 +129,6 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request)
 		return (response);
 	}
 	pathFile += "/" + fileName;
-	std::cout << pathFile << std::endl;
 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 	{
@@ -257,38 +150,121 @@ std::string handleFilesUploads(InfoServer info, ClientRequest request)
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request)
+//utilis
+std::string ServerResponse::pageNotFound(void)
 {
-	std::string response;
-	if (request.getTypeBody() == MULTIPART)
-		response = handleFilesUploads(info, request);
-	else
-	{
-		response =
-				"HTTP/1.1 200 OK\r\n"
-				"Content-Length: 0\r\n"
-				"Connection: keep-alive\r\n"
-				"\r\n"; //very imporan
-		printf("do something with text body\n");
-	}
-	return (response);
+    std::string str =   "HTTP/1.1 404 Not Found\r\n"
+					    "Content-Type: text/html\r\n"
+					    "Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
+					    "\r\n"
+					    "<html>\r\n"
+					    "<header>\r\n"
+					    "<title>Not Found</title>\r\n"
+					    "</header>\r\n"
+					    "<body>\r\n"
+					    "<h1>Not Found!!</h1>\r\n"
+					    "</body>\r\n"
+					    "</html>\r\n";
+    return (str);
 }
 
-std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest request)
+std::string ServerResponse::getFileContent(std::string path)
 {
-	std::cout << "Delete method" << std::endl;
+	std::ifstream file;
+	std::string line;
+	std::string bodyHtml;
+	std::string temp;
 
-	std::string response = pageNotFound();
-	//TODO: check path to resource, if it exits delete, if not send negative response
-	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-URI"];
-	std::ifstream file(pathToResource.c_str());
-	if (!(file.good()))
-		return response;
-	remove(pathToResource.c_str());
-	response =
-				"HTTP/1.1 200 OK\r\n"
-				"Content-Length: 0\r\n"
-				"Connection: keep-alive\r\n"
-				"\r\n"; //very imporant
-	return response;
+	file.open(path.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
+	if (!file)
+	{
+		std::cerr << "Error in opening the file" << std::endl;
+		return (bodyHtml);
+	}
+	// get file content into string
+	while (std::getline(file, line))
+	{
+		if (line.size() == 0)
+			continue;
+		else
+			bodyHtml = bodyHtml.append(line + "\r\n");
+	}
+	file.close();
+	return (bodyHtml);
+}
+
+//TODO: review this function
+std::string ServerResponse::assembleHeaders(std::string protocol, std::string length)
+{
+	std::string statusLine;
+	ServerStatusCode CodeNumber;
+	std::string contentType;
+	std::string fileType;
+	std::string fileExtension;
+
+	statusLine += protocol + " " + CodeNumber.getStatusCode(200) + "\r\n";
+	statusLine += "Content-Length: " + length + "\r\n";
+	statusLine += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
+	statusLine += "\r\n";
+	return statusLine;
+}
+
+std::string ServerResponse::getFileType(std::map<std::string, std::string> headers)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::string type;
+
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "Content-Type")
+			type = it->second;
+	}
+	return type;
+}
+
+std::string ServerResponse::getFileName(std::map<std::string, std::string> headers)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::string name;
+
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "Content-Disposition")
+		{
+			if (it->second.find("filename") != std::string::npos)
+			{
+				std::string fileNameField = it->second.substr(it->second.find("filename"));
+				if (fileNameField.find('"') != std::string::npos)
+				{
+					int indexFirstQuote = fileNameField.find('"');
+					int indexSecondQuote = 0;
+					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
+					{
+						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
+					}
+					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
+				}
+			}
+		}
+	}
+	return name;
+}
+
+int ServerResponse::checkNameFile(std::string str, std::string path)
+{
+	DIR *folder;
+	struct dirent *data;
+
+	folder = opendir(path.c_str());
+	std::string convStr;
+	if (folder == NULL)
+		printf("error opening folder\n");
+	while ((data = readdir(folder)))
+	{
+		convStr = data->d_name;
+		if (convStr == str)
+			return (1);
+	}
+	closedir(folder);
+	return (0);
 }
