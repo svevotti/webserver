@@ -71,38 +71,17 @@ std::string prepareResponse(ClientRequest *request, InfoServer info)
 	return response;
 }
 
-int	searchPage(std::string path, std::string target)
+int	searchPage(std::string path)
 {
-	DIR *folder;
-	struct dirent *data;
-	std::string strC;
+	FILE *folder;
 
-	folder = opendir(path.c_str());
+	folder = fopen(path.c_str(), "rb");
 	if (folder == NULL)
-		printf("error opening folder\n");
-	std::cout << target << std::endl;
-	while ((data = readdir(folder)))
 	{
-		strC = data->d_name;
-		if (strC == "." || strC == "..")
-			continue;
-		std::string newPath = path + strC;
-		if (strC == target)
-		{
-			closedir(folder);
-			return false;
-		}
-		if (data->d_type == DT_DIR)
-		{
-			if (searchPage(path, target) == false)
-			{
-				closedir(folder);
-				return false;
-			}
-		}
-		
+		printf("folder not found\n");
+		return false;
 	}
-	closedir(folder);
+	fclose(folder);
 	return true;
 }
 int isCgi(std::string str, InfoServer info)
@@ -110,12 +89,7 @@ int isCgi(std::string str, InfoServer info)
 	printf("isCgi\n");
 	if (str.find(".py") != std::string::npos)
 		return true;
-	if (str == "/")
-	{
-		str.clear();
-		str = "/index.html";
-	}
-	if (searchPage(info.getServerDocumentRoot(), str) == 0)
+	if (searchPage(info.getServerDocumentRoot() + str) == true)
 		return false;
 	return true;
 }
@@ -181,7 +155,7 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 		close(fd);
 		this->it = this->poll_sets.erase(this->it);
 	}
-	//TODO: check by deafult if the http headers is always sent
+	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems
 	if (this->totBytes > 0)
 	{
 		if (this->full_buffer.find("Content-Length") == std::string::npos && this->full_buffer.find("POST") == std::string::npos)
