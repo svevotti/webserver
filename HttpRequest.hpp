@@ -16,8 +16,10 @@
 #include "StringManipulations.hpp"
 #include "ClientRequest.hpp"
 
-#define TEXT 0
-#define MULTIPART 1
+#define ERROR (-1)
+#define EMPTY 0
+#define TEXT 1
+#define MULTIPART 2
 
 typedef struct section
 {
@@ -34,7 +36,12 @@ public:
 	void parseRequestHttp();
 	void parseRequestLine(std::string);
 	void parseHeaders(std::istringstream&);
-	void parseBody(std::string, int);
+	void parseBody(std::string, std::string, int);
+	void exractQuery(std::string);
+	void parseMultiPartBody(std::string, int);
+	void extractSections(std::string, std::vector<int>, int, std::string);
+	std::string findMethod(std::string);
+	char *getBoundary(const char *);
 
 	std::map<std::string, std::string> getHttpHeaders() const;
 	std::map<std::string, std::string> getHttpRequestLine() const;

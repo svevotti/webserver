@@ -16,9 +16,6 @@
 #include "StringManipulations.hpp"
 #include "HttpRequest.hpp"
 
-#define TEXT 0
-#define MULTIPART 1
-
 class ClientRequest
 {
 //TODO mettere const get

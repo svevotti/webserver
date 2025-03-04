@@ -7,15 +7,87 @@
 #include <sstream>
 #include <cstdio>
 
-std::string findMethod(std::string inputStr)
+//Constructor and Destructor
+
+//Setters and getters
+std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
 {
-	if (inputStr.find("GET") != std::string::npos)
-		return ("GET");
-	else if (inputStr.find("POST") != std::string::npos)
-		return ("POST");
-	else if (inputStr.find("DELETE") != std::string::npos)
-		return ("DELETE");
-	return ("OTHER");
+	return requestLine;
+}
+
+std::map<std::string, std::string> HttpRequest::getHttpHeaders(void) const
+{
+	return headers;
+}
+
+std::map<std::string, std::string> HttpRequest::getHttpUriQueryMap(void) const
+{
+	return query;
+}
+
+std::vector<struct section> HttpRequest::getHttpSections(void) const
+{
+	return this->sectionsVec;
+}
+
+int HttpRequest::getHttpTypeBody(void) const
+{
+	return typeBody;
+}
+
+//main functions
+void HttpRequest::HttpParse(std::string str, int size)
+{
+    this->str = str;
+    this->size = size;
+    parseRequestHttp();
+}
+
+void HttpRequest::parseRequestHttp(void)
+{
+	std::string inputString(this->str);
+	std::istringstream request(inputString);
+	std::string line;
+    std::map<std::string, std::string>::iterator it;
+
+	parseRequestLine(inputString);
+	getline(request, line); //skipping first line
+	parseHeaders(request);
+    it = headers.find("Content-Length");
+	if (it != headers.end())
+		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
+	else
+		typeBody = EMPTY;	
+}
+
+void HttpRequest::parseBody(std::string method, std::string buffer, int size)
+{
+	std::string contentType = headers["Content-Type"];
+	struct section data;
+
+	if (method == "POST")
+	{
+		if (contentType.find("boundary") != std::string::npos) //multi format data
+		{
+			this->typeBody = MULTIPART;
+			parseMultiPartBody(buffer, size);
+		}
+		else
+		{
+			struct section data;
+			typeBody = TEXT;
+			data.indexBinary = 0;
+			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
+			if (bodyStart != std::string::npos)
+			{
+				bodyStart += 4;
+				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
+			}
+			sectionsVec.push_back(data);	
+		}
+	}
+	else
+		typeBody = ERROR;
 }
 
 void HttpRequest::parseRequestLine(std::string str)
@@ -29,46 +101,12 @@ void HttpRequest::parseRequestLine(std::string str)
 
 	method = findMethod(str);
 	requestLine["Method"] = method;
-	if (str.find("/") != std::string::npos) //
+	if (str.find("/") != std::string::npos)
 	{
 		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
 		requestLine["Request-URI"] = subStr; //Request-URI: full url+query
 		if (subStr.find("?") != std::string::npos) //query
-		{
-			url = subStr.substr(0, subStr.find("?"));
-			requestLine["Url"] = url; //url : only url
-			queryString = subStr.substr(subStr.find("?") + 1, subStr.length() - subStr.find("?"));
-			requestLine["Query-string"] = queryString; //query-string only query
-			std::string key;
-			std::string value;
-			int i = 0;
-			while (i < (int)queryString.length())
-			{
-				while (queryString[i] != '=')
-				{
-					if (i ==  (int)queryString.length())
-						break;
-					key.append(1, queryString[i]);
-					i++;
-				}
-				if (i ==  (int)queryString.length())
-					break;
-				i++;
-				while (queryString[i] != '&')
-				{
-					if (i ==  (int)queryString.length())
-						break;
-					value.append(1, queryString[i]);
-					i++;
-				}
-				query[key] = value;
-				if (i == (int)queryString.length())
-					break;
-				key.clear();
-				value.clear();
-				i++;
-			}
-		}
+			exractQuery(subStr);
 	}
 	else
 		requestLine["Request-URI"] = "target not defined"; //error
@@ -99,7 +137,121 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 	}
 }
 
-char *getBoundary(const char *buffer)
+void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
+{
+	char *b;
+	std::string line;
+	std::string key;
+	std::string value;
+	struct section data;
+	int indexBinary = 0;
+	std::vector<int> boundariesIndexes;
+
+	b = getBoundary(buffer.c_str());
+	int blen = strlen(b);
+	for (int i = 0; i < size; i++)
+	{
+		int diff = ft_memcmp(buffer.c_str() + i, b, blen);
+		if (diff == 0) {
+			boundariesIndexes.push_back(i-2); //correct?
+		}
+	}
+	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
+		extractSections(buffer, boundariesIndexes, i, b);
+}
+
+void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, int i, std::string b)
+{
+	int indexBinary = 0;
+	std::string line;
+	std::string key;
+	std::string value;
+	struct section data;
+
+	std::istringstream streamHeaders(buffer.c_str() + indeces[i]);
+
+	indexBinary = indeces[i];
+	while (getline(streamHeaders, line))
+	{
+		if (line.find_first_not_of("\r\n") == std::string::npos)
+			break ;
+		indexBinary += line.length() + 1; //ADD \n in the count
+		if (line.find(b) != std::string::npos)
+			continue;
+		else
+		{
+			if (line.find(":") != std::string::npos)
+				key = line.substr(0, line.find(":"));
+			if (line.find(" ") != std::string::npos)
+				value = line.substr(line.find(" ") + 1);
+			data.myMap[key] = value;
+		}
+	}
+	data.indexBinary = indexBinary+2;
+	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
+	sectionsVec.push_back(data);
+	streamHeaders.clear();
+	line.clear();
+	key.clear();
+	value.clear();
+	data.myMap.clear();
+	indexBinary = 0;
+	data.body.clear();
+}
+
+//utilis
+std::string HttpRequest::findMethod(std::string inputStr)
+{
+	if (inputStr.find("GET") != std::string::npos)
+		return ("GET");
+	else if (inputStr.find("POST") != std::string::npos)
+		return ("POST");
+	else if (inputStr.find("DELETE") != std::string::npos)
+		return ("DELETE");
+	return ("OTHER");
+}
+
+void HttpRequest::exractQuery(std::string str)
+{
+	std::string url;
+	std::string queryString;
+	std::string key;
+	std::string value;
+	size_t i = 0;
+
+	url = str.substr(0, str.find("?"));
+	requestLine["Url"] = url; //url : only url
+	queryString = str.substr(str.find("?") + 1, str.length() - str.find("?"));
+	requestLine["Query-string"] = queryString; //query-string only query
+	while (i < queryString.length())
+	{
+		while (queryString[i] != '=')
+		{
+			if (i == queryString.length())
+				break;
+			key.append(1, queryString[i]);
+			i++;
+		}
+		if (i == queryString.length())
+			break;
+		i++;
+		while (queryString[i] != '&')
+		{
+			if (i == queryString.length())
+				break;
+			value.append(1, queryString[i]);
+			i++;
+		}
+		query[key] = value;
+		if (i == queryString.length())
+			break;
+		key.clear();
+		value.clear();
+		i++;
+	}
+}
+
+char *HttpRequest::getBoundary(const char *buffer)
 {
 	char *b;
 	const char *result = strstr(buffer, "=");
@@ -123,120 +275,4 @@ char *getBoundary(const char *buffer)
 	}
 	b[i] = '\0';
 	return (b);
-}
-
-void HttpRequest::parseBody(std::string buffer, int size)
-{
-	std::string contentType = headers["Content-Type"];
-	std::string line;
-	std::string key;
-	std::string value;
-	struct section data;
-	int indexBinary = 0;
-	std::vector<int> boundariesIndexes;
-
-	std::cout << "parsing body" << std::endl;
-	if (contentType.find("boundary") != std::string::npos) //multi format data
-	{
-		this->typeBody = MULTIPART;
-		char *b;
-		b = getBoundary(buffer.c_str());
-		int blen = strlen(b);
-		for (int i = 0; i < size; i++) 
-		{
-			int diff = ft_memcmp(buffer.c_str() + i, b, blen);
-			if (diff == 0) {
-				boundariesIndexes.push_back(i-2); //correct?
-			}
-		}
-		for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
-		{
-			std::istringstream streamHeaders(buffer.c_str() + boundariesIndexes[i]);
-			indexBinary = boundariesIndexes[i];
-			while (getline(streamHeaders, line))
-			{
-				if (line.find_first_not_of("\r\n") == std::string::npos)
-					break ;
-				indexBinary += line.length() + 1; //ADD \n in the count
-				if (line.find(b) != std::string::npos)
-					continue;
-				else
-				{
-					if (line.find(":") != std::string::npos)
-						key = line.substr(0, line.find(":"));
-					if (line.find(" ") != std::string::npos)
-						value = line.substr(line.find(" ") + 1);
-					data.myMap[key] = value;
-				}
-			}
-			data.indexBinary = indexBinary+2;
-			data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + boundariesIndexes[i+1]-2);
-			sectionsVec.push_back(data);
-			streamHeaders.clear();
-			line.clear();
-			key.clear();
-			value.clear();
-			data.myMap.clear();
-			indexBinary = 0;
-			data.body.clear();
-		}
-	}
-	else
-	{
-		typeBody = TEXT;
-		data.indexBinary = 0;
-		data.body = "";
-		sectionsVec.push_back(data);	
-	}
-}
-
-std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
-{
-	return requestLine;
-}
-
-std::map<std::string, std::string> HttpRequest::getHttpHeaders(void) const
-{
-	return headers;
-}
-
-std::map<std::string, std::string> HttpRequest::getHttpUriQueryMap(void) const
-{
-	return query;
-}
-
-std::vector<struct section> HttpRequest::getHttpSections(void) const
-{
-	return this->sectionsVec;
-}
-
-int HttpRequest::getHttpTypeBody(void) const
-{
-	return typeBody;
-}
-
-void HttpRequest::parseRequestHttp(void)
-{
-	std::string inputString(this->str);
-	std::istringstream request(inputString);
-	std::string line;
-    std::map<std::string, std::string>::iterator it;
-
-	parseRequestLine(inputString);
-	std::cout << "parse headers" << std::endl;
-	getline(request, line); //skipping first line
-	parseHeaders(request);
-    it = headers.find("Content-Length");
-	if (it != headers.end())
-	{
-		printf("before body parse\n");
-		parseBody(this->str, this->size);
-	}
-}
-
-void HttpRequest::HttpParse(std::string str, int size)
-{
-    this->str = str;
-    this->size = size;
-    parseRequestHttp();
 }

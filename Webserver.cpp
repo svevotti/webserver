@@ -47,7 +47,7 @@ std::string Webserver::getFullBuffer(void) const
 	return this->full_buffer;
 }
 
-//main function
+//main functions
 void	Webserver::startServer(InfoServer info)
 {
 	int returnPoll;
@@ -196,6 +196,7 @@ std::string Webserver::prepareResponse(ClientRequest *request, InfoServer info)
 	return response;
 }
 
+//utilis
 //TODO:make size not defined
 void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 {
