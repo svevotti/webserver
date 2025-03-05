@@ -14,6 +14,6 @@ int main(void)
 	InfoServer		info;
 	Webserver 	server(info);
 
-	server.startServer(info);
+	server.startServer();
 	return (0);
 }

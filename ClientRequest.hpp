@@ -18,10 +18,12 @@
 
 class ClientRequest
 {
-//TODO mettere const get
+
 public:
 	void parseRequestHttp(std::string, int);
-	
+	ClientRequest();
+	ClientRequest(ClientRequest const &other);
+	ClientRequest &operator=(ClientRequest const &other);
 	std::map<std::string, std::string> getHeaders() const;
 	std::map<std::string, std::string> getRequestLine() const;
 	std::map<std::string, std::string> getUriQueryMap() const;

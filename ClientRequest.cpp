@@ -7,6 +7,32 @@
 #include <sstream>
 #include <cstdio>
 
+//constructor and destructor
+ClientRequest::ClientRequest(void)
+{
+	
+}
+ClientRequest::ClientRequest(ClientRequest const &other)
+{
+	this->requestLine = other.requestLine;
+	this->query = other.query;
+	this->headers = other.headers;
+	this->sectionsVec = other.sectionsVec;
+	this->typeBody = other.typeBody;
+}
+
+ClientRequest &ClientRequest::operator=(ClientRequest const &other)
+{
+	if (this != &other)
+	{
+		this->requestLine = other.requestLine;
+		this->query = other.query;
+		this->headers = other.headers;
+		this->sectionsVec = other.sectionsVec;
+		this->typeBody = other.typeBody;
+	}
+	return *this;
+}
 //setter and getters
 std::map<std::string, std::string> ClientRequest::getRequestLine(void) const
 {

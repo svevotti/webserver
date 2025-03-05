@@ -15,7 +15,6 @@
 #include <cstdio>
 
 #include "ClientRequest.hpp"
-#include "ServerStatusCode.hpp"
 #include "InfoServer.hpp"
 #include "PrintingFunctions.hpp"
 
@@ -23,17 +22,27 @@ class ServerResponse
 {
 
 public:
-	std::string responseGetMethod(InfoServer, ClientRequest);
-	std::string responsePostMethod(InfoServer, ClientRequest);
-	std::string responseDeleteMethod(InfoServer, ClientRequest);
+	ServerResponse(ClientRequest, InfoServer);
+	ServerResponse &operator=(ServerResponse const &other);
+	std::string responseGetMethod();
+	std::string responsePostMethod();
+	std::string responseDeleteMethod();
 	std::string pageNotFound(void);
-	std::string handleFilesUploads(InfoServer info, ClientRequest request);
+	std::string handleFilesUploads();
 	std::string getFileContent(std::string path);
 	std::string getContentType(std::string str);
-	std::string assembleHeaders(std::string protocol, std::string length);
+	std::string GenerateHttpResponse(std::string length);
 	std::string getFileType(std::map<std::string, std::string> headers);
 	std::string getFileName(std::map<std::string, std::string> headers);
 	int checkNameFile(std::string str, std::string path);
+	std::string GenerateStatusCode(int code);
+	void createMapStatusCode();
+private:
+	ClientRequest request;
+	InfoServer    info;
+	int			 statusCode;
+	std::map<int, std::string> mapStatusCode;
+	
 
 };
 

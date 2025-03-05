@@ -12,27 +12,37 @@
 #include <cstdio>
 
 //constructor and destructor
+ServerResponse::ServerResponse(ClientRequest request, InfoServer info)
+{
+	createMapStatusCode();
+	this->request = ClientRequest(request);
+	this->info = InfoServer(info);
+	this->statusCode = 200;
+}
 
 //setters and getters
 
 //main functions
-std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest request)
+std::string ServerResponse::responseGetMethod()
 {
 	std::string response;
-	std::string bodyHtml;
+	std::string htmlFile;
 	int bodyHtmlLen;
 	std::ostringstream intermediatestream;
 	std::string strbodyHtmlLen;
-	std::string headers;
+	std::string httpHeaders;
+	std::string statusCodeLine;
 	std::string documentRootPath;
 	std::string pathToTarget;
 	struct stat pathStat;
 	std::map<std::string, std::string> httpRequestLine;
 
+	//TODO: i think the 404 page can be hardcode it
 	response = pageNotFound();
 	httpRequestLine = request.getRequestLine();
 	if (!(httpRequestLine["Request-URI"].empty()))
 	{
+		//create path to the index.html
 		documentRootPath = info.getServerDocumentRoot();
 		pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
 		if (stat(pathToTarget.c_str(), &pathStat) != 0)
@@ -44,24 +54,34 @@ std::string ServerResponse::responseGetMethod(InfoServer info, ClientRequest req
 			else
 			pathToTarget += "/index.html";
 		}
-		bodyHtml = getFileContent(pathToTarget);
-		if (bodyHtml.empty())
+		//check if file exists
+		htmlFile = getFileContent(pathToTarget);
+		if (htmlFile.empty())
 			return (response);
-		bodyHtmlLen = bodyHtml.length();
+		bodyHtmlLen = htmlFile.length();
 		intermediatestream << bodyHtmlLen;
 		strbodyHtmlLen = intermediatestream.str();
-		headers = assembleHeaders(httpRequestLine["Protocol"], strbodyHtmlLen);
+
+		statusCodeLine = GenerateStatusCode(this->statusCode);
+		httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
 		response.clear();
-		response += headers + bodyHtml;
+		response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
 	}
 	return (response);
 }
 
-std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest request)
+std::string ServerResponse::GenerateStatusCode(int code)
+{
+	std::map<int, std::string>::iterator it = this->mapStatusCode.find(code);
+	if (it != this->mapStatusCode.end())
+		return it->second;
+	return "";
+}
+std::string ServerResponse::responsePostMethod()
 {
 	std::string response;
 	if (request.getTypeBody() == MULTIPART)
-		response = handleFilesUploads(info, request);
+		response = handleFilesUploads();
 	else
 	{
 		response =
@@ -74,7 +94,7 @@ std::string ServerResponse::responsePostMethod(InfoServer info, ClientRequest re
 	return (response);
 }
 
-std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest request)
+std::string ServerResponse::responseDeleteMethod()
 {
 	std::string response = pageNotFound();
 	//TODO: check path to resource, if it exits delete, if not send negative response
@@ -91,7 +111,7 @@ std::string ServerResponse::responseDeleteMethod(InfoServer info, ClientRequest 
 	return response;
 }
 
-std::string ServerResponse::handleFilesUploads(InfoServer info, ClientRequest request)
+std::string ServerResponse::handleFilesUploads()
 {
 	std::map<std::string, std::string> httpRequestLine;
 	std::string response;
@@ -172,41 +192,38 @@ std::string ServerResponse::getFileContent(std::string path)
 {
 	std::ifstream file;
 	std::string line;
-	std::string bodyHtml;
+	std::string htmlFile;
 	std::string temp;
 
-	file.open(path.c_str(), std::fstream::in | std::fstream::out); //checking if i can open the file, ergo it exists
+	file.open(path.c_str(), std::fstream::in | std::fstream::out);
 	if (!file)
 	{
-		std::cerr << "Error in opening the file" << std::endl;
-		return (bodyHtml);
+		std::cerr << "Error in opening html file" << std::endl;
+		return (htmlFile);
 	}
-	// get file content into string
 	while (std::getline(file, line))
 	{
 		if (line.size() == 0)
 			continue;
 		else
-			bodyHtml = bodyHtml.append(line + "\r\n");
+			htmlFile = htmlFile.append(line + "\r\n");
 	}
 	file.close();
-	return (bodyHtml);
+	return (htmlFile);
 }
 
 //TODO: review this function
-std::string ServerResponse::assembleHeaders(std::string protocol, std::string length)
+std::string ServerResponse::GenerateHttpResponse(std::string length)
 {
-	std::string statusLine;
-	ServerStatusCode CodeNumber;
+	std::string httpHeaders;
 	std::string contentType;
 	std::string fileType;
 	std::string fileExtension;
 
-	statusLine += protocol + " " + CodeNumber.getStatusCode(200) + "\r\n";
-	statusLine += "Content-Length: " + length + "\r\n";
-	statusLine += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
-	statusLine += "\r\n";
-	return statusLine;
+	httpHeaders += "Content-Length: " + length + "\r\n";
+	httpHeaders += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
+	httpHeaders += "\r\n";
+	return httpHeaders;
 }
 
 std::string ServerResponse::getFileType(std::map<std::string, std::string> headers)
@@ -267,4 +284,30 @@ int ServerResponse::checkNameFile(std::string str, std::string path)
 	}
 	closedir(folder);
 	return (0);
+}
+
+void ServerResponse::createMapStatusCode(void)
+{
+	//2xx is for success
+	this->mapStatusCode.insert(std::pair<int, std::string>(200, "200 OK"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(201, "201 Created"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(202, "202 Accepted"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(204, "204 No Content"));
+
+	//3xx is for redirection
+	this->mapStatusCode.insert(std::pair<int, std::string>(301, "301 Moved Permanently"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(302, "302 Found"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(304, "304 Not Modified"));
+
+	//4xxis for client error
+	this->mapStatusCode.insert(std::pair<int, std::string>(400, "400 Bad Request"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(401, "401 Unauthorized"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(403, "403 Forbidden"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(404, "404 Not Found"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(405, "405 Method Not Allowed"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(409, "409 Conflict"));
+
+	//5xx for server error
+	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
 }

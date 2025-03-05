@@ -15,7 +15,7 @@
 #include "ClientRequest.hpp"
 #include "ServerResponse.hpp"
 #include "InfoServer.hpp"
-#include "ServerStatusCode.hpp"
+#include "ServerSockets.hpp"
 #include "StringManipulations.hpp"
 #include "PrintingFunctions.hpp"
 
@@ -30,21 +30,21 @@ class Webserver
 public:
                 Webserver(InfoServer&);
                 ~Webserver();
-    void	    startServer(InfoServer);
+    void	    startServer();
     void        addServerSocketsToPoll(std::vector<int>);
-    void        dispatchEvents(InfoServer, std::vector<int>);
+    int         fdIsServerSocket(int);
+    void        dispatchEvents();
     int         createNewClient(int);
-    void        ReadClientRequest(int, InfoServer);
-    int        readData(int, std::string&, int&);
-    void        handleReadEvents(int, InfoServer);
-    int         callPoll(InfoServer, std::vector<int>);
+    int         readData(int, std::string&, int&);
+    void        handleReadEvents(int);
+    void        handleWritingEvents(int);
     ClientRequest        *ParsingRequest(std::string, int);
     std::string getFullBuffer() const;
     void        closeSockets();
     int        readInChunks(int, std::string&, int&);
-    int         isCgi(std::string, InfoServer);
+    int         isCgi(std::string);
     int         searchPage(std::string path);
-    std::string prepareResponse(ClientRequest *request, InfoServer info);
+    std::string prepareResponse(ClientRequest *request);
 
 private:
 

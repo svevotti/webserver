@@ -41,6 +41,7 @@ void HttpRequest::HttpParse(std::string str, int size)
     this->str = str;
     this->size = size;
     parseRequestHttp();
+	//TODO: check if http is correct?
 }
 
 void HttpRequest::parseRequestHttp(void)
@@ -53,6 +54,7 @@ void HttpRequest::parseRequestHttp(void)
 	parseRequestLine(inputString);
 	getline(request, line); //skipping first line
 	parseHeaders(request);
+	//TODO:add logic for transfer-encoding
     it = headers.find("Content-Length");
 	if (it != headers.end())
 		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
@@ -87,7 +89,7 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 		}
 	}
 	else
-		typeBody = ERROR;
+		typeBody = EMPTY;
 }
 
 void HttpRequest::parseRequestLine(std::string str)

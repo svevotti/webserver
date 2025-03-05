@@ -42,6 +42,7 @@ void	ServerSockets::initSockets(InfoServer info)
 	this->_serverFds.resize(serverNumber);
 	for (int i = 0; i < serverNumber; i++)
 	{
+		//should be a try and catch?
 		this->_serverFds[i] = createSocket(info.getArrayPorts()[i].c_str());
 		if (this->_serverFds[i] < 0)
 			printError(this->_serverFds[i]);
