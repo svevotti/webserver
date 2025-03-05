@@ -38,7 +38,7 @@ std::vector<int>	ServerSockets::getServerSockets(void) const
 //main functions
 void	ServerSockets::initSockets(InfoServer info)
 {
-	int serverNumber = info.getServerNumber();
+	int serverNumber = (int)info.getArrayPorts().size();
 	this->_serverFds.resize(serverNumber);
 	for (int i = 0; i < serverNumber; i++)
 	{

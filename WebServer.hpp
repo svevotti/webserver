@@ -28,7 +28,7 @@ typedef struct client
 class Webserver
 {
 public:
-                Webserver(InfoServer);
+                Webserver(InfoServer&);
                 ~Webserver();
     void	    startServer(InfoServer);
     void        addServerSocketsToPoll(std::vector<int>);
@@ -48,6 +48,7 @@ public:
 
 private:
 
+    InfoServer *_serverInfo;
     std::vector<struct pollfd> poll_sets;
     std::vector<struct pollfd>::iterator it;
 	std::vector<struct pollfd>::iterator end;

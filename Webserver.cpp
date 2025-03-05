@@ -23,11 +23,13 @@
 #define ACCEPT -9
 #define POLL -10
 #define BUFFER 1024
+#define MAX 100
 
 //Constructor and Destructor
-Webserver::Webserver(InfoServer info)
+Webserver::Webserver(InfoServer& info)
 {
-	ServerSockets serverFds(info);
+	this->_serverInfo = new InfoServer(info);
+	ServerSockets serverFds(*this->_serverInfo);
 
 	this->serverFds = serverFds.getServerSockets();
 	this->totBytes = 0;
@@ -38,6 +40,7 @@ Webserver::Webserver(InfoServer info)
 
 Webserver::~Webserver()
 {
+	delete this->_serverInfo;
 	closeSockets();
 }
 
@@ -113,7 +116,7 @@ void Webserver::handleReadEvents(int fd, InfoServer info)
 		close(fd);
 		this->it = this->poll_sets.erase(this->it);
 	}
-	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems
+	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems, it does
 	if (this->totBytes > 0)
 	{
 		if (this->full_buffer.find("Content-Length") == std::string::npos && this->full_buffer.find("POST") == std::string::npos)
@@ -183,7 +186,7 @@ std::string Webserver::prepareResponse(ClientRequest *request, InfoServer info)
 //TODO:make size not defined
 void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 {
-    struct pollfd serverPoll[200];
+    struct pollfd serverPoll[MAX];
 	for (int i = 0; i < 2; i++)
 	{
 		serverPoll[i].fd = fds[i];

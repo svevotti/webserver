@@ -1,41 +1,50 @@
 #include "InfoServer.hpp"
 
-
-void InfoServer::setServerRootPath(std::string path)
+//constructor and destructor
+InfoServer::InfoServer()
 {
-    serverRootPath = path;
+    // this->serverRootPath = "/home/smazzari/repos/Github/Circle5/webserver/server_root";
+    // this->serverDocumentRoot = "/home/smazzari/repos/Github/Circle5/webserver/server_root/public_html";
+	this->serverRootPath = "/Users/sveva/repos/Circle5/webserver/server_root";
+	this->serverDocumentRoot = "/Users/sveva/repos/Circle5/webserver/server_root/public_html";
+    this->arrayPorts.push_back("8080");
+    this->arrayPorts.push_back("9090");
 }
 
-void InfoServer::setServerDocumentRoot(std::string path)
+InfoServer::InfoServer(InfoServer const &other)
 {
-    serverDocumentRoot = path;
+    this->serverRootPath = other.serverRootPath;
+    this->serverDocumentRoot = other.serverDocumentRoot;
+	this->serverRootPath = other.serverRootPath;
+	this->serverDocumentRoot = other.serverDocumentRoot;
+    this->arrayPorts = other.arrayPorts;
 }
 
-std::string InfoServer::getServerDocumentRoot(void)
+InfoServer &InfoServer::operator=(InfoServer const &other)
+{
+    if (this != &other)
+    {
+        this->serverRootPath = other.serverRootPath;
+        this->serverDocumentRoot = other.serverDocumentRoot;
+        this->serverRootPath = other.serverRootPath;
+        this->serverDocumentRoot = other.serverDocumentRoot;
+        this->arrayPorts = other.arrayPorts;
+    }
+    return *this;
+}
+//getters and setters
+std::string InfoServer::getServerDocumentRoot(void) const
 {
    return serverDocumentRoot;
 }
 
-std::string InfoServer::getServerRootPath(void)
+std::string InfoServer::getServerRootPath(void) const
 {
     return serverRootPath;
 }
 
-void InfoServer::setArrayPorts(std::string portNumber)
-{
-    arrayPorts.push_back(portNumber);
-}
-
-std::vector<std::string> InfoServer::getArrayPorts(void)
+std::vector<std::string> InfoServer::getArrayPorts(void) const
 {
     return arrayPorts;
 }
 
-void InfoServer::setServerNumber(int number)
-{
-    this->serverNumbers = number;
-}
-int InfoServer::getServerNumber() const
-{
-        return serverNumbers;
-}
