@@ -16,7 +16,6 @@
 #include "StringManipulations.hpp"
 #include "ClientRequest.hpp"
 
-#define ERROR (-1)
 #define EMPTY 0
 #define TEXT 1
 #define MULTIPART 2

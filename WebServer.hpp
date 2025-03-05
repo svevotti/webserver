@@ -17,7 +17,7 @@
 #include "InfoServer.hpp"
 #include "ServerSockets.hpp"
 #include "StringManipulations.hpp"
-#include "PrintingFunctions.hpp"
+#include "Logger.hpp"
 
 typedef struct client
 {
@@ -34,12 +34,11 @@ public:
     void        addServerSocketsToPoll(std::vector<int>);
     int         fdIsServerSocket(int);
     void        dispatchEvents();
-    int         createNewClient(int);
+    void         createNewClient(int);
     int         readData(int, std::string&, int&);
     void        handleReadEvents(int);
     void        handleWritingEvents(int);
     ClientRequest        *ParsingRequest(std::string, int);
-    std::string getFullBuffer() const;
     void        closeSockets();
     int        readInChunks(int, std::string&, int&);
     int         isCgi(std::string);

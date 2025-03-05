@@ -40,33 +40,30 @@ std::string ServerResponse::responseGetMethod()
 	//TODO: i think the 404 page can be hardcode it
 	response = pageNotFound();
 	httpRequestLine = request.getRequestLine();
-	if (!(httpRequestLine["Request-URI"].empty()))
-	{
 		//create path to the index.html
-		documentRootPath = info.getServerDocumentRoot();
-		pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
-		if (stat(pathToTarget.c_str(), &pathStat) != 0)
-			std::cout << "Error using stat" << std::endl;
-		if (S_ISDIR(pathStat.st_mode))
-		{
-			if (pathToTarget[pathToTarget.length()-1] == '/')
-				pathToTarget += "index.html";
-			else
-			pathToTarget += "/index.html";
-		}
-		//check if file exists
-		htmlFile = getFileContent(pathToTarget);
-		if (htmlFile.empty())
-			return (response);
-		bodyHtmlLen = htmlFile.length();
-		intermediatestream << bodyHtmlLen;
-		strbodyHtmlLen = intermediatestream.str();
-
-		statusCodeLine = GenerateStatusCode(this->statusCode);
-		httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
-		response.clear();
-		response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
+	documentRootPath = info.getServerDocumentRoot();
+	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
+	if (stat(pathToTarget.c_str(), &pathStat) != 0)
+		Logger::error("Failed stat: " + std::string(strerror(errno)));
+	if (S_ISDIR(pathStat.st_mode))
+	{
+		if (pathToTarget[pathToTarget.length()-1] == '/')
+			pathToTarget += "index.html";
+		else
+		pathToTarget += "/index.html";
 	}
+	//check if file exists
+	htmlFile = getFileContent(pathToTarget);
+	if (htmlFile.empty())
+		return (response);
+	bodyHtmlLen = htmlFile.length();
+	intermediatestream << bodyHtmlLen;
+	strbodyHtmlLen = intermediatestream.str();
+
+	statusCodeLine = GenerateStatusCode(this->statusCode);
+	httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
+	response.clear();
+	response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
 	return (response);
 }
 
@@ -82,7 +79,7 @@ std::string ServerResponse::responsePostMethod()
 	std::string response;
 	if (request.getTypeBody() == MULTIPART)
 		response = handleFilesUploads();
-	else
+	else if (request.getTypeBody() == TEXT)
 	{
 		response =
 				"HTTP/1.1 200 OK\r\n"
@@ -198,7 +195,7 @@ std::string ServerResponse::getFileContent(std::string path)
 	file.open(path.c_str(), std::fstream::in | std::fstream::out);
 	if (!file)
 	{
-		std::cerr << "Error in opening html file" << std::endl;
+		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
 		return (htmlFile);
 	}
 	while (std::getline(file, line))
@@ -212,7 +209,7 @@ std::string ServerResponse::getFileContent(std::string path)
 	return (htmlFile);
 }
 
-//TODO: review this function
+//TODO: review this function: add couple more headers maybe
 std::string ServerResponse::GenerateHttpResponse(std::string length)
 {
 	std::string httpHeaders;

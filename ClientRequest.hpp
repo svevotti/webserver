@@ -15,6 +15,7 @@
 #include <vector>
 #include "StringManipulations.hpp"
 #include "HttpRequest.hpp"
+#include "Logger.hpp"
 
 class ClientRequest
 {

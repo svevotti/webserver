@@ -16,12 +16,6 @@
 #include <stdexcept>
 #include <dirent.h>
 
-#include "PrintingFunctions.hpp"
-
-#define RECEIVE -7
-#define SEND -8
-#define ACCEPT -9
-#define POLL -10
 #define BUFFER 1024
 #define MAX 100
 
@@ -31,6 +25,8 @@ Webserver::Webserver(InfoServer& info)
 	this->_serverInfo = new InfoServer(info);
 	ServerSockets serverFds(*this->_serverInfo);
 
+	if (this->serverFds.size() < 0)
+		Logger::error("Failed creating any server socket");
 	this->serverFds = serverFds.getServerSockets();
 	this->totBytes = 0;
 	this->full_buffer.clear();
@@ -45,10 +41,6 @@ Webserver::~Webserver()
 }
 
 //setters and getters
-std::string Webserver::getFullBuffer(void) const
-{
-	return this->full_buffer;
-}
 
 //main functions
 void	Webserver::startServer()
@@ -60,7 +52,7 @@ void	Webserver::startServer()
 		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 20 * 1000);
 		if (returnPoll == -1)
 		{
-			printError(POLL);
+			Logger::error("Failed poll: " + std::string(strerror(errno)));
 			break;
 		}
 		else if (returnPoll == 0)
@@ -96,8 +88,9 @@ void Webserver::handleWritingEvents(int fd)
 	{
 		if (iterClient->fd == fd)
 		{
+			//TODO:does it behave as recv?
 			if (send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), MSG_DONTWAIT) == -1)
-				printError(SEND);
+				Logger::error("Failed send");
 			this->it->events = POLLIN;
 			iterClient->response.clear();
 			clientsQueue.erase(iterClient);
@@ -109,19 +102,19 @@ void Webserver::handleReadEvents(int fd)
 {
 	std::string response;
 
-	int contentLength = 0;
-	int bytesRecv;
+	int contentLength = -1;
 	int flag = 1;
+	int bytesRecv;
 	bytesRecv = readData(fd, this->full_buffer, this->totBytes);
 	if (bytesRecv == 0)
 	{
-		std::cout << "socket number " << fd << " closed connection" << std::endl;
+		Logger::info("Client " + std::to_string(fd) + " disconnected");
 		close(fd);
 		this->it = this->poll_sets.erase(this->it);
 	}
 	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems, it does
-	//TODO: errors
-	//TODO: reorganize this function
+	//TODO: right now we are ignoring -1 of recv
+	//TODO: reorganize this function for keep it clean
 	if (this->totBytes > 0)
 	{
 		if (this->full_buffer.find("Content-Length") == std::string::npos && this->full_buffer.find("POST") == std::string::npos)
@@ -151,6 +144,7 @@ void Webserver::handleReadEvents(int fd)
 				infoC.response = response;
 				this->clientsQueue.push_back(infoC);
 				this->it->events = POLLOUT;
+				Logger::info("Response created successfully and store in clientQueu");
 			}
 		}
 	}
@@ -181,10 +175,10 @@ std::string Webserver::prepareResponse(ClientRequest *request)
 		else if (httpRequestLine["Method"] == "DELETE")
 			response = serverResponse.responseDeleteMethod();
 		else
-			std::cout << "method not found" << std::endl;
+			Logger::error("Method not found, Sveva, use correct status code line");
 	}
 	else
-		std::cout << "method not found" << std::endl;
+		Logger::error("Method not found, Sveva, use correct status code line");
 	return response;
 }
 
@@ -210,22 +204,27 @@ void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 		serverPoll[i].events = POLLIN;
 		this->poll_sets.push_back(serverPoll[i]);
 	}
+	Logger::info("Add server sockets to poll sets");
 }
 
-int Webserver::createNewClient(int fd)
+void Webserver::createNewClient(int fd)
 {
 	socklen_t clientSize;
 	struct sockaddr_storage clientStruct;
 	struct pollfd clientPoll;
+	int	clientFd;
 
 	clientSize = sizeof(clientStruct);
-	fd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize);
-	if (fd == -1)
-		printError(ACCEPT);
-	clientPoll.fd = fd;
+	clientFd = accept(fd, (struct sockaddr *)&clientStruct, &clientSize);
+	if (clientFd == -1)
+	{
+		Logger::error("Failed to create new client (accept): " + std::string(strerror(errno)));
+		return;
+	}
+	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	return (fd);
+	Logger::info("New client " + std::to_string(clientFd) + " created and added to poll sets");
 }
 
 int Webserver::readData(int fd, std::string &str, int &bytes)

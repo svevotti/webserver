@@ -52,7 +52,7 @@ void HttpRequest::parseRequestHttp(void)
     std::map<std::string, std::string>::iterator it;
 
 	parseRequestLine(inputString);
-	getline(request, line); //skipping first line
+	getline(request, line);
 	parseHeaders(request);
 	//TODO:add logic for transfer-encoding
     it = headers.find("Content-Length");
@@ -101,6 +101,7 @@ void HttpRequest::parseRequestLine(std::string str)
 	std::string queryString;
 	std::string url;
 
+	//TODO:maybe split by spaces the first line
 	method = findMethod(str);
 	requestLine["Method"] = method;
 	if (str.find("/") != std::string::npos)
@@ -111,7 +112,7 @@ void HttpRequest::parseRequestLine(std::string str)
 			exractQuery(subStr);
 	}
 	else
-		requestLine["Request-URI"] = "target not defined"; //error
+		requestLine["Request-URI"] = "ERROR"; //error
 	if (str.find("HTTP") != std::string::npos)
 	{
 		std::size_t protocol_index_start = str.find("HTTP");
@@ -119,7 +120,7 @@ void HttpRequest::parseRequestLine(std::string str)
 		requestLine["Protocol"] = protocol;
 	}
 	else
-		requestLine["Protocol"] = "protocol not defined";
+		requestLine["Protocol"] = "ERROR";
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -135,7 +136,7 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 			key = line.substr(0, line.find(":"));
 		if (line.find(" ") != std::string::npos)
 			value = line.substr(line.find(" ") + 1);
-		headers[key] = value; //should i have all lowercase?
+		headers[key] = value;
 	}
 }
 
@@ -208,7 +209,7 @@ std::string HttpRequest::findMethod(std::string inputStr)
 		return ("POST");
 	else if (inputStr.find("DELETE") != std::string::npos)
 		return ("DELETE");
-	return ("OTHER");
+	return ("ERROR");
 }
 
 void HttpRequest::exractQuery(std::string str)

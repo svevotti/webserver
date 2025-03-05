@@ -15,7 +15,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "PrintingFunctions.hpp"
+#include "Logger.hpp"
 
 #define SOCKET -1
 #define GETADDRINFO -2
@@ -45,14 +45,19 @@ void	ServerSockets::initSockets(InfoServer info)
 		//should be a try and catch?
 		this->_serverFds[i] = createSocket(info.getArrayPorts()[i].c_str());
 		if (this->_serverFds[i] < 0)
-			printError(this->_serverFds[i]);
+		{
+			Logger::error("Failed to create socket on port " + info.getArrayPorts()[i] + ": " + std::string(strerror(errno)));
+			this->_serverFds.pop_back();
+			continue;
+		}
+		Logger::info("Socker on port " + info.getArrayPorts()[i] + ": successfully created");
 	}
 }
 
 int ServerSockets::createSocket(const char* portNumber)
 {
 	int fd;
-	struct addrinfo hints, *serverInfo; //struct info about server address
+	struct addrinfo hints, *serverInfo;
 	int error;
 	int opt = 1;
 
@@ -62,18 +67,25 @@ int ServerSockets::createSocket(const char* portNumber)
 	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
 	error = getaddrinfo(NULL, portNumber, &hints, &serverInfo);
 	if (error == -1)
-		std::cout << "Error getaddrinfo" << std::endl;
-	/*note: loop to check socket availabilyt or not*/
-	fd = socket(serverInfo->ai_family, serverInfo->ai_socktype, 0); //create socket
+		Logger::error("Failed getaddrinfo: " + std::string(strerror(errno)));
+	fd = socket(serverInfo->ai_family, serverInfo->ai_socktype, 0);
 	if (fd == -1)
-		printError(SOCKET);
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) //make the address reusable
-		printError(SETSOCKET);
-	if (bind(fd, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) //binding address to port number
-		printError(BIND);
-	/*till here the loop*/
+		Logger::error("Failed socket: " + std::string(strerror(errno)));
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+	{
+		Logger::error("Failed set socket: " + std::string(strerror(errno)));
+		close(fd);
+	}
+	if (bind(fd, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
+	{
+		Logger::error("Failed bind socket: " + std::string(strerror(errno)));
+		close(fd);
+	}
 	freeaddrinfo(serverInfo);
-	if (listen(fd, 5) == -1) //make server socket listenning to incoming connections
-		printError(LISTEN);
+	if (listen(fd, 5) == -1)
+	{
+		Logger::error("Failed listen socket: " + std::string(strerror(errno)));
+		close (fd);
+	}
 	return (fd);
 }
