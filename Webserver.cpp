@@ -78,6 +78,7 @@ void Webserver::handleWritingEvents(int fd)
 	//TODO:does it behave as recv?
 	Logger::debug("bytes to send " + std::to_string(iterClient->response.size()));
 	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), MSG_DONTWAIT);
+	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), 0);
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	Logger::info("these bytes were sent " + std::to_string(bytes));
@@ -133,6 +134,7 @@ void Webserver::handleReadEvents(int fd)
 			}
 			else
 			{
+				//static page
 				//TODO: insert full client properly
 				struct client client;
 

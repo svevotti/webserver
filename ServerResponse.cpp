@@ -21,7 +21,7 @@ ServerResponse::ServerResponse(ClientRequest request, InfoServer info)
 }
 
 //setters and getters
-
+//TODO: Simona please add getter for status code
 //main functions
 std::string ServerResponse::responseGetMethod()
 {
@@ -64,6 +64,7 @@ std::string ServerResponse::responseGetMethod()
 	statusCodeLine = GenerateStatusCode(this->statusCode);
 	httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
 	response.clear();
+	//TODO: check why having problems with binary
 	response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
 	Logger::debug("response: " + response);
 	return (response);
@@ -194,7 +195,7 @@ std::string ServerResponse::getFileContent(std::string path)
 	std::string htmlFile;
 	std::string temp;
 
-	file.open(path.c_str(), std::fstream::in | std::fstream::out);
+	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
 	if (!file)
 	{
 		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
