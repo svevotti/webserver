@@ -1,0 +1,51 @@
+flow http request
+GET has only headers
+POST has headers and body
+parse http request
+get headers
+get body if post
+
+string
+put in the stream
+get line and split the line in key and value
+key will be what is before :
+value will be what is after the space
+what happened when i read empty line?
+
+post method
+client request to upload an image
+server gets the image data and store it on server side (save image)
+???missing something
+server send back response
+
+parsing client request -> check content type then parse
+
+
+server root path harcoded
+request http if / ->index file
+
+parse body multipart
+
+--boundary123456
+content-
+content-
+
+body
+
+--boundary123456
+content-
+content-
+--boundary123456--
+
+find boundary123456
+then go till the blank line
+store in vector
+check for last section: boundary123456--
+
+the section goes from after boundary to empty line
+keep track of pos = 0
+find boundary in the string
+skip full boundary -> index start
+then find first empty line -> index end
+copy str into vector
+start new search boundary after full section is copied
