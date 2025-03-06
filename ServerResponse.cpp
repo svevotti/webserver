@@ -38,6 +38,7 @@ std::string ServerResponse::responseGetMethod()
 	std::map<std::string, std::string> httpRequestLine;
 
 	//TODO: i think the 404 page can be hardcode it
+	//TODO: need to check curl -O why is not downloading
 	response = pageNotFound();
 	httpRequestLine = request.getRequestLine();
 		//create path to the index.html
@@ -64,6 +65,7 @@ std::string ServerResponse::responseGetMethod()
 	httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
 	response.clear();
 	response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
+	Logger::debug("response: " + response);
 	return (response);
 }
 

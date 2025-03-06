@@ -18,7 +18,7 @@ class Logger
 		Logger();
 		static LogPriority priority;
 	public:
-		void setLevelLog(LogPriority new_priority) {priority = new_priority;};
+		static void setLevelLog(LogPriority new_priority) {priority = new_priority;};
 
 		static void debug(std::string message)
 		{

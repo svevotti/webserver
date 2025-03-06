@@ -1,11 +1,4 @@
 #include "ClientRequest.hpp"
-#include <vector>
-#include <sstream>
-#include <algorithm>
-#include <cctype>
-#include <dirent.h>
-#include <sstream>
-#include <cstdio>
 
 //constructor and destructor
 ClientRequest::ClientRequest(void)

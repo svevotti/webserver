@@ -17,12 +17,6 @@
 
 #include "Logger.hpp"
 
-#define SOCKET -1
-#define GETADDRINFO -2
-#define SETSOCKET -4
-#define BIND -5
-#define LISTEN -6
-
 //constructor and destructor
 ServerSockets::ServerSockets(InfoServer info)
 {

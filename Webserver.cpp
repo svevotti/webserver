@@ -1,20 +1,5 @@
-#include <stdio.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-#include <map>
 #include "WebServer.hpp"
-#include <iostream>
-#include <fstream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sstream>
-#include <stdexcept>
-#include <dirent.h>
+
 
 #define BUFFER 1024
 #define MAX 100
@@ -56,7 +41,7 @@ void	Webserver::startServer()
 			break;
 		}
 		else if (returnPoll == 0)
-			std::cout << "No events\n";
+			Logger::debug("Poll timeout: no events");
 		else
 			dispatchEvents();
 	}
@@ -84,24 +69,26 @@ void Webserver::handleWritingEvents(int fd)
 	std::vector<struct client>::iterator iterClient;
 	std::vector<struct client>::iterator endClient = this->clientsQueue.end();
 
-	for (iterClient = this->clientsQueue.begin(); iterClient != endClient; it++)
+	iterClient = retrieveClient(fd);
+	if (iterClient == endClient)
 	{
-		if (iterClient->fd == fd)
-		{
-			//TODO:does it behave as recv?
-			if (send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), MSG_DONTWAIT) == -1)
-				Logger::error("Failed send");
-			this->it->events = POLLIN;
-			iterClient->response.clear();
-			clientsQueue.erase(iterClient);
-			break;
-		}
+		Logger::error("Failed to find client " + std::to_string(fd));
+		return;
 	}
+	//TODO:does it behave as recv?
+	Logger::debug("bytes to send " + std::to_string(iterClient->response.size()));
+	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), MSG_DONTWAIT);
+	if (bytes == -1)
+		Logger::error("Failed send - Sveva check this out");
+	Logger::info("these bytes were sent " + std::to_string(bytes));
+	this->it->events = POLLIN;
+	iterClient->response.clear();
+	//clientsQueue.erase(iterClient);
 }
+
 void Webserver::handleReadEvents(int fd)
 {
 	std::string response;
-
 	int contentLength = -1;
 	int flag = 1;
 	int bytesRecv;
@@ -111,12 +98,15 @@ void Webserver::handleReadEvents(int fd)
 		Logger::info("Client " + std::to_string(fd) + " disconnected");
 		close(fd);
 		this->it = this->poll_sets.erase(this->it);
+		if (retrieveClient(fd) != this->clientsQueue.end())
+			this->clientsQueue.erase(retrieveClient(fd));
 	}
 	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems, it does
 	//TODO: right now we are ignoring -1 of recv
 	//TODO: reorganize this function for keep it clean
 	if (this->totBytes > 0)
 	{
+		Logger::debug("recv this bytes: " + std::to_string(this->totBytes));
 		if (this->full_buffer.find("Content-Length") == std::string::npos && this->full_buffer.find("POST") == std::string::npos)
 			flag = 0;
 		else if (this->full_buffer.find("Content-Length") != std::string::npos)
@@ -126,48 +116,60 @@ void Webserver::handleReadEvents(int fd)
 		}
 		if (this->totBytes > contentLength && flag == 0)
 		{
-			this->request = ParsingRequest(this->full_buffer, this->totBytes);
-			if (isCgi(this->request->getRequestLine()["Request-URI"]) == true)
+			//Logger::debug("recv this bytes: " + std::to_string(this->totBytes));
+			std::vector<struct client>::iterator clientIt;
+			clientIt = retrieveClient(fd);
+			if (clientIt == this->clientsQueue.end())
+			{
+				Logger::error("Client not found " + std::to_string(clientIt->fd) + " - please Sveva review");
+				return;
+			}
+			clientIt->request = ParsingRequest(this->full_buffer, this->totBytes);
+			if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
 			{
 				printf("send to CGI\n");
 				//should return a string
-				//adding in the infoC structure
+				//adding in the struct client structure
 			}
 			else
 			{
-				response = prepareResponse(this->request);
-				delete this->request;
+				//TODO: insert full client properly
+				struct client client;
+
+				Logger::debug("fill in struct client");
+				response = prepareResponse(clientIt->request);
+				clientIt->response = response;
+				client.fd = clientIt->fd;
+				client.request = clientIt->request;
+				client.response = clientIt->response;
+				response.clear();
+				this->clientsQueue.erase(clientIt);
+				this->clientsQueue.push_back(client);
+				this->it->events = POLLOUT;
 				this->full_buffer.clear();
 				this->totBytes = 0;
-				struct client infoC;
-				infoC.fd = fd;
-				infoC.response = response;
-				this->clientsQueue.push_back(infoC);
-				this->it->events = POLLOUT;
 				Logger::info("Response created successfully and store in clientQueu");
 			}
 		}
 	}
 }
 
-ClientRequest *Webserver::ParsingRequest(std::string str, int size)
+ClientRequest Webserver::ParsingRequest(std::string str, int size)
 {
-
-	this->request = new ClientRequest();
-	this->request->parseRequestHttp(str, size);
-	return this->request;
+	ClientRequest request;
+	request.parseRequestHttp(str, size);
+	return request;
 }
 
-
-std::string Webserver::prepareResponse(ClientRequest *request)
+std::string Webserver::prepareResponse(ClientRequest request)
 {
 	std::string response;
 
 	std::map<std::string, std::string> httpRequestLine;
-	httpRequestLine = request->getRequestLine();
+	httpRequestLine = request.getRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
-		ServerResponse serverResponse(*request, *this->_serverInfo);
+		ServerResponse serverResponse(request, *this->_serverInfo);
 		if (httpRequestLine["Method"] == "GET")
 			response = serverResponse.responseGetMethod();
 		else if (httpRequestLine["Method"] == "POST")
@@ -224,7 +226,24 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
+	struct client newClient;
+	newClient.fd = clientFd;
+	this->clientsQueue.push_back(newClient);
 	Logger::info("New client " + std::to_string(clientFd) + " created and added to poll sets");
+}
+
+//TODO: add helper function to retrieve fd from vector
+std::vector<struct client>::iterator Webserver::retrieveClient(int fd)
+{
+	std::vector<struct client>::iterator iterClient;
+	std::vector<struct client>::iterator endClient = this->clientsQueue.end();
+
+	for (iterClient = this->clientsQueue.begin(); iterClient != endClient; iterClient++)
+	{
+		if (iterClient->fd == fd)
+			return iterClient;
+	}
+	return endClient;
 }
 
 int Webserver::readData(int fd, std::string &str, int &bytes)

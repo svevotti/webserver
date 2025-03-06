@@ -1,16 +1,23 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
-#include <sys/socket.h>
+#include <stdio.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <map>
+#include "WebServer.hpp"
 #include <iostream>
-#include <sys/types.h> 
-#include <unistd.h>
+#include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <cstring>
-#include <fcntl.h>
-#include <netdb.h>
-#include <poll.h>
+#include <sstream>
+#include <stdexcept>
+#include <dirent.h>
 
 #include "ClientRequest.hpp"
 #include "ServerResponse.hpp"
@@ -22,6 +29,7 @@
 typedef struct client
 {
     int fd;
+    ClientRequest request;
     std::string response;
 } client;
 
@@ -38,12 +46,13 @@ public:
     int         readData(int, std::string&, int&);
     void        handleReadEvents(int);
     void        handleWritingEvents(int);
-    ClientRequest        *ParsingRequest(std::string, int);
+    ClientRequest        ParsingRequest(std::string, int);
     void        closeSockets();
     int        readInChunks(int, std::string&, int&);
     int         isCgi(std::string);
     int         searchPage(std::string path);
-    std::string prepareResponse(ClientRequest *request);
+    std::string prepareResponse(ClientRequest);
+    std::vector<struct client>::iterator retrieveClient(int fd);
 
 private:
 
@@ -53,7 +62,6 @@ private:
 	std::vector<struct pollfd>::iterator end;
     int totBytes;
     std::string full_buffer;
-    ClientRequest   *request;
     std::vector<int>    serverFds;
     std::vector<struct client> clientsQueue;
 

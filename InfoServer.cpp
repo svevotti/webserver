@@ -9,6 +9,7 @@ InfoServer::InfoServer()
 	this->serverDocumentRoot = "/Users/sveva/repos/Circle5/webserver/server_root/public_html";
     this->arrayPorts.push_back("8080");
     this->arrayPorts.push_back("9090");
+    //TODO: add logger in configuration file
 }
 
 InfoServer::InfoServer(InfoServer const &other)
