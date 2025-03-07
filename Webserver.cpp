@@ -60,7 +60,16 @@ void Webserver::dispatchEvents()
 			if (fdIsServerSocket(it->fd) == true)
 				createNewClient(it->fd);
 			else
+			{
 				handleReadEvents(it->fd, it, &clientRemove);
+				if (clientRemove == 1)
+				{
+					Logger::info("Client " + std::to_string(it->fd) + " disconnected");
+					close(it->fd);
+					this->clientsQueue.erase(retrieveClient(it->fd));
+					it = this->poll_sets.erase(it);
+				}
+			}
         }
 		else if (it->revents & POLLOUT)
 			handleWritingEvents(it->fd, it);
@@ -101,16 +110,7 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 	int totBytes;
 	bytesRecv = readData(fd, full_buffer, totBytes);
 	if (bytesRecv == 0)
-	{
-		Logger::info("Client " + std::to_string(fd) + " disconnected");
-		close(fd);
-		this->clientsQueue.erase(retrieveClient(fd));
-		it = this->poll_sets.erase(it);
 		*flagClient = 1;
-	}
-	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems, it does
-	//TODO: right now we are ignoring -1 of recv
-	//TODO: reorganize this function for keep it clean
 	if (totBytes > 0)
 	{
 		Logger::debug("recv this bytes: " + std::to_string(totBytes));
@@ -133,17 +133,10 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 			}
 			clientIt->request = ParsingRequest(full_buffer, totBytes);
 			if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
-			{
 				printf("send to CGI\n");
-				//should return a string
-				//adding in the struct client structure
-			}
 			else
 			{
-				//static page
-				//TODO: insert full client properly
 				struct client client;
-
 				Logger::debug("fill in struct client");
 				response = prepareResponse(clientIt->request);
 				clientIt->response = response;
