@@ -1,10 +1,8 @@
 #include "WebServer.hpp"
-
-
 #define BUFFER 1024
 #define MAX 100
 
-//Constructor and Destructor
+// Constructor and Destructor
 Webserver::Webserver(InfoServer& info)
 {
 	this->_serverInfo = new InfoServer(info);
@@ -23,9 +21,9 @@ Webserver::~Webserver()
 	closeSockets();
 }
 
-//setters and getters
+// Setters and getters
 
-//main functions
+// Main functions
 void	Webserver::startServer()
 {
 	int returnPoll;

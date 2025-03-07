@@ -7,9 +7,9 @@
 #include <sstream>
 #include <cstdio>
 
-//Constructor and Destructor
+// Constructor and Destructor
 
-//Setters and getters
+// Setters and getters
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
 {
 	return requestLine;
@@ -35,7 +35,7 @@ int HttpRequest::getHttpTypeBody(void) const
 	return typeBody;
 }
 
-//main functions
+// Main functions
 void HttpRequest::HttpParse(std::string str, int size)
 {
     this->str = str;
@@ -153,9 +153,8 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	for (int i = 0; i < size; i++)
 	{
 		int diff = ft_memcmp(buffer.c_str() + i, b, blen);
-		if (diff == 0) {
+		if (diff == 0)
 			boundariesIndexes.push_back(i-2); //correct?
-		}
 	}
 	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		extractSections(buffer, boundariesIndexes, i, b);
@@ -200,7 +199,7 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	// data.body.clear();
 }
 
-//utilis
+// Utils
 std::string HttpRequest::findMethod(std::string inputStr)
 {
 	if (inputStr.find("GET") != std::string::npos)
