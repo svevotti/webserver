@@ -12,11 +12,12 @@
 
 enum LogPriority {DEBUG, INFO, WARN, ERROR};
 
-class Logger
-{
+class Logger {
+
 	private:
 		Logger();
 		static LogPriority priority;
+	
 	public:
 		static void setLevelLog(LogPriority new_priority) {priority = new_priority;};
 
@@ -51,6 +52,7 @@ class Logger
 				std::cout << RED << "[ERROR]: " << message << RESET << std::endl;
 			}
 		}
+		
 };
 
 #endif

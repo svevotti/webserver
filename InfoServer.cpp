@@ -33,7 +33,11 @@ InfoServer &InfoServer::operator=(InfoServer const &other)
     }
     return *this;
 }
-//getters and setters
+
+// ----------------------Getters and Setters ----------------------------
+
+// Getters 
+
 std::string InfoServer::getServerDocumentRoot(void) const
 {
    return serverDocumentRoot;
@@ -49,3 +53,20 @@ std::vector<std::string> InfoServer::getArrayPorts(void) const
     return arrayPorts;
 }
 
+//---------------Setters-------------------------------------------------------------------------
+
+void InfoServer::setArrayPorts(const std::string& ports)
+{
+    this->arrayPorts.clear();
+    this->arrayPorts.push_back(ports);  // Single port for now; can enhance later
+}
+
+void InfoServer::setServerRootPath(const std::string& path)
+{
+    this->serverRootPath = path;
+}
+
+void InfoServer::setServerDocumentRoot(const std::string& path)
+{
+    this->serverDocumentRoot = path;
+}

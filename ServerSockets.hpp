@@ -13,19 +13,19 @@
 #include "ClientRequest.hpp"
 #include "ServerResponse.hpp"
 #include "InfoServer.hpp"
-#include "StringManipulations.hpp"
 #include "HttpRequest.hpp"
 
 
-class ServerSockets
-{
-public:
-	ServerSockets(InfoServer);
-	void initSockets(InfoServer);
-	int createSocket(const char*);
-	std::vector<int> getServerSockets() const;
-private:
-	std::vector<int> _serverFds;
+class ServerSockets {
+
+	public:
+		ServerSockets(InfoServer);
+		void initSockets(InfoServer);
+		int createSocket(const char*);
+		std::vector<int> getServerSockets() const;
+	private:
+		std::vector<int> _serverFds;
+
 };
 
 #endif
