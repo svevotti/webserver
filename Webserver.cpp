@@ -49,20 +49,20 @@ void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
 	std::vector<struct pollfd>::iterator ite;
-	int clientRemove;
+	int result;
 
 	ite = this->poll_sets.end();
     for (it = poll_sets.begin(); it != ite;) 
     {
-		clientRemove = 0;
+		result = 0;
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
 				createNewClient(it->fd);
 			else
 			{
-				handleReadEvents(it->fd, it, &clientRemove);
-				if (clientRemove == 1)
+				result = handleReadEvents(it->fd, it);
+				if (result == 1)
 				{
 					Logger::info("Client " + std::to_string(it->fd) + " disconnected");
 					close(it->fd);
@@ -73,7 +73,7 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 			handleWritingEvents(it->fd, it);
-		if (clientRemove == 0)
+		if (result == 0)
 			it++;
 	}
 }
@@ -100,7 +100,7 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 	//clientsQueue.erase(iterClient);
 }
 
-void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it, int *flagClient)
+int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
 	std::string response;
 	int contentLength = -1;
@@ -110,7 +110,7 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 	int totBytes;
 	bytesRecv = readData(fd, full_buffer, totBytes);
 	if (bytesRecv == 0)
-		*flagClient = 1;
+		return 1;
 	if (totBytes > 0)
 	{
 		Logger::debug("recv this bytes: " + std::to_string(totBytes));
@@ -129,7 +129,7 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 			if (clientIt == this->clientsQueue.end())
 			{
 				Logger::error("Client not found " + std::to_string(clientIt->fd) + " - please Sveva review");
-				return;
+				return 0;
 			}
 			clientIt->request = ParsingRequest(full_buffer, totBytes);
 			if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
@@ -153,6 +153,7 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 			}
 		}
 	}
+	return 0;
 }
 
 ClientRequest Webserver::ParsingRequest(std::string str, int size)
