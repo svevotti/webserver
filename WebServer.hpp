@@ -26,42 +26,39 @@
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
 
-typedef struct client
-{
-    int fd;
-    ClientRequest request;
-    std::string response;
-} client;
+typedef struct client {
+    int             fd;
+    ClientRequest   request;
+    std::string     response;
+}              client;
 
-class Webserver
-{
-public:
-                Webserver(InfoServer&);
-                ~Webserver();
-    void	    startServer();
-    void        addServerSocketsToPoll(std::vector<int>);
-    int         fdIsServerSocket(int);
-    void        dispatchEvents();
-    void        createNewClient(int);
-    int         readData(int, std::string&, int&);
-    int        handleReadEvents(int, std::vector<struct pollfd>::iterator);
-    void        handleWritingEvents(int, std::vector<struct pollfd>::iterator);
-    ClientRequest        ParsingRequest(std::string, int);
-    void        closeSockets();
-    int        readInChunks(int, std::string&, int&);
-    int         isCgi(std::string);
-    int         searchPage(std::string path);
-    std::string prepareResponse(ClientRequest);
-    std::vector<struct client>::iterator retrieveClient(int fd);
-    void addToClientQueue(std::vector<struct client>::iterator it);
-    void clearInRead(std::string &buffer, std::string &response, int *readBytes);
+class Webserver {
+    public:
+        Webserver(InfoServer&);
+        ~Webserver();
+        void	                                startServer();
+        void                                    addServerSocketsToPoll(std::vector<int>);
+        int                                     fdIsServerSocket(int);
+        void                                    dispatchEvents();
+        void                                    createNewClient(int);
+        int                                     readData(int, std::string&, int&);
+        int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
+        void                                    handleWritingEvents(int, std::vector<struct pollfd>::iterator);
+        ClientRequest                           ParsingRequest(std::string, int);
+        void                                    closeSockets();
+        int                                     isCgi(std::string);
+        int                                     searchPage(std::string path);
+        std::string                             prepareResponse(ClientRequest);
+        std::vector<struct client>::iterator    retrieveClient(int fd);
+        void                                    addToClientQueue(std::vector<struct client>::iterator it);
+        void                                    clearInRead(std::string &buffer, std::string &response, int *readBytes);
 
-private:
+    private:
 
-    InfoServer *_serverInfo;
-    std::vector<struct pollfd> poll_sets;
-    std::vector<int>    serverFds;
-    std::vector<struct client> clientsQueue;
+        InfoServer                  *_serverInfo;
+        std::vector<struct pollfd>  poll_sets;
+        std::vector<int>            serverFds;
+        std::vector<struct client>  clientsQueue;
 
 };
 #endif
