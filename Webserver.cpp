@@ -13,8 +13,6 @@ Webserver::Webserver(InfoServer& info)
 	if (this->serverFds.size() < 0)
 		Logger::error("Failed creating any server socket");
 	this->serverFds = serverFds.getServerSockets();
-	this->totBytes = 0;
-	this->full_buffer.clear();
 	this->poll_sets.reserve(MAX);
 	addServerSocketsToPoll(this->serverFds);
 }
@@ -99,7 +97,9 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 	int contentLength = -1;
 	int flag = 1;
 	int bytesRecv;
-	bytesRecv = readData(fd, this->full_buffer, this->totBytes);
+	std::string full_buffer;
+	int totBytes;
+	bytesRecv = readData(fd, full_buffer, totBytes);
 	if (bytesRecv == 0)
 	{
 		Logger::info("Client " + std::to_string(fd) + " disconnected");
@@ -111,17 +111,17 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems, it does
 	//TODO: right now we are ignoring -1 of recv
 	//TODO: reorganize this function for keep it clean
-	if (this->totBytes > 0)
+	if (totBytes > 0)
 	{
-		Logger::debug("recv this bytes: " + std::to_string(this->totBytes));
-		if (this->full_buffer.find("Content-Length") == std::string::npos && this->full_buffer.find("POST") == std::string::npos)
+		Logger::debug("recv this bytes: " + std::to_string(totBytes));
+		if (full_buffer.find("Content-Length") == std::string::npos && full_buffer.find("POST") == std::string::npos)
 			flag = 0;
-		else if (this->full_buffer.find("Content-Length") != std::string::npos)
+		else if (full_buffer.find("Content-Length") != std::string::npos)
 		{
 			flag = 0;
-			contentLength = atoi(this->full_buffer.substr(this->full_buffer.find("Content-Length") + 16).c_str());
+			contentLength = atoi(full_buffer.substr(full_buffer.find("Content-Length") + 16).c_str());
 		}
-		if (this->totBytes > contentLength && flag == 0)
+		if (totBytes > contentLength && flag == 0)
 		{
 			//Logger::debug("recv this bytes: " + std::to_string(this->totBytes));
 			std::vector<struct client>::iterator clientIt;
@@ -131,7 +131,7 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 				Logger::error("Client not found " + std::to_string(clientIt->fd) + " - please Sveva review");
 				return;
 			}
-			clientIt->request = ParsingRequest(this->full_buffer, this->totBytes);
+			clientIt->request = ParsingRequest(full_buffer, totBytes);
 			if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
 			{
 				printf("send to CGI\n");
@@ -154,8 +154,8 @@ void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it
 				this->clientsQueue.erase(clientIt);
 				this->clientsQueue.push_back(client);
 				it->events = POLLOUT;
-				this->full_buffer.clear();
-				this->totBytes = 0;
+				full_buffer.clear();
+				totBytes = 0;
 				Logger::info("Response created successfully and store in clientQueu");
 			}
 		}
