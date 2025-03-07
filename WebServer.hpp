@@ -58,8 +58,6 @@ private:
 
     InfoServer *_serverInfo;
     std::vector<struct pollfd> poll_sets;
-    int totBytes;
-    std::string full_buffer;
     std::vector<int>    serverFds;
     std::vector<struct client> clientsQueue;
 

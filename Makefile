@@ -9,7 +9,7 @@ CPP_OBJ = $(OBJ_DIR)/ServerSockets.o $(OBJ_DIR)/main.o $(OBJ_DIR)/ClientRequest.
           $(OBJ_DIR)/StringManipulations.o $(OBJ_DIR)/Logger.o \
 		  $(OBJ_DIR)/Webserver.o $(OBJ_DIR)/HttpRequest.o
 
-NAME = server
+NAME = webserver
 
 all: $(NAME)
 
