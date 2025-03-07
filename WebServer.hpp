@@ -44,8 +44,8 @@ public:
     void        dispatchEvents();
     void         createNewClient(int);
     int         readData(int, std::string&, int&);
-    void        handleReadEvents(int);
-    void        handleWritingEvents(int);
+    void        handleReadEvents(int, std::vector<struct pollfd>::iterator, int*);
+    void        handleWritingEvents(int, std::vector<struct pollfd>::iterator);
     ClientRequest        ParsingRequest(std::string, int);
     void        closeSockets();
     int        readInChunks(int, std::string&, int&);
@@ -58,8 +58,6 @@ private:
 
     InfoServer *_serverInfo;
     std::vector<struct pollfd> poll_sets;
-    std::vector<struct pollfd>::iterator it;
-	std::vector<struct pollfd>::iterator end;
     int totBytes;
     std::string full_buffer;
     std::vector<int>    serverFds;

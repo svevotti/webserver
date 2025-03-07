@@ -49,22 +49,29 @@ void	Webserver::startServer()
 
 void Webserver::dispatchEvents()
 {
-	end = this->poll_sets.end();
-    for (this->it = poll_sets.begin(); this->it != end; this->it++) 
+	std::vector<struct pollfd>::iterator it;
+	std::vector<struct pollfd>::iterator ite;
+	int clientRemove;
+
+	ite = this->poll_sets.end();
+    for (it = poll_sets.begin(); it != ite;) 
     {
-        if (this->it->revents & POLLIN)
+		clientRemove = 0;
+        if (it->revents & POLLIN)
         {
-			if (fdIsServerSocket(this->it->fd) == true)
-				createNewClient(this->it->fd);
+			if (fdIsServerSocket(it->fd) == true)
+				createNewClient(it->fd);
 			else
-				handleReadEvents(this->it->fd);
+				handleReadEvents(it->fd, it, &clientRemove);
         }
-		else if (this->it->revents & POLLOUT)
-			handleWritingEvents(this->it->fd);
+		else if (it->revents & POLLOUT)
+			handleWritingEvents(it->fd, it);
+		if (clientRemove == 0)
+			it++;
 	}
 }
 
-void Webserver::handleWritingEvents(int fd)
+void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
 	std::vector<struct client>::iterator iterClient;
 	std::vector<struct client>::iterator endClient = this->clientsQueue.end();
@@ -77,17 +84,16 @@ void Webserver::handleWritingEvents(int fd)
 	}
 	//TODO:does it behave as recv?
 	Logger::debug("bytes to send " + std::to_string(iterClient->response.size()));
-	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), MSG_DONTWAIT);
 	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), 0);
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	Logger::info("these bytes were sent " + std::to_string(bytes));
-	this->it->events = POLLIN;
+	it->events = POLLIN;
 	iterClient->response.clear();
 	//clientsQueue.erase(iterClient);
 }
 
-void Webserver::handleReadEvents(int fd)
+void Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it, int *flagClient)
 {
 	std::string response;
 	int contentLength = -1;
@@ -98,9 +104,9 @@ void Webserver::handleReadEvents(int fd)
 	{
 		Logger::info("Client " + std::to_string(fd) + " disconnected");
 		close(fd);
-		this->it = this->poll_sets.erase(this->it);
-		if (retrieveClient(fd) != this->clientsQueue.end())
-			this->clientsQueue.erase(retrieveClient(fd));
+		this->clientsQueue.erase(retrieveClient(fd));
+		it = this->poll_sets.erase(it);
+		*flagClient = 1;
 	}
 	//TODO: check by deafult if the http headers is always sent:if the request is malformed, it could lead to problems, it does
 	//TODO: right now we are ignoring -1 of recv
@@ -147,7 +153,7 @@ void Webserver::handleReadEvents(int fd)
 				response.clear();
 				this->clientsQueue.erase(clientIt);
 				this->clientsQueue.push_back(client);
-				this->it->events = POLLOUT;
+				it->events = POLLOUT;
 				this->full_buffer.clear();
 				this->totBytes = 0;
 				Logger::info("Response created successfully and store in clientQueu");
