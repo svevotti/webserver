@@ -44,7 +44,7 @@ public:
     void        dispatchEvents();
     void         createNewClient(int);
     int         readData(int, std::string&, int&);
-    void        handleReadEvents(int, std::vector<struct pollfd>::iterator, int*);
+    int        handleReadEvents(int, std::vector<struct pollfd>::iterator);
     void        handleWritingEvents(int, std::vector<struct pollfd>::iterator);
     ClientRequest        ParsingRequest(std::string, int);
     void        closeSockets();
