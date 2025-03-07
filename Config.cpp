@@ -51,7 +51,7 @@ std::set<std::string>	Config::parseMethods(std::string method_list)
 	return methods;
 }
 
-bool	Config::parseLocation(std::istream &conf, Server &server, const std::string location)
+bool	Config::parseLocation(std::istream &conf, InfoServer &server, const std::string location)
 {
 	Route		route;
 	std::string	line;
@@ -101,13 +101,15 @@ bool	Config::parseLocation(std::istream &conf, Server &server, const std::string
 					route.methods = parseMethods(value);
 				}
 			}
+			else if (line == "internal;")
+				route.internal = true;
 		}
 	}
 	return (true);
 }
 
 //Parses a block of code that starts with "server"
-bool	Config::parseServer(std::istream &conf, Server &server)
+bool	Config::parseServer(std::istream &conf, InfoServer &server)
 {
 	std::string	line;
 	std::string	key;
@@ -156,6 +158,7 @@ bool	Config::parseServer(std::istream &conf, Server &server)
 			//Trim again
 			key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
 			value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
+			_settings[key] = value;
 			//Note: Think on potential problems in syntax, eg symbols? quotations? spaces and tabs? Make a checking function
 			if (key == "port")
 			{
@@ -184,9 +187,9 @@ bool	Config::parseServer(std::istream &conf, Server &server)
 
 
 //Parses the config file and populates all the attributes of the Config class
-std::vector<Server>	Config::parseConfigFile(const std::string &configFile)
+std::vector<InfoServer>	Config::parseConfigFile(const std::string &configFile)
 {
-	std::vector<Server>	server_list;
+	std::vector<InfoServer>	server_list;
 	std::string			line;
 	std::ifstream 		conf(configFile.c_str());
 	bool				started_server = false;
@@ -200,7 +203,7 @@ std::vector<Server>	Config::parseConfigFile(const std::string &configFile)
 	}
 
 	//reads line by line, extracts all parameters and location blocks
-	Server	new_server("", "", "", "");
+	InfoServer	new_server("", "", "", "");
 	std::cout << "Reading file" <<std::endl;
 	while (std::getline(conf, line))
 	{
@@ -213,7 +216,7 @@ std::vector<Server>	Config::parseConfigFile(const std::string &configFile)
 		if (line.empty() || line[0] == '#')
 			continue;
 
-		if (line.find("server") != std::string::npos) //"[[server]]" means find server as a single word
+		if (line.find("server ") != std::string::npos) //"[[server]]" means find server as a single word
 		{
 			started_server = parseServer(conf, new_server);
 			if (started_server == false)
