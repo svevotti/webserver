@@ -103,7 +103,7 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
 	std::string response;
-	int contentLength = -1;
+	int contentLen = 0;
 	int flag = 1;
 	int bytesRecv;
 	std::string full_buffer;
@@ -111,33 +111,33 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 	bytesRecv = readData(fd, full_buffer, totBytes);
 	if (bytesRecv == 0)
 		return 1;
-	if (totBytes > 0)
+	else if (bytesRecv == -1 && totBytes == 0)
 	{
-		Logger::debug("recv this bytes: " + std::to_string(totBytes));
-		if (full_buffer.find("Content-Length") == std::string::npos && full_buffer.find("POST") == std::string::npos)
-			flag = 0;
-		else if (full_buffer.find("Content-Length") != std::string::npos)
+		Logger::debug("recv return -1");
+		return 0;
+	}
+	else
+	{
+		if (full_buffer.find("Content-Length") != std::string::npos)
+			contentLen = atoi(full_buffer.substr(full_buffer.find("Content-Length") + 16).c_str());
+		else
+			contentLen = totBytes;
+		if (totBytes == contentLen)
 		{
-			flag = 0;
-			contentLength = atoi(full_buffer.substr(full_buffer.find("Content-Length") + 16).c_str());
-		}
-		if (totBytes > contentLength && flag == 0)
-		{
-			//Logger::debug("recv this bytes: " + std::to_string(this->totBytes));
 			std::vector<struct client>::iterator clientIt;
 			clientIt = retrieveClient(fd);
-			if (clientIt == this->clientsQueue.end())
+			if (clientIt != this->clientsQueue.end())
+				clientIt->request = ParsingRequest(full_buffer, totBytes);
+			else
 			{
-				Logger::error("Client not found " + std::to_string(clientIt->fd) + " - please Sveva review");
+				Logger::debug("Client " + std::to_string(clientIt->fd) + " not found");
 				return 0;
 			}
-			clientIt->request = ParsingRequest(full_buffer, totBytes);
 			if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
 				printf("send to CGI\n");
 			else
 			{
 				struct client client;
-				Logger::debug("fill in struct client");
 				response = prepareResponse(clientIt->request);
 				clientIt->response = response;
 				client.fd = clientIt->fd;
@@ -151,7 +151,7 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 				totBytes = 0;
 				Logger::info("Response created successfully and store in clientQueu");
 			}
-		}
+		}	
 	}
 	return 0;
 }
@@ -264,6 +264,7 @@ int Webserver::readData(int fd, std::string &str, int &bytes)
 	}
 	return res;
 }
+
 
 int	Webserver::searchPage(std::string path)
 {

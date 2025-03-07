@@ -42,7 +42,7 @@ public:
     void        addServerSocketsToPoll(std::vector<int>);
     int         fdIsServerSocket(int);
     void        dispatchEvents();
-    void         createNewClient(int);
+    void        createNewClient(int);
     int         readData(int, std::string&, int&);
     int        handleReadEvents(int, std::vector<struct pollfd>::iterator);
     void        handleWritingEvents(int, std::vector<struct pollfd>::iterator);
@@ -53,6 +53,8 @@ public:
     int         searchPage(std::string path);
     std::string prepareResponse(ClientRequest);
     std::vector<struct client>::iterator retrieveClient(int fd);
+    void addToClientQueue(std::vector<struct client>::iterator it);
+    void clearInRead(std::string &buffer, std::string &response, int *readBytes);
 
 private:
 
