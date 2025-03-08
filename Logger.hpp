@@ -12,14 +12,9 @@
 
 enum LogPriority {DEBUG, INFO, WARN, ERROR};
 
-class Logger
-{
-	private:
-		Logger();
-		static LogPriority priority;
+class Logger {
 	public:
 		static void setLevelLog(LogPriority new_priority) {priority = new_priority;};
-
 		static void debug(std::string message)
 		{
 			if (priority <= DEBUG)
@@ -27,7 +22,6 @@ class Logger
 				std::cout << BLUE << "[DEBUG]: " << message << RESET << std::endl;
 			}
 		}
-
 		static void info(std::string message)
 		{
 			if (priority <= INFO)
@@ -35,7 +29,6 @@ class Logger
 				std::cout << GREEN << "[INFO]: " << message << RESET << std::endl;
 			}
 		}
-
 		static void warn(std::string message)
 		{
 			if (priority <= WARN)
@@ -43,7 +36,6 @@ class Logger
 				std::cout << YELLOW << "[WARN]: " << message << RESET << std::endl;
 			}
 		}
-
 		static void error(std::string message)
 		{
 			if (priority <= ERROR)
@@ -51,6 +43,10 @@ class Logger
 				std::cout << RED << "[ERROR]: " << message << RESET << std::endl;
 			}
 		}
+
+		private:
+			Logger();
+			static LogPriority priority;
 };
 
 #endif

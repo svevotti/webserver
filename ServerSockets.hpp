@@ -17,15 +17,15 @@
 #include "HttpRequest.hpp"
 
 
-class ServerSockets
-{
-public:
-	ServerSockets(InfoServer);
-	void initSockets(InfoServer);
-	int createSocket(const char*);
-	std::vector<int> getServerSockets() const;
-private:
-	std::vector<int> _serverFds;
+class ServerSockets {
+	public:
+		ServerSockets(InfoServer);
+		std::vector<int>	getServerSockets() const;
+		void				initSockets(InfoServer);
+		int					createSocket(const char*);
+
+	private:
+		std::vector<int>	_serverFds;
 };
 
 #endif

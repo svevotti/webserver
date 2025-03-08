@@ -1,6 +1,6 @@
 #include "ClientRequest.hpp"
 
-//constructor and destructor
+// Constructor and destructor
 ClientRequest::ClientRequest(void)
 {
 	
