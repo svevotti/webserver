@@ -1,5 +1,10 @@
 #include "Config.hpp"
 
+// bool	test(InfoServer server)
+// {
+
+// }
+
 int	main(int argc, char** argv){
 	if (argc != 2)
 	{
@@ -7,7 +12,11 @@ int	main(int argc, char** argv){
 		return 1;
 	}
 	Config	configuration(argv[1]);
-	Server server = *configuration._servlist.begin();
-	std::cout << "here" << server._port << std::endl;
+	InfoServer server = *configuration._servlist.begin();
+
+	// if (test(server))
+	// 	std::cout << "All worked well!" << std::endl;
+	// else
+	// 	std::cout << "Error!" << std::endl;
 	return 0;
 }

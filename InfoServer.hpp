@@ -16,7 +16,7 @@ struct Route
 	std::string				uri;
 	std::string				path;
 	std::set<std::string>	methods;
-	bool					internal = false;
+	bool					internal;
 };
 
 

@@ -25,10 +25,11 @@ class Config {
 		Config( const Config& copy);
 		Config& operator=(const Config& copy);
 		~Config();
-		bool	parseServer(std::istream &conf, InfoServer &server);
+		bool	parseServer(std::istream &conf);
 		bool	parseLocation(std::istream &conf, InfoServer &server, const std::string location);
 		std::set<std::string>	parseMethods(std::string method_list);
 		std::vector<InfoServer> parseConfigFile(const std::string &configFile);
+		bool	trimLine(std::string& line);
 };
 
 struct mylocations {
