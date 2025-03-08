@@ -55,6 +55,7 @@ void Webserver::dispatchEvents()
     for (it = poll_sets.begin(); it != ite;) 
     {
 		result = 0;
+		Logger::debug("call made by " + std::to_string(it->fd));
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
@@ -68,6 +69,8 @@ void Webserver::dispatchEvents()
 					close(it->fd);
 					this->clientsQueue.erase(retrieveClient(it->fd));
 					it = this->poll_sets.erase(it);
+					//it makes an extra loop if i dont break
+					//Logger::debug("call made by " + std::to_string(it->fd));
 				}
 			}
         }
@@ -107,8 +110,9 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 	int flag = 1;
 	int bytesRecv;
 	std::string full_buffer;
-	int totBytes;
+	int totBytes = 0;
 	bytesRecv = readData(fd, full_buffer, totBytes);
+	Logger::debug("Bytes " + std::to_string(totBytes));
 	if (bytesRecv == 0)
 		return 1;
 	else if (bytesRecv == -1 && totBytes == 0)
@@ -118,40 +122,33 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 	}
 	else
 	{
-		if (full_buffer.find("Content-Length") != std::string::npos)
-			contentLen = atoi(full_buffer.substr(full_buffer.find("Content-Length") + 16).c_str());
+		std::vector<struct client>::iterator clientIt;
+		clientIt = retrieveClient(fd);
+		if (clientIt != this->clientsQueue.end())
+			clientIt->request = ParsingRequest(full_buffer, totBytes);
 		else
-			contentLen = totBytes;
-		if (totBytes == contentLen)
 		{
-			std::vector<struct client>::iterator clientIt;
-			clientIt = retrieveClient(fd);
-			if (clientIt != this->clientsQueue.end())
-				clientIt->request = ParsingRequest(full_buffer, totBytes);
-			else
-			{
-				Logger::debug("Client " + std::to_string(clientIt->fd) + " not found");
-				return 0;
-			}
-			if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
-				printf("send to CGI\n");
-			else
-			{
-				struct client client;
-				response = prepareResponse(clientIt->request);
-				clientIt->response = response;
-				client.fd = clientIt->fd;
-				client.request = clientIt->request;
-				client.response = clientIt->response;
-				response.clear();
-				this->clientsQueue.erase(clientIt);
-				this->clientsQueue.push_back(client);
-				it->events = POLLOUT;
-				full_buffer.clear();
-				totBytes = 0;
-				Logger::info("Response created successfully and store in clientQueu");
-			}
-		}	
+			Logger::debug("Client " + std::to_string(clientIt->fd) + " not found");
+			return 0;
+		}
+		if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
+			printf("send to CGI\n");
+		else
+		{
+			struct client client;
+			response = prepareResponse(clientIt->request);
+			clientIt->response = response;
+			client.fd = clientIt->fd;
+			client.request = clientIt->request;
+			client.response = clientIt->response;
+			response.clear();
+			this->clientsQueue.erase(clientIt);
+			this->clientsQueue.push_back(client);
+			it->events = POLLOUT;
+			full_buffer.clear();
+			totBytes = 0;
+			Logger::info("Response created successfully and store in clientQueu");
+		}
 	}
 	return 0;
 }
