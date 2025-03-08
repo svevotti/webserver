@@ -6,7 +6,7 @@ void	*ft_memset(void *s, int c, size_t len)
 	int				i;
 
 	i = 0;
-	temp = (unsigned char *)s;
+	temp = (unsigned char *)s; 
 	while (len > 0)
 	{
 		temp[i] = c;
