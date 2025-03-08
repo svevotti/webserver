@@ -1,0 +1,315 @@
+//// SHORT VERSION
+
+
++----------------------------------+
+| [START: Webserver Constructor]   |
+| - Init _serverInfo, serverFds    |
++----------------------------------+
+          |
+          v
++----------------------------------+       +----------------------------------+
+| [startServer()]                  |-----> | [dispatchEvents()]               |
+| - Poll loop, 2s timeout          |       | - Check POLLIN, POLLOUT, errors  |
++----------------------------------+       +----------------------------------+
+          |                               | [handlePollInEvent]              |
+          |                               | - Server: createNewClient        |
+          |                               | - Client: handleReadEvents       |
+          |                               +--> [handleReadEvents]           |
+          |                               |    - Read data, processRequest  |
+          |                               +--> [processRequest]            |
+          |                               |    - Parse, setupCGI or response|
+          |                               +--> [setupCGI]                 |
+          |                               |    - New CGI, add pipes to poll |
+          |                               +----------------------------------+
+          |                               | [handlePollOutEvent]             |
+          |                               | - CGI: writeCGIInput             |
+          |                               | - Client: sendClientResponse     |
+          |                               +--> [writeCGIInput]             |
+          |                               |    - Write to CGI in pipe       |
+          |                               +--> [sendClientResponse]        |
+          |                               |    - Send response to client    |
+          |                               +----------------------------------+
+          |                               | [handlePollErrorOrHangup]        |
+          |                               | - CGI: handleCgiOutputPipeError  |
+          |                               | - Client: handleClientError      |
+          |                               +--> [handleCgiOutputPipeError]  |
+          |                               |    - Process CGI output/errors  |
+          |                               +--> [handleClientError]         |
+          |                               |    - Close client FD            |
+          |                               +----------------------------------+
+          v
++----------------------------------+
+| [END: Webserver Destructor]      |
+| - Free _serverInfo, close sockets|
++----------------------------------+
+
+Tips for Graphic Creation
+Tool: Draw.io—paste this into the text import for a starting point.
+Detail: Use collapsible nodes or notes for detailed actions to keep the main flow readable.
+Colors:
+Blue: Main loop (startServer, dispatchEvents).
+Green: Client handling (handlePollInEvent, sendClientResponse).
+Orange: CGI handling (setupCGI, handleCgiOutput).
+Red: Error handling (handlePollErrorOrHangup, handleCgiInputPipeError).
+
+
+
+
+//// LONG VERSION
+
+
+[START: Webserver Constructor]
+    Description: "Initializes Webserver with server configuration."
+    Actions:
+    - Allocate _serverInfo = new InfoServer(info)
+    - Create ServerSockets object with _serverInfo
+    - If serverFds.getServerSockets() empty: Log error "Failed creating any server socket"
+    - Set serverFds = serverFds.getServerSockets()
+    - Set totBytes = 0, full_buffer.clear()
+    - Reserve poll_sets space for MAX (100)
+    - Call addServerSocketsToPoll(serverFds)
+    Output: Server sockets set up for polling
+    |
+    v
+[startServer()]
+    Description: "Runs the main polling loop to handle events."
+    Actions:
+    - Log info: "Entering poll loop"
+    - While true:
+      - Log debug: "Polling " + poll_sets.size() + " FDs"
+      - Log each poll_sets entry: "FD " + fd + " events: " + events
+      - returnPoll = poll(poll_sets, size, 20s timeout)
+      - If returnPoll == -1: 
+        - Log error: "Failed poll: " + strerror(errno)
+        - Break loop
+      - If returnPoll == 0: Log debug: "Poll timeout: no events"
+      - Else:
+        - Log debug: "Poll detected " + returnPoll + " events"
+        - Call dispatchEvents()
+    Output: Continuous event handling
+    |
+    +----> [dispatchEvents()]
+    |         Description: "Dispatches poll events to appropriate handlers."
+    |         Actions:
+    |         - Set end = poll_sets.end()
+    |         - For it = poll_sets.begin() to end:
+    |           - Log debug: "Checking FD " + it->fd + " revents: " + it->revents
+    |           - If POLLIN:
+    |             - If CGI match (retrieveCGI):
+    |               - If out pipe: Call handleCgiOutput(fd, cgiIt)
+    |               - If stderr: Read buffer, log, erase on close/error
+    |             - Else: Call handlePollInEvent(fd)
+    |             - ++it
+    |           - If POLLOUT: 
+    |             - Call handlePollOutEvent(fd)
+    |             - ++it
+    |           - If POLLHUP | POLLERR | POLLNVAL:
+    |             - Log debug: "Detected POLLHUP/POLLERR/POLLNVAL"
+    |             - Call handlePollErrorOrHangup(fd)
+    |             - If fd unchanged: ++it
+    |           - If revents != 0 (unexpected):
+    |             - Log warn: "Unexpected revents"
+    |             - Call handlePollErrorOrHangup(fd)
+    |             - If fd unchanged: ++it
+    |           - Else: 
+    |             - Log debug: "No events"
+    |             - ++it
+    |         Output: Events processed, it updated
+    |
+    +----> [handlePollInEvent(int fd)]
+    |         Description: "Handles POLLIN events for server or client FDs."
+    |         Actions:
+    |         - Log debug: "Handling POLLIN for FD " + fd
+    |         - If fdIsServerSocket(fd): Call createNewClient(fd)
+    |         - Else: Call handleReadEvents(fd)
+    |         Output: New client or data read
+    |
+    +----> [handleReadEvents(int fd)]
+    |         Description: "Reads data from client FD and processes it."
+    |         Actions:
+    |         - bytesRecv = readData(fd, full_buffer, totBytes)
+    |         - Log debug: "Read " + bytesRecv + " bytes"
+    |         - If bytesRecv == 0: Call handleClientDisconnect(fd)
+    |         - Else:
+    |           - If "Content-Length" in full_buffer: Parse contentLength
+    |           - If (contentLength > 0 && totBytes >= contentLength) || (contentLength == -1 && bytesRecv > 0):
+    |             - Call processRequest(fd, contentLength)
+    |           - If bytesRecv < 0 && totBytes > 0: Call processRequest(fd, contentLength)
+    |           - Else: Log debug: "No data or error, waiting"
+    |         - If CGI out pipe match: Call handleCgiOutput(fd, cgiIt)
+    |         Output: Request processed or queued
+    |
+    +----> [processRequest(int fd, int contentLength)]
+    |         Description: "Processes complete client request."
+    |         Actions:
+    |         - Log debug: "recv this bytes: " + totBytes
+    |         - Parse contentLength from full_buffer if present
+    |         - If (contentLength == -1 && totBytes > 0) || (contentLength > 0 && totBytes >= contentLength):
+    |           - clientIt = retrieveClient(fd)
+    |           - If clientIt not found: Log error, return
+    |           - clientIt->request = ParsingRequest(full_buffer, totBytes)
+    |           - Log debug: "Request URI: " + request.getRequestLine()["Request-URI"]
+    |           - If isCGI(request URI):
+    |             - Call setupCGI(fd, clientIt)
+    |           - Else:
+    |             - response = prepareResponse(clientIt->request)
+    |             - Update clientIt with response, erase and re-add to clientsQueue
+    |             - Set it->events = POLLOUT
+    |             - Clear full_buffer, totBytes = 0
+    |             - Log info: "Response created successfully"
+    |         - Else: Log debug: "Waiting for more data"
+    |         Output: Request handled (CGI or static response)
+    |
+    +----> [setupCGI(int fd, std::vector<struct ClientTracker>::iterator& clientIt)]
+    |         Description: "Sets up CGI for a client request."
+    |         Actions:
+    |         - Log debug: "Entering setupCGI for FD " + fd
+    |         - Try:
+    |           - body = full_buffer
+    |           - Log debug: "Full raw body size: " + body.size()
+    |           - Get contentType, contentLength from clientIt->request headers
+    |           - Log debug: "Setting CGI env - Content-Type, Content-Length"
+    |           - Log body preview (first 200 bytes)
+    |           - cgi = new CGI(clientIt->request, serverRoot + "/uploads", *_serverInfo, body)
+    |           - tracker = {cgi, cgi->getInPipeWriteFd(), clientIt->fd, body}
+    |           - Add tracker to cgiQueue
+    |           - Add pollfd for cgi input (POLLOUT), output (POLLIN), stderr (POLLIN) to poll_sets
+    |           - Log debug: "CGI setup for client FD, input/output/stderr FDs"
+    |           - Clear full_buffer, totBytes = 0
+    |         - Catch exception:
+    |           - Log error: "CGI setup failed: " + e.what()
+    |           - Set clientIt->response = "HTTP/1.1 500 Internal Server Error"
+    |           - Set poll_sets event to POLLOUT for fd
+    |           - Clear full_buffer, totBytes = 0
+    |         Output: CGI process started or error response queued
+    |
+    +----> [handleCgiOutput(int fd, std::vector<CGITracker>::iterator& cgiIt)]
+    |         Description: "Reads CGI output from out pipe."
+    |         Actions:
+    |         - bytes = read(fd, buffer, 1024)
+    |         - Log debug: "Read " + bytes + " from CGI FD " + fd
+    |         - If bytes > 0:
+    |           - cgiIt->cgi->appendOutput(buffer, bytes)
+    |           - Log debug: "Appended " + bytes + " to CGI output"
+    |         - If bytes == 0:
+    |           - cgiOutput = cgiIt->cgi->getOutput()
+    |           - Log debug: "CGI raw output: " + cgiOutput
+    |           - Set clientIt->response = cgiOutput for matching clientFd
+    |           - Log info: "CGI response queued for client FD " + clientFd
+    |           - Close fd, delete cgiIt->cgi, erase cgiIt from cgiQueue, erase it from poll_sets
+    |           - Set client poll event to POLLOUT
+    |         - If bytes < 0:
+    |           - Log error: "Failed to read CGI output"
+    |           - Close fd, delete cgiIt->cgi, erase cgiIt, erase it
+    |         Output: CGI output appended or completed
+    |
+    +----> [handlePollOutEvent(int fd)]
+    |         Description: "Handles POLLOUT events for CGI or client FDs."
+    |         Actions:
+    |         - Log debug: "Handling POLLOUT for FD " + fd
+    |         - cgiIt = retrieveCGI(fd)
+    |         - If cgiIt found:
+    |           - If fd == cgi in pipe: Call writeCGIInput(fd, cgiIt)
+    |           - Else: Log warn: "Unexpected POLLOUT on CGI output FD"
+    |         - Else:
+    |           - clientIt = retrieveClient(fd)
+    |           - If clientIt found: Call sendClientResponse(fd, clientIt)
+    |           - Else: Log debug: "No CGI or client match, skipping"
+    |         Output: Data written to CGI or client
+    |
+    +----> [writeCGIInput(int fd, std::vector<CGITracker>::iterator& cgiIt)]
+    |         Description: "Writes input to CGI in pipe."
+    |         Actions:
+    |         - If cgiIt found && fd == cgi in pipe:
+    |           - Log debug: "Writing to CGI input FD " + fd
+    |           - cgiIt->cgi->writeInput()
+    |           - If cgiIt->cgi->isInputDone():
+    |             - Switch it->fd to cgi out pipe, it->events = POLLIN
+    |             - Update cgiIt->fd to out pipe
+    |             - Log debug: "Switched to CGI output FD " + outFd
+    |             - Log full body sent to CGI
+    |           - Else: Log debug: "Input not done"
+    |         - Else: Log debug: "No CGI match for FD " + fd
+    |         Output: CGI input written, switch to output polling if done
+    |
+    +----> [sendClientResponse(int fd, std::vector<struct ClientTracker>::iterator& iterClient)]
+    |         Description: "Sends response to client FD."
+    |         Actions:
+    |         - Log debug: "Sending response for FD " + fd
+    |         - Log debug: "bytes to send " + iterClient->response.size()
+    |         - If response empty:
+    |           - Log debug: "No response to send"
+    |           - Close fd, erase it from poll_sets, erase iterClient from clientsQueue
+    |         - Else:
+    |           - bytes = send(fd, response, size, MSG_DONTWAIT)
+    |           - If bytes == -1:
+    |             - Log error: "Failed send: " + strerror(errno)
+    |             - Close fd, erase it, erase iterClient
+    |           - Else:
+    |             - Log info: "these bytes were sent " + bytes
+    |             - Set poll_sets event to POLLIN for fd
+    |             - Erase iterClient from clientsQueue
+    |         Output: Response sent, client ready for next input
+    |
+    +----> [handlePollErrorOrHangup(int fd)]
+    |         Description: "Handles POLLERR or POLLHUP events."
+    |         Actions:
+    |         - Log debug: "Handling POLLERR or POLLHUP for FD " + fd
+    |         - cgiIt = retrieveCGI(fd)
+    |         - If cgiIt found:
+    |           - If fd == cgi out pipe: Call handleCgiOutputPipeError(fd, cgiIt)
+    |           - If fd == cgi in pipe:
+    |             - If output not handled: Call handleCgiInputPipeError(fd, cgiIt)
+    |             - Else: Close pipe, erase it from poll_sets
+    |           - Else: Log warn: "Unexpected CGI FD"
+    |         - Else: Call handleClientError(fd)
+    |         Output: Error handled for CGI or client
+    |
+    +----> [handleCgiOutputPipeError(int fd, std::vector<CGITracker>::iterator& cgiIt)]
+    |         Description: "Handles CGI output pipe errors or completion."
+    |         Actions:
+    |         - If POLLERR:
+    |           - cgiResponse = "HTTP/1.1 500 Internal Server Error..."
+    |           - Log error: "CGI error on FD " + fd
+    |         - Else (POLLHUP):
+    |           - output = cgiIt->cgi->getOutput()
+    |           - If output empty:
+    |             - cgiResponse = "HTTP/1.1 500 Internal Server Error..."
+    |             - Log debug: "CGI output empty, setting 500"
+    |           - Else:
+    |             - Parse headers, set status (200, 500, 400)
+    |             - Trim output, set cgiResponse with status, Content-Length
+    |             - Log debug: "CGI completed, output size: " + output.size()
+    |         - Close cgi pipe, erase client from clientsQueue, erase fd from poll_sets
+    |         - Delete cgiIt->cgi, erase cgiIt from cgiQueue
+    |         - Add client to clientsQueue with cgiResponse, add POLLOUT to poll_sets
+    |         - Log info: "CGI response queued for client FD " + clientFd
+    |         Output: CGI response queued or error set
+    |
+    +----> [handleCgiInputPipeError(int fd, std::vector<CGITracker>::iterator& cgiIt)]
+    |         Description: "Handles CGI input pipe errors."
+    |         Actions:
+    |         - Log error: "CGI input pipe error on FD " + fd
+    |         - Close cgi pipe, delete cgiIt->cgi, erase cgiIt from cgiQueue
+    |         - cgiResponse = "HTTP/1.1 500 Internal Server Error..."
+    |         - Add client to clientsQueue with cgiResponse, add POLLOUT to poll_sets
+    |         - Erase fd from poll_sets
+    |         - Log info: "CGI error response queued for client FD " + clientFd
+    |         Output: Error response queued
+    |
+    +----> [handleClientError(int fd)]
+    |         Description: "Handles client FD errors or hangups."
+    |         Actions:
+    |         - Log info: "Client " + fd + " hung up or errored"
+    |         - Close fd
+    |         - Erase client from clientsQueue if found
+    |         - Erase fd from poll_sets if found, else log warn
+    |         Output: Client cleaned up
+    |
+    +----> [END: Webserver Destructor]
+        Description: "Cleans up Webserver resources."
+        Actions:
+        - Delete _serverInfo
+        - For each cgi in cgiQueue: Delete cgi->cgi
+        - Call closeSockets()
+        Output: All resources freed

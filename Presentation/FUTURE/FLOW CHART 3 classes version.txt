@@ -1,0 +1,176 @@
+FLOW CHART 3 classes version
+
+[START: ServerCore Constructor]
+    Description: "Initializes server infrastructure."
+    Actions:
+    - Allocate _serverInfo = new InfoServer(info)
+    - Create serverFds via ServerSockets
+    - If empty: Log error "Failed creating any server socket"
+    - Initialize pollManager
+    - Create clientHandler and cgiHandler
+    - Call addServerSocketsToPoll(serverFds)
+    Output: Server sockets set for polling
+    |
+    v
+[ServerCore::startServer()]
+    Description: "Runs main polling loop."
+    Actions:
+    - Log "Entering poll loop"
+    - While true:
+      - returnPoll = pollManager->poll(20s timeout)
+      - If returnPoll == -1: Log error, break
+      - If returnPoll == 0: Log "Poll timeout"
+      - Else: Call dispatchEvents()
+    Output: Continuous event monitoring
+    |
+    +----> [ServerCore::dispatchEvents()]
+    |         Description: "Dispatches poll events to handlers."
+    |         Actions:
+    |         - For each pollfd in pollManager->getPollSets():
+    |           - If revents & POLLIN:
+    |             - If fdIsServerSocket(fd): Call createNewClient(fd)
+    |             - Else if cgiHandler->retrieveCGI(fd): cgiHandler->handlePollInEvent(fd, *pollManager)
+    |             - Else: clientHandler->handlePollInEvent(fd, *pollManager)
+    |           - If revents & POLLOUT:
+    |             - If cgiHandler->retrieveCGI(fd): cgiHandler->handlePollOutEvent(fd, *pollManager)
+    |             - Else: clientHandler->handlePollOutEvent(fd, *pollManager)
+    |           - If revents & (POLLHUP | POLLERR | POLLNVAL):
+    |             - If cgiHandler->retrieveCGI(fd): cgiHandler->handlePollErrorOrHangup(fd, *pollManager)
+    |             - Else: clientHandler->handlePollErrorOrHangup(fd, *pollManager)
+    |         Output: Events routed to appropriate handler
+    |
+    +----> [ServerCore::createNewClient(int fd)]
+    |         Description: "Accepts new client connections."
+    |         Actions:
+    |         - clientFd = accept(fd, ...)
+    |         - If clientFd == -1: Log error, return
+    |         - pollManager->addFd(clientFd, POLLIN)
+    |         - clientHandler->addClient(clientFd)
+    |         - Log "New client " + clientFd + " created"
+    |         Output: New client added to polling and tracking
+    |
+    v
+[ClientHandler::handlePollInEvent(int fd, PollManager& pm)]
+    Description: "Handles POLLIN for client FDs."
+    Actions:
+    - Log "Handling POLLIN for FD " + fd
+    - bytesRecv = readData(fd, *clientBuffer)
+    - If bytesRecv == 0: Call handleClientDisconnect(fd, pm)
+    - Else:
+      - clientBuffer->append(data, bytesRecv)
+      - If requestComplete(clientBuffer, contentLength):
+        - Call processRequest(fd, pm)
+    Output: Client data read or disconnected
+    |
+    +----> [ClientHandler::processRequest(int fd, PollManager& pm)]
+    |         Description: "Processes complete client request."
+    |         Actions:
+    |         - request = parseRequest(clientBuffer->getData())
+    |         - clientIt = retrieveClient(fd)
+    |         - If isCGI(request.getRequestLine()["Request-URI"]):
+    |           - Call cgiHandler->startCGI(fd, request, clientBuffer->getData(), pm)
+    |           - clientBuffer->clear()
+    |         - Else:
+    |           - response = prepareResponse(request)
+    |           - clientIt->response = response
+    |           - pm->updateEvents(fd, POLLOUT)
+    |           - clientBuffer->clear()
+    |         Output: CGI started or response queued
+    |
+    +----> [ClientHandler::handlePollOutEvent(int fd, PollManager& pm)]
+    |         Description: "Sends response to client."
+    |         Actions:
+    |         - clientIt = retrieveClient(fd)
+    |         - If clientIt != clientsQueue.end():
+    |           - bytes = send(fd, clientIt->response, ...)
+    |           - If bytes > 0:
+    |             - pm->updateEvents(fd, POLLIN)
+    |             - clientsQueue.erase(clientIt)
+    |           - Else: Call handleClientError(fd, pm)
+    |         Output: Response sent, client ready for next request
+    |
+    +----> [ClientHandler::handlePollErrorOrHangup(int fd, PollManager& pm)]
+    |         Description: "Handles client errors or hangups."
+    |         Actions:
+    |         - Log "Client " + fd + " errored or hung up"
+    |         - Call handleClientError(fd, pm)
+    |         - close(fd)
+    |         - pm->removeFd(fd)
+    |         - Erase client from clientsQueue
+    |         Output: Client cleaned up
+    |
+    v
+[CGIHandler::startCGI(int clientFd, ClientRequest& req, std::string body, PollManager& pm)]
+    Description: "Initiates CGI process for a client request."
+    Actions:
+    - Try:
+      - cgi = new CGI(req, _serverInfo.getServerRootPath() + "/uploads", _serverInfo, body)
+      - tracker = { cgi, cgi->getInPipeWriteFd(), clientFd, body }
+      - cgiQueue.push_back(tracker)
+      - pm->addFd(cgi->getInPipeWriteFd(), POLLOUT)
+      - pm->addFd(cgi->getOutPipeReadFd(), POLLIN)
+      - pm->addFd(cgi->getStderrFd(), POLLIN)
+    - Catch:
+      - response = ErrorResponse::generate(500, "CGI setup failed")
+      - clientHandler->queueResponse(clientFd, response, pm)
+    Output: CGI process started or error queued
+    |
+    +----> [CGIHandler::handlePollInEvent(int fd, PollManager& pm)]
+    |         Description: "Reads CGI output or stderr."
+    |         Actions:
+    |         - cgiIt = retrieveCGI(fd)
+    |         - If fd == cgiIt->cgi->getOutPipeReadFd():
+    |           - bytes = read(fd, buffer, 1024)
+    |           - If bytes > 0: cgiIt->cgi->appendOutput(buffer, bytes)
+    |           - If bytes == 0:
+    |             - output = cgiIt->cgi->getOutput()
+    |             - clientHandler->queueResponse(cgiIt->clientFd, output, pm)
+    |             - pm->removeFd(fd)
+    |             - delete cgiIt->cgi
+    |             - cgiQueue.erase(cgiIt)
+    |           - If bytes < 0: Call handleCgiError(fd, pm)
+    |         - If fd == cgiIt->cgi->getStderrFd():
+    |           - Read stderr, log it
+    |         Output: CGI output collected or error handled
+    |
+    +----> [CGIHandler::handlePollOutEvent(int fd, PollManager& pm)]
+    |         Description: "Writes input to CGI."
+    |         Actions:
+    |         - cgiIt = retrieveCGI(fd)
+    |         - If fd == cgiIt->cgi->getInPipeWriteFd():
+    |           - cgiIt->cgi->writeInput()
+    |           - If cgiIt->cgi->isInputDone():
+    |             - pm->removeFd(fd)
+    |             - pm->updateEvents(cgiIt->cgi->getOutPipeReadFd(), POLLIN)
+    |             - cgiIt->fd = cgiIt->cgi->getOutPipeReadFd()
+    |         Output: CGI input written, switches to output polling
+    |
+    +----> [CGIHandler::handlePollErrorOrHangup(int fd, PollManager& pm)]
+    |         Description: "Handles CGI pipe errors or hangups."
+    |         Actions:
+    |         - cgiIt = retrieveCGI(fd)
+    |         - If fd == cgiIt->cgi->getOutPipeReadFd():
+    |           - output = cgiIt->cgi->getOutput()
+    |           - If output.empty(): response = ErrorResponse::generate(500)
+    |           - Else: Parse output, set response (200/400/500)
+    |           - clientHandler->queueResponse(cgiIt->clientFd, response, pm)
+    |           - pm->removeFd(fd)
+    |           - delete cgiIt->cgi
+    |           - cgiQueue.erase(cgiIt)
+    |         - Else if fd == cgiIt->cgi->getInPipeWriteFd():
+    |           - response = ErrorResponse::generate(500, "CGI input error")
+    |           - clientHandler->queueResponse(cgiIt->clientFd, response, pm)
+    |           - pm->removeFd(fd)
+    |           - delete cgiIt->cgi
+    |           - cgiQueue.erase(cgiIt)
+    |         Output: Error response queued, CGI cleaned up
+    |
+    v
+[END: ServerCore Destructor]
+    Description: "Cleans up server resources."
+    Actions:
+    - Delete _serverInfo
+    - Delete clientHandler
+    - Delete cgiHandler
+    - Call closeSockets() via pollManager
+    Output: All resources freed

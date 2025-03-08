@@ -1,0 +1,186 @@
+PROPOSAL FOR THE FUTURE
+
+
+-- Proposal: break this class in three, plus 3 utilities classes.
+
+  Right now, the Webeserver clas handles multiple responsibilities
+    - Server Management
+          Setting up sockets, polling, and managing the main event loop.
+    - Request/Response Handling: 
+          Reading client data, processing requests, 
+          managing CGI interactions, and sending responses.
+    - CGI Coordination:
+          Creating, monitoring, and cleaning up CGI processes.
+
+   Why the breakwould would be good:
+     - centralize FD logic, 
+     - reduces bugs (e.g., iterator invalidation), 
+     - simplify methods like handleCgiOutputPipeError.
+
+
+////////////////////////////////////////////
+/// BREAKING DOWN WEBSERVER in 3 CLASSES
+////////////////////////////////////////////
+
+--- ServerCore
+--- Clienthandler???
+--- CGI manager
+
+- ServerCore: The manager/orchestrator; sets up the server, runs the poll loop, and delegates work.
+- RequestHandler: The worker; handles requests, coordinates CGI, and sends responses.
+- CGIManager: Owns CGI lifecycle.
+
+ServerCore as the orchestrator, or big boss manager. 
+ClientHandler as the client manager.
+CGIHandler as the CGI specialist.
+
+NOTE on this flow, dispatchEvents splits work between 
+            ClientHandler and CGIHandler ù
+            for a clean flow.
+
+///////// ServerCore
+            Manages sockets, 
+            polling, 
+            and event dispatch. 
+
+            Key Methods: 
+                    startServer,
+                    dispatchEvents, 
+                    createNewClient.
+
+
+///////// ClientHandler
+  Handles client requests and responses
+        
+        Key Methods: 
+            handlePollInEvent, 
+            processRequest, 
+            sendClientResponse.
+
+
+//////  CGIHandler 
+    Manages CGI processes and I/O.
+        
+        Key Methods: 
+                startCGI, 
+                handleCgiOutput, 
+                handleCgiError.
+
+
+////////Helper Classes (in a utils file)
+    
+    PollManager, 
+    ClientBuffer, 
+    ErrorResponse.
+
+
+- PollManager: Used by ServerCore to poll FDs and by ClientHandler/CGIHandler to add/remove/update FDs.
+        Key Actions: addFd, removeFd, updateEvents, poll.
+
+- ClientBuffer: Used by ClientHandler to accumulate request data.
+        Key Actions: append, getData, clear.
+
+- ErrorResponse: Used by ClientHandler and CGIHandler for consistent error responses.
+        Key Action: generate(statusCode, message).
+
+
+---
+
+Linear Flow  (ROUGH OUTLINE TO IMPROVE)
+
+            [ServerCore]
+            | PollManager.poll()
+            v
+            [dispatchEvents]
+            | EventHandler->handleEvent
+            v
+            [RequestHandler]
+            | ClientBuffer->append
+            | CGIManager->startCGI
+            v
+            [CGI Output or Static Response]
+            | ErrorResponse if needed
+            v
+            [PollManager->updateEvents(POLLOUT)]
+            | Send response
+            v
+            [ClientBuffer->clear]
+
+
+---
+
+
+a) CGI MANAGER
+Goal: handle CGI creation and destruction.
+
+            class CGIManager {
+            
+                public:
+                    CGITracker startCGI(const ClientRequest& req, const std::string& uploadPath, InfoServer& info, const std::string& body);
+                    void writeInput(int fd);
+                    std::string getOutput(int fd);
+                    void cleanup(int fd);
+                
+                private:
+                    std::vector<CGITracker> cgiQueue;
+            };
+
+(Basically moving cgiQueue and helpers into CGIManager...promotion!)
+
+ - This class also  helps me to SIMPLIFY handleCGIOutputPipeError
+
+
+/////////////////////////////
+/// UTILS
+/////////////////////////////
+
+///////// a) SIMPLER BUFFER MANAGEMENT - not needed
+
+    Right now: 
+    full_buffer and totBytes are global to RequestHandler,
+    we reset it manually in multiple places.
+
+    We could encapsulate this in a ClientBuffer class.
+    Why: Cleaner state management, reduces risk of forgetting to reset. (Makes Simo's code way simpler.)
+
+                    class ClientBuffer {
+
+                        public:
+                            void append(const char* data, size_t size);
+                            std::string getData() const;
+                            size_t size() const;
+                            void clear();
+
+                        private:
+                            std::string buffer;
+                            size_t totalBytes;
+
+                    };
+
+
+//////// b) POLL MANAGER 
+- since several classes manipulate poll_sets, we could create a PollManager class to own poll_sets.
+
+        class PollManager {
+        
+                public:
+
+                    void addFd(int fd, short events);
+                    void removeFd(int fd);
+                    void updateEvents(int fd, short events);
+                    std::vector<struct pollfd>& getPollSets();
+                    int poll(int timeout);
+      
+        };
+
+///////// c) ERROR HANDLING CONSISTENCY
+
+So far, CGI failures are handled ad-hoc with repeated 500 response code.
+To consistently treat errors throughout (integration with ServerStatusCode?):
+
+            class ErrorResponse {
+
+                    public:
+                        static std::string generate(int statusCode, const std::string& message = "");
+
+            };

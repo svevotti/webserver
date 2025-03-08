@@ -1,0 +1,389 @@
+
+/// SHORT FLOW
+
+
++-------------------+
+| CGI Constructor   |
+| (request, upload, |
+|  serverInfo, body)|
++-------------------+
+          |
+          v
++-------------------+
+| Initialize Vars   |
+| - Set _request_   |
+|   method, _upload |
+| - Init pipes, etc |
+| - _start_time     |
++-------------------+
+          |
+          v
+       +-----------+
+       | Try Block |-------> [No] ----> +-----------------+
+       +-----------+                    | cleanup()       |
+          | [Yes]                       | - Free _av, _env|
+          v                             | - Close pipes   |
++-------------------+                   | - Kill _pid     |
+| populateEnvVars   |                   +-----------------+
+| - Set _env_map    |                            |
+| - Handle POST     |                            v
++-------------------+                   +-----------------+
+          |                             | Throw Exception |
+          v                             +-----------------+
++-------------------+
+| getScriptFileName |
+| - Extract URI     |
+| - Build path      |
++-------------------+
+          |
+          v
+       +-----------+
+       | File OK?  |-------> [No] ----> [Throw CGIException]
+       +-----------+
+          | [Yes]
+          v
++-------------------+
+| createAvAndEnv    |
+| - createAv: _av[] |
+| - createEnv: _env |
++-------------------+
+          |
+          v
++-------------------+
+| startExecution    |
+| - Create pipes    |
+| - Fork process    |
++-------------------+
+          |
+          v
+       +-----------+
+       | Pipes/Fork|-------> [No] ----> [Throw CGIException]
+       | OK?       |
+       +-----------+
+          | [Yes]
+          v
+       +-----------+
+       | Split     |
+       +-----------+
+       |         |
+  [Child]    [Parent]
+       |         |
+       v         v
++----------------+  +----------------+
+| Close pipes    |  | Close unused   |
+| Redirect I/O   |  | pipes          |
+| execve(script) |  | Set _stderr_fd |
++----------------+  | Check body     |
+       |            +----------------+
+       v                   |
++----------------+    +-----------+
+| Exit (Success  |    | Body Empty?|
+| or Failure)    |    +-----------+
++----------------+          | [Yes]
+       |                    v
+       v             +----------------+
+[End: Child]         | Close input    |
+                     | _input_done = T |
+                     +----------------+
+                            | [No]
+                            v
+                     +----------------+
+                     | Keep pipe open  |
+                     | for writeInput  |
+                     +----------------+
+                            |
+                            v
+                     [End: CGI Ready]
+
+
+
+[START: CGI Constructor]
+    Description: "Initializes CGI object with ClientRequest, upload directory, server info, and raw body."
+    Actions:
+    - Set _request_method = request.getRequestLine()["Method"]
+    - Set _upload_to = upload_to (passed parameter)
+    - Set _processed_body = raw_body (passed parameter)
+    - Initialize _output = "", _av = NULL, _env = NULL
+    - Set _in_pipe[0,1] = -1, _out_pipe[0,1] = -1 (pipe FDs)
+    - Set _pid = -1, _stderr_fd = -1, _bytes_written = 0
+    - Set _input_done = false, _output_done = false
+    - Set _start_time = time(NULL) for timeout tracking
+    - Set _serverInfo = serverInfo (passed parameter)
+    |
+    v
+[TRY Block]
+    Description: "Executes core setup and starts CGI process; catches exceptions."
+    Actions:
+    - Call populateEnvVariables(request)
+    - Set _cgi_path = getScriptFileName(request)
+    - Call createAvAndEnv(request)
+    - Log raw body size with Logger::debug
+    - Call startExecution()
+    Conditions:
+    - If any step throws exception: Jump to [CATCH Block]
+    |
+    +----> [populateEnvVariables(const ClientRequest& request)]
+    |         Description: "Populates _env_map with CGI environment variables from request."
+    |         Actions:
+    |         - Get requestLine = request.getRequestLine()
+    |         - Get uri = requestLine["Request-URI"]
+    |         - If uri has '?': 
+    |           - _env_map["QUERY_STRING"] = uri.substr(qpos + 1)
+    |           - _env_map["PATH_INFO"] = uri.substr(0, qpos)
+    |         - Else: 
+    |           - _env_map["QUERY_STRING"] = ""
+    |           - _env_map["PATH_INFO"] = uri
+    |         - _env_map["REQUEST_METHOD"] = _request_method
+    |         - _env_map["REQUEST_URI"] = uri
+    |         - _env_map["SERVER_PROTOCOL"] = requestLine["Protocol"]
+    |         - _env_map["SERVER_NAME"] = "127.0.0.1"
+    |         - _env_map["SERVER_PORT"] = _serverInfo.getArrayPorts()[0] or "8080" if empty
+    |         - _env_map["GATEWAY_INTERFACE"] = "CGI/1.1"
+    |         - If _request_method == "POST":
+    |           - _env_map["CONTENT_LENGTH"] = _processed_body.size()
+    |           - Get headers = request.getHeaders()
+    |           - If "Content-Type" in headers: 
+    |             - _env_map["CONTENT_TYPE"] = headers["Content-Type"]
+    |             - Log "CGI CONTENT_TYPE set to: " + value
+    |           - If "Transfer-Encoding" == "chunked":
+    |             - Call unchunkRequest(_processed_body, unchunked)
+    |             - If successful: Update _processed_body, _env_map["CONTENT_LENGTH"]
+    |         - Else: _env_map["CONTENT_LENGTH"] = "0"
+    |         Output: Populated _env_map
+    |
+    +----> [getScriptFileName(const ClientRequest& request)]
+    |         Description: "Determines the Python script path from URI."
+    |         Actions:
+    |         - Get uri = request.getRequestLine()["Request-URI"]
+    |         - Set cgi_root = SCRIPT_BASE_DIR ("./cgi_bin/")
+    |         - If uri == "/upload":
+    |           - script_path = cgi_root + "upload.py"
+    |           - If access(script_path, F_OK) fails: Throw CGIException("Script file does not exist")
+    |           - Return script_path
+    |         - Else:
+    |           - Extract script_name from uri (last part after '/')
+    |           - Remove query string if present (after '?')
+    |           - If script_name empty, no '.', or not ".py": Throw CGIException("Invalid script extension")
+    |           - full_path = cgi_root + script_name
+    |           - If access(full_path, F_OK) fails: Throw CGIException("Script file does not exist")
+    |           - Return full_path
+    |         Output: _cgi_path set to script file path
+    |
+    +----> [createAvAndEnv(const ClientRequest& request)]
+    |         Description: "Sets up arguments (_av) and environment (_env) for execve."
+    |         Actions:
+    |         - If access(_cgi_path, F_OK) fails: Throw CGIException("Script file does not exist")
+    |         - Call createAv(_cgi_path, _upload_to)
+    |         - Call createEnv(request)
+    |         |
+    |         +----> [createAv(const std::string& cgi_path, const std::string& upload_to)]
+    |         |         Description: "Creates argument vector (_av) for script execution."
+    |         |         Actions:
+    |         |         - If upload_to empty: 
+    |         |           - Log warning, set _upload_to = "./uploads"
+    |         |         - If opendir(_upload_to) fails: 
+    |         |           - Log debug, mkdir(_upload_to, 0755)
+    |         |         - Allocate _av = new char*[4]
+    |         |         - _av[0] = strdup("/usr/bin/python3")
+    |         |         - _av[1] = strdup(cgi_path.c_str())
+    |         |         - _av[2] = strdup(upload_to.c_str())
+    |         |         - _av[3] = NULL
+    |         |         - Log debug: "CGI arguments: [python3, script, upload_to]"
+    |         |         Output: _av set with Python interpreter, script, upload directory
+    |         |
+    |         +----> [createEnv(const ClientRequest& request)]
+    |                   Description: "Converts _env_map, headers, and query params to _env array."
+    |                   Actions:
+    |                   - Get headers = request.getHeaders()
+    |                   - Get queryMap = request.getUriQueryMap()
+    |                   - Calculate env_size = _env_map.size() + headers.size() + queryMap.size()
+    |                   - Allocate _env = new char*[env_size + 1]
+    |                   - i = 0
+    |                   - For each _env_map entry: _env[i++] = "key=value"
+    |                   - For each header: _env[i++] = "HTTP_key=value"
+    |                   - For each query param: _env[i++] = "QUERY_key=value"
+    |                   - _env[i] = NULL
+    |                   Output: _env set with all environment variables
+    |
+    +----> [startExecution()]
+              Description: "Creates pipes, forks, and starts script execution."
+              Actions:
+              - Create stderr_pipe[2]
+              - Log debug: "Creating pipes for CGI"
+              - If pipe(_in_pipe), pipe(_out_pipe), or pipe(stderr_pipe) fails:
+                - Close all pipes, throw CGIException("Failed to create pipes")
+              - Log debug: "Forking CGI process"
+              - _pid = fork()
+              - If _pid == -1:
+                - Close all pipes, throw CGIException("Failed to fork")
+              - If _pid == 0 (Child):
+                - Close _in_pipe[1], _out_pipe[0], stderr_pipe[0]
+                - dup2(_in_pipe[0], STDIN), dup2(_out_pipe[1], STDOUT), dup2(stderr_pipe[1], STDERR)
+                - If any dup2 fails: Exit(1)
+                - Close remaining pipe ends
+                - execve(_av[0], _av, _env)
+                - Exit(1) on failure
+              - Else (Parent):
+                - Log debug: "In parent, closing unused pipe ends"
+                - Close _in_pipe[0], _out_pipe[1], stderr_pipe[1]
+                - Set _out_pipe[1] = -1
+                - If _processed_body.empty():
+                  - Close _in_pipe[1], set _in_pipe[1] = -1, _input_done = true
+                  - Log debug: "No body to write, input done"
+                - Set _stderr_fd = stderr_pipe[0]
+                - Log debug: "CGI stderr FD stored for polling: " + _stderr_fd
+              Output: Script running, pipes set for I/O
+              |
+              v
+[CATCH Block]
+    Description: "Handles exceptions from TRY block."
+    Actions:
+    - Call cleanup()
+    - Rethrow exception
+    |
+    v
+[Execution Continues]
+    Description: "Ongoing I/O and monitoring in Webserv loop."
+    |
+    +----> [writeInput()]
+    |         Description: "Writes _processed_body to script via _in_pipe[1] in chunks."
+    |         Actions:
+    |         - If _input_done or _in_pipe[1] == -1: Return
+    |         - remaining = _processed_body.size() - _bytes_written
+    |         - If remaining <= 0:
+    |           - Close _in_pipe[1], set _in_pipe[1] = -1, _input_done = true
+    |           - Log debug: "CGI input completed"
+    |           - Return
+    |         - CHUNK_SIZE = 1024
+    |         - to_write = min(remaining, CHUNK_SIZE)
+    |         - Log debug: "Writing " + to_write + " bytes to CGI"
+    |         - written = write(_in_pipe[1], _processed_body + _bytes_written, to_write)
+    |         - If written > 0:
+    |           - _bytes_written += written
+    |           - Log debug: "Wrote " + written + " of " + remaining + " bytes"
+    |           - If _bytes_written >= _processed_body.size():
+    |             - Close _in_pipe[1], set _in_pipe[1] = -1, _input_done = true
+    |             - Log debug: "CGI input fully written and pipe closed"
+    |         - Else:
+    |           - Log debug: "CGI write failed or pipe closed"
+    |           - Close _in_pipe[1], set _in_pipe[1] = -1, _input_done = true
+    |         Output: Body written to script, pipe closed when done
+    |
+    +----> [appendOutput(const char* data, size_t len)]
+    |         Description: "Appends script output from _out_pipe[0] to _output."
+    |         Actions:
+    |         - _output.append(data, len)
+    |         Output: _output grows with script’s stdout
+    |
+    +----> [killIfTimedOut()]
+    |         Description: "Kills script if execution exceeds 20 seconds."
+    |         Actions:
+    |         - If isTimedOut() && _pid > 0:
+    |           - kill(_pid, SIGKILL)
+    |           - waitpid(_pid, NULL, 0)
+    |           - _pid = -1
+    |           - _input_done = true, _output_done = true
+    |           - closePipes()
+    |           - Log warn: "CGI process killed due to timeout"
+    |         Output: Script terminated if timed out
+    |
+    +----> [isTimedOut() const]
+    |         Description: "Checks if execution time exceeds TIMEOUT_SECONDS (20s)."
+    |         Actions:
+    |         - Return time(NULL) - _start_time >= TIMEOUT_SECONDS
+    |         Output: Boolean (true if timed out)
+    |
+    +----> [closePipes()]
+    |         Description: "Closes all pipe file descriptors."
+    |         Actions:
+    |         - closePipe(_in_pipe[0]), closePipe(_in_pipe[1])
+    |         - closePipe(_out_pipe[0]), closePipe(_out_pipe[1])
+    |         Output: All pipes closed
+    |
+    +----> [closePipe(int& pipe_fd)]
+    |         Description: "Closes a single pipe FD if open."
+    |         Actions:
+    |         - If pipe_fd != -1: close(pipe_fd), set pipe_fd = -1
+    |         Output: Pipe FD closed
+    |
+    +----> [unchunkRequest(const std::string& chunked, std::string& unchunked)]
+    |         Description: "Decodes chunked Transfer-Encoding body."
+    |         Actions:
+    |         - Create istringstream from chunked
+    |         - While getline(iss, line):
+    |           - If line empty: Continue
+    |           - chunk_size = strtol(line, 16)
+    |           - If invalid: Throw CGIException("Invalid chunk size")
+    |           - If chunk_size == 0: Break
+    |           - Read chunk_size bytes into buffer
+    |           - If read fails: Throw CGIException("Failed to read chunk data")
+    |           - Append buffer to unchunked
+    |         - Return !unchunked.empty()
+    |         Output: Unchunked body string
+    |
+    v
+[Webserv Polling Loop]
+    Description: "Iterative I/O and monitoring by Webserv."
+    Actions:
+    - Poll _out_pipe[0] for output, _stderr_fd for errors
+    - Call writeInput() to send body
+    - Call appendOutput() to collect output
+    - Call killIfTimedOut() to check timeout
+    Conditions:
+    - Continues until _input_done && _output_done
+    Output: _output contains script result
+    |
+    v
+[END: CGI Destructor]
+    Description: "Cleans up resources when CGI object is destroyed."
+    Actions:
+    - Call cleanup()
+    - If _av: Free each _av[i], delete[] _av, set _av = NULL
+    - If _env: Free each _env[i], delete[] _env, set _env = NULL
+    - closePipes()
+    - closePipe(_stderr_fd)
+    - If _pid > 0: kill(_pid, SIGKILL), waitpid(_pid), set _pid = -1
+    Output: All resources freed
+
+
+
+    +----------------------------------+
+| [START: CGI Constructor]         |
+| - Set _request_method, _upload_to|
+| - Init pipes, _pid, _output, etc.|
++----------------------------------+
+          |
+          v
++----------------------------------+       +----------------------------------+
+| [TRY Block]                      |-----> | [populateEnvVariables]           |
+| - Call env, script, av/env, exec |       | - Set QUERY_STRING, PATH_INFO    |
++----------------------------------+       | - Handle POST: CONTENT_LENGTH    |
+          |                               +----------------------------------+
+          +-----------------------------> | [getScriptFileName]              |
+          |                               | - If /upload: ./cgi_bin/upload.py|
+          |                               | - Else: Validate .py script      |
+          |                               +----------------------------------+
+          |                               | [createAvAndEnv]                 |
+          |                               | - Call createAv, createEnv       |
+          |                               +--> [createAv]                   |
+          |                               |    - Set _av: python3, script   |
+          |                               +--> [createEnv]                 |
+          |                               |    - Build _env from map, headers|
+          |                               +----------------------------------+
+          |                               | [startExecution]                 |
+          |                               | - Pipes, fork, execve           |
+          |                               +----------------------------------+
+          v
++----------------------------------+       +----------------------------------+
+| [CATCH Block]                    |<------| [Webserv Polling Loop]           |
+| - cleanup(), rethrow             |       | - Poll pipes, call I/O, timeout |
++----------------------------------+       | - [writeInput]: Send body chunks |
+                                          | - [appendOutput]: Collect output |
+                                          | - [killIfTimedOut]: Check 20s    |
+                                          +----------------------------------+
+          |
+          v
++----------------------------------+
+| [END: CGI Destructor]            |
+| - Free _av, _env, close pipes    |
++----------------------------------+

@@ -1,0 +1,470 @@
+
+///////////////////////////////////////////////////////
+/////  Current Webserver Class: Full Explanation
+///////////////////////////////////////////////////////
+
+The Webserver class is the heart of our HTTP server. 
+It listens for client requests, manages connections, 
+and handles both static responses 
+and dynamic content via CGI scripts—like our Python upload script.
+
+It uses an event-driven model with poll to juggle multiple clients
+ and CGI processes efficiently, without blocking. 
+ 
+
+In this class we have a manager (Webserver) and chef (CGI) combo.
+  - The manager takes orders,  
+  - chef cooks dynamic dishes, 
+  - and the manager delivers them.
+
+Webserver is like a busy restaurant manager coordinating orders 
+(client requests) and kitchen tasks (CGI scripts)
+
+Key Goals:
+- Accept client connections.
+- Read and process requests.
+- Delegate to CGI for dynamic content.
+- Send responses back.
+
+------------------------------------------------------
+Flow Recap:
+    Constructor sets up sockets.
+    startServer polls for events.
+    dispatchEvents routes to handlers.
+    Client data → processRequest → setupCGI if needed.
+    CGI runs, Webserver feeds input and collects output.
+    Response sent, errors handled, loop continues.
+
+CGI Integration: 
+    Webserver creates CGI objects, 
+    polls their pipes, 
+    and uses their output.
+  Tight teamwork!
+
+-----------------------------
+STEP BY STEP BREAKDOWN
+------------------------------
+///////////////////////////
+//FIRST STEP: STAGE-SETTING
+////////////////////////////
+Constructor (Webserver::Webserver)
+
+  - Takes an InfoServer object with config details, 
+  like ports and root directory. 
+    -- Are we storing these twice?
+    -- could we not just have getters from Heath?
+
+  - It creates server sockets (like opening restaurant doors) 
+  using ServerSockets. -- what is a socket exactly?
+  If that fails, it logs an error but keeps going.
+
+  - It sets up serverFds (our listening sockets), 
+  initializes totBytes and full_buffer for tracking 
+  client data, and reserves space for poll_sets, 
+  our list of file descriptors (FDs) to watch, up to 100. 
+    -- why this limit? 
+    -- are we sure that reserving space is the best option here?
+
+  - calls addServerSocketsToPoll to start monitoring 
+  those server sockets for incoming clients.
+
+  Why stage setting? Without sockets, no clients can connect.
+
+
+////////////////////////////
+/// SECOND STEP: MAIN LOOP
+////////////////////////////
+
+startServer
+- The server’s heartbeat.
+- It runs an infinite loop using poll to check all FDs
+        server sockets, 
+        client sockets,
+        CGI pipes,
+every 2 seconds.
+
+
+If poll fails (e.g., system error), 
+it logs and stops. 
+If it times out, it just 1waits again. 
+If events happen, it logs how many and 
+calls dispatchEvents to handle them.
+
+This loop keeps the server alive, reacting to whatever happens:
+new clients, data arriving, or CGI finishing.
+
+/////////////////////////////////
+///// THIRD STEP: Event Dispatching
+////////////////////////////////////
+dispatchEvents
+
+          SIMPLIFIED CODE:
+          void Webserver::dispatchEvents() 
+          {
+              for (this->it = poll_sets.begin(); this->it != end;) 
+              {
+                  if (this->it->revents & POLLIN) // READ events
+                  {
+                      if (retrieveCGI(this->it->fd) != cgiQueue.end()) 
+                      {
+                          // Handle CGI output or CGI errors (stderr)
+                      } 
+                      else
+                      {
+                          handlePollInEvent(this->it->fd); // isCGI is here
+                      }
+                      ++this->it;
+                  }
+                  else if (this->it->revents & POLLOUT) // write event
+                  {
+                      handlePollOutEvent(this->it->fd);
+                      ++this->it;
+                  }
+                  else if (this->it->revents & (POLLHUP | POLLERR | POLLNVAL)) 
+                  {
+                      handlePollErrorOrHangup(this->it->fd);
+                  }
+                  else 
+                  {
+                      ++this->it;
+                  }
+              }
+          }
+
+          This is the brain of the operation.
+
+          It loops through poll_sets (our list of FDs) 
+          and checks what’s happening (revents).
+
+////////POLLIN: 
+      Data to read: a client request, or CGI output. 
+
+      If it’s a CGI FD, it handles output or errors; 
+      otherwise, it’s a client or server FD, so it calls handlePollInEvent
+
+
+/////////POLLOUT: 
+      Ready to write, like sending a response or feeding CGI input. 
+      Goes to handlePollOutEvent.
+
+//////////POLLHUP/POLLERR: 
+      Something broke (e.g., client disconnected or CGI crashed). 
+      Calls handlePollErrorOrHangup.
+
+      “No events? Move on.”
+
+      This function decides who gets attention (clients or CGI) 
+      and keeps things moving.
+
+
+////////////////////////////////////////
+//////  FOURTH STEP: Handling Incoming Data
+////////////////////////////////////////////
+handlePollInEvent & handleReadEvents
+
+          void Webserver::handlePollInEvent(int fd) 
+          {
+              if (fdIsServerSocket(fd))
+                  createNewClient(fd);
+              else
+                  handleReadEvents(fd);
+          }
+
+          void Webserver::handleReadEvents(int fd) 
+          {
+              int bytesRecv = readData(fd, full_buffer, totBytes);
+              if (bytesRecv == 0)
+                  handleClientDisconnect(fd);
+              else if ((contentLength > 0 && totBytes >= contentLength) || (contentLength == -1 && bytesRecv > 0))
+                  processRequest(fd, contentLength);
+          }
+
+handlePollInEvent 
+  checks if the FD is a server socket (new client) 
+  or a client socket (data to read).
+
+  For new clients, it calls createNewClient (it seats a new customer).
+  For existing clients, handleReadEvents reads data into full_buffer 
+    using readData. 
+    - If the client disconnects (0 bytes), it cleans up. 
+    - If we’ve got enough data (based on Content-Length 
+    or any data for no length), it calls processRequest.
+
+    It’s like the manager noticing a customer waving (data arriving) 
+    and taking their order.
+
+  This is where requests start.
+  Requests are either new connections or incoming data.
+
+/////////////////////////////////
+////FIFTH STEP: Processing Requests
+///////////////////////////////////
+processRequest & setupCGI
+
+    void Webserver::processRequest(int fd, int contentLength) 
+    {
+        clientIt->request = ParsingRequest(full_buffer, totBytes);
+        if (isCGI(clientIt->request.getRequestLine()["Request-URI"]))
+            setupCGI(fd, clientIt);
+        else 
+        {
+            clientIt->response = prepareResponse(clientIt->request);
+            // Update client queue and poll events
+        }
+    }
+    void Webserver::setupCGI(int fd, std::vector<struct ClientTracker>::iterator& clientIt) 
+    {
+        CGI* cgi = new CGI(clientIt->request, _serverInfo->getServerRootPath() + "/uploads", *_serverInfo, full_buffer);
+        CGITracker tracker = { cgi, cgi->getInPipeWriteFd(), clientIt->fd, full_buffer };
+        cgiQueue.push_back(tracker);
+        // Add cgi input, output, stderr FDs to poll_sets
+    }
+
+
+    - processRequest 
+            - parses the raw request into a ClientRequest object. 
+            - then it checks if it’s a CGI request (e.g., /upload or .py),
+            using isCGI.
+            - If CGI, processRequest calls setupCGI.
+
+    - setupCGI
+        setupCGI creates a CGI object with the request, 
+        upload path, server info, and raw body.
+    
+    - It adds a CGITracker to cgiQueue and sets up three 
+        FDs in poll_sets: 
+          input (POLLOUT), 
+          output (POLLIN), 
+          and stderr (POLLIN).
+
+    - If not CGI, it generates a static response with 
+        prepareResponse (GET/POST/DELETE) 
+        and queues it for sending.
+
+  This function basically decide if the order needs the chef (CGI)
+  or just a pre-made dish (static response).
+
+  NOTE: this is where CGI gets involved.
+        setupCGI bridges Webserver and CGI.
+
+
+/////////////////////////////////////////
+////   SIXTH STEP: CGI Interaction
+//////////////////////////////////////////
+writeCGIInput, handleCgiOutput, handleCgiOutputPipeError
+
+
+      void Webserver::writeCGIInput(int fd, std::vector<CGITracker>::iterator& cgiIt) 
+      {
+          cgiIt->cgi->writeInput();
+          if (cgiIt->cgi->isInputDone())
+              // Switch to output FD with POLLIN
+      }
+
+      void Webserver::handleCgiOutput(int fd, std::vector<CGITracker>::iterator& cgiIt) 
+      {
+          bytes = read(fd, buffer, 1024);
+          if (bytes > 0)
+              cgiIt->cgi->appendOutput(buffer, bytes);
+          else if (bytes == 0)
+              // Queue response, clean up CGI
+      }
+
+      void Webserver::handleCgiOutputPipeError(int fd, std::vector<CGITracker>::iterator& cgiIt) 
+      {
+          if (output.empty())
+              cgiResponse = "HTTP/1.1 500 Internal Server Error...";
+          else
+              cgiResponse = status + headers + output;
+          // Queue response, delete CGI
+      }
+
+    writeCGIInput: 
+        When the CGI input pipe is ready (POLLOUT), 
+        it calls CGI::writeInput() to send the request body in chunks. 
+        Once done, it switches to polling the output pipe.
+
+    handleCgiOutput: 
+        Reads from the CGI output pipe (POLLIN). 
+        If data comes, it appends it to the CGI object’s output. 
+        If the pipe closes (0 bytes), it queues the final response 
+        and cleans up the CGI object.
+
+  handleCgiOutputPipeError: 
+        If the output pipe errors or hangs up, it checks the CGI output.
+        - Empty? 500 error. 
+        - Otherwise, it parses headers and builds a response (200, 400, 500), 
+        then queues it.
+
+This step is the kitchen handing back the dish.
+The dish is either perfect or burnt.
+Nope, no middle way.
+
+These methods talk to CGI, feeding it data and collecting its results.
+
+////////////////////////////////////
+///  SEVENTH STEP: Sending Responses
+////////////////////////////////////
+handlePollOutEvent, sendClientResponse
+
+      void Webserver::handlePollOutEvent(int fd) 
+      {
+          if (cgiIt != cgiQueue.end())
+              writeCGIInput(fd, cgiIt);
+          else if (clientIt != clientsQueue.end())
+              sendClientResponse(fd, clientIt);
+      }
+
+      void Webserver::sendClientResponse(int fd, std::vector<struct ClientTracker>::iterator& iterClient) 
+      {
+          bytes = send(fd, iterClient->response.c_str(), iterClient->response.size(), MSG_DONTWAIT);
+          if (bytes > 0)
+              // Switch to POLLIN, erase client
+      }
+
+
+  handlePollOutEvent
+    This checks if the FD is for CGI input (write more data) 
+    or a client (send response).
+
+  sendClientResponse 
+    This sends the response to the client FD. 
+    If successful, it switches the FD back to POLLIN 
+    for new requests and removes the client from the queue. 
+    If it fails, it closes the connection.
+
+It’s like delivering the meal to the customer and clearing their table.
+This finishes the request cycle: response delivered, ready for the next one.
+
+////////////////////////////////
+/////   EIGHT STEP: ERROR HANDLING
+////////////////////////////////////
+
+handlePollErrorOrHangup, handleClientError
+
+        void Webserver::handlePollErrorOrHangup(int fd) 
+        {
+            if (cgiIt != cgiQueue.end()) 
+            {
+                if (fd == cgi out pipe)
+                    handleCgiOutputPipeError(fd, cgiIt);
+                else if (fd == cgi in pipe)
+                    handleCgiInputPipeError(fd, cgiIt);
+            } else
+                handleClientError(fd);
+        }
+        void Webserver::handleClientError(int fd) 
+        {
+            close(fd);
+            // Erase from clientsQueue and poll_sets
+        }
+
+Explanation:
+
+handlePollErrorOrHangup catches errors or hangups.
+
+  - If it’s a CGI FD, it handles input or output pipe issues. 
+  - If it’s a client, it calls handleClientError.
+
+  handleClientError 
+    closes the FD and removes it from clientsQueue 
+    and poll_sets—like kicking out a rowdy customer.
+
+  CGI errors (e.g., handleCgiInputPipeError) 
+  set a 500 response and clean up.
+  -- TO DO A HELPER FUNCTION HERE
+
+Key Point: This keeps the server stable when things go wrong.
+
+
+////////////////////////////
+///////  NINTH STEP: DESTRUCTOR
+////////////////////////////////////////
+
+      Webserver::~Webserver() 
+      {
+          delete this->_serverInfo;
+          for (auto it = cgiQueue.begin(); it != cgiQueue.end(); ++it)
+              delete it->cgi;
+          closeSockets();
+      }
+
+When the server shuts down, 
+  - it frees the InfoServer object, 
+  - deletes all CGI objects in cgiQueue, 
+  - and closes all sockets in poll_sets.
+
+It’s the cleanup crew after the restaurant closes.
+
+Ensures no memory leaks or lingering connections.
+
+//////////////////////////
+///  TENTH: HELPER METHODS
+////////////////////////////
+
+        addServerSocketsToPoll: 
+                  Adds server FDs to poll_sets with POLLIN.
+
+        createNewClient: 
+                  Accepts new client connections, 
+                  adds to poll_sets and clientsQueue.
+
+        readData: 
+                  Reads client data into full_buffer, handles disconnects.
+
+        isCGI: 
+                  Checks if URI needs CGI (e.g., /upload, .py).
+
+        prepareResponse: 
+                  Builds static responses for GET/POST/DELETE.
+
+        retrieveClient/retrieveCGI: 
+                  Finds trackers in queues by FD.
+
+---------------------
+
+////////////////////////////////////
+////  KEY INTERACTIONS WITH CGI  ///
+////////////////////////////////////
+
+Setup: 
+[setupCGI] 
+creates a CGI object, 
+adds its pipes (_in_pipe[1], _out_pipe[0], _stderr_fd) to poll_sets.
+
+Input: 
+[writeCGIInput] 
+calls CGI::writeInput() to send body data.
+
+Output: 
+[handleCgiOutput] 
+calls CGI::appendOutput() and CGI::getOutput() to collect results.
+
+Error/Completion: 
+[handleCgiOutputPipeError] 
+processes CGI output or errors, integrating with client response queue.
+
+//////////////////
+
+//////////////////////////////////////////////////////////////////////////////////
+///// -- Proposal For the future: break this class in three, plus 3 utilities classes.
+//////////////////////////////////////////////////////////////////////////////////
+
+  Right now, the clas handles multiple responsibilities
+    - Server Management
+          Setting up sockets, polling, and managing the main event loop.
+    - Request/Response Handling: 
+          Reading client data, processing requests, 
+          managing CGI interactions, and sending responses.
+    - CGI Coordination:
+          Creating, monitoring, and cleaning up CGI processes.
+
+   Why it could be good
+     - centralize FD logic, 
+     - reduces bugs (e.g., iterator invalidation), 
+     - simplify methods like handleCgiOutputPipeError.
+
+-
+
+
+

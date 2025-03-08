@@ -1,0 +1,257 @@
+CGI
+
+    What CGI does: It’s a way to run programs (like Python or shell scripts) to 
+    create web pages on the fly, instead of just serving static files.
+
+    Our server (Webserv) uses CGI to handle dynamic requests, making it more versatile.
+
+
+Example Walkthrough
+
+•	    Imagine a request: GET /cgi-bin/calculator.py?num=5.
+
+•	    Webserv says, “This is a CGI job,” and passes it to CGI.
+
+•	    CGI runs the_right_script.py, which might output: <h1>Result: whatever</h1>.
+
+•	    Webserv sends that back to the browser.
+
+-	Webserv has a method (some handleRequest())  that checks for CGI paths and calls CGI.
+
+////////////////////
+///////  CGI Class
+////////////////////////
+
+The CGI class is like a middleman that takes a web request, 
+runs an external script (e.g., a Python or shell script), 
+and sends the script’s output back to our web server. It’s how we handle dynamic content in our project.
+
+•	It’s triggered when a request hits a CGI-enabled path (e.g., /cgi-bin/script.py).
+
+--
+Our CGI class runs Python scripts (like upload.py) to handle dynamic requests in our web server. 
+
+Purpose of the CGI Class
+    The CGI takes a client’s HTTP request, 
+    executes the script with the right data, 
+    and collects the output for Webserv to send back
+
+--
+It takes a client’s HTTP request, executes the script with the right data, and collects the output 
+for Webserv to send back.
+--
+It’s designed to support things like file uploads (via /upload) – so far. 
+More tasks can be done with further cgi scripts.
+
+/////////////////////
+/// STEPS 
+/////////////////////
+--
+
+So far: 
+designed to support things like file uploads (via /upload) 
+or other .py scripts in the ./cgi_bin/ directory (so here it handles a POST request).
+
+For later (to handle a GET request): the whatever script! 
+
+
+////////////////////
+///// Step 1: Constructor 
+/////////////////////////////
+
+The constructor takes four inputs: the HTTP request, an upload directory (e.g., ./uploads) – this can be passed by Heath –, server info, and the raw request body
+
+    It initializes a bunch of variables
+    •	Pipes
+    •	Process ID
+    •	Timeout tracker
+    •	I could do a version that initializes env variables directly here.
+
+    Try block:
+    1.	PopulateEnvVariables
+    2.	getScriptFileName (figures out which python script to run)
+    3.	prepare script arguments and environment
+    4.	starExecution – starts running the script
+    This sets up and kicks off the CGI process at once.
+
+
+
+//////////////////////////////////////////////////
+///// Step 2: Setting Up Environment (populateEnvVariables)
+//////////////////////////////////////////7
+    This fills a map (_env_map) with variables the script needs.
+
+    It splits the URI (e.g., /upload?id=123) into PATH_INFO (/upload) and QUERY_STRING (id=123). – me or Heath? Prob me.
+
+    For POST requests, it adds CONTENT_LENGTH (body size) and CONTENT_TYPE (e.g., multipart/form-data).
+
+    If the body is chunked (a special format), it calls unchunkRequest to decode it and updates the body and length.
+
+    These variables tell the script what the client asked for.
+
+
+/////////////////////////////////////////
+///// Step 3: Finding the Script (getScriptFileName)
+/////////////////////////////////////////////////
+
+• This figures out which script to run based on the URI.
+• If the URI is /upload, it picks ./cgi_bin/upload.py (hardcoded for uploads).
+• Otherwise, it takes the last part of the URI (e.g., script.py from /path/script.py?id=123), strips any query string, and checks it’s a .py file.
+•	It builds the full path (e.g., ./cgi_bin/script.py) and checks if it exists. If not, it throws an error.
+•	This ensures we only run valid Python scripts from ./cgi_bin/.
+
+////////////////////////////////////////////////
+///// Step 4: Preparing Arguments and Environment (createAvAndEnv)
+/////////////////////////////////////////////////////////
+
+    •	double-checks the script exists, then calls two helpers.
+
+    •	createAv: Sets up the arguments for execve:
+                o	Python interpreter (/usr/bin/python3),
+                o	 the script path, 
+                o	and the upload directory
+                    If the upload directory is missing, it creates it.”
+
+    •	createEnv: 
+            o	Turns 
+            	    _env_map, 
+            	    HTTP headers (prefixed with HTTP_), 
+                	and query parameters (prefixed with QUERY_)
+                into a C-style array (_env) for the script.
+
+
+///////////////////////////////////////
+///// Step 5: Starting Execution (startExecution)
+////////////////////////////////////////
+        •	This method creates three pipes: 
+                 o	one for input (_in_pipe), 
+                 o  one for output (_out_pipe), 
+                 o	and one for errors (stderr_pipe). // this helps me debug
+
+        •	“It forks into two processes:”
+        •	 Child: (a) Redirects 
+                            input (stdin) to _in_pipe, 
+                            output (stdout) to _out_pipe, 
+                            and errors (stderr) to stderr_pipe, 
+                    (b) then runs the script with execve.”
+        This splits the work so the script runs separately, 
+        and we can talk to it via pipes.
+
+
+/////////////////////////////////////////////////
+////  Step 6: Writing Input (writeInput) – POST 
+/////////////////////////////////////////////////
+
+    •  “This sends the request body (e.g., POST data) to the script in chunks of 1024 bytes.”
+    •  “It tracks how much has been written (_bytes_written) and stops when done, closing the pipe.”
+    •	“If writing fails, it closes the pipe and marks it done.” – important
+
+This function feeds data to the script gradually, like streaming.
+
+
+////////////////////////////////////////////////////
+/////// Step 8: Collecting Output (appendOutput)
+/////////////////////////////////////////////////////
+
+        -	As the script writes to _out_pipe, this adds the output to _output, which Webserv will later use
+        -	This builds the response piece by piece.
+
+
+/////////////////////////////////////////////////////////
+/// Step 9: Cleanup and Timeout (cleanup, killIfTimedOut)
+//////////////////////////////////////////////////////////
+
+        cleanup frees memory and kills the script process if it’s still running.
+        killIfTimedOut checks if 20 seconds have passed and terminates the script if so
+
+Goal: keep the server safe from memory leaks or hung scripts.
+(Possible redundancy here? Cleanup already killing scripts?).
+
+
+[START: CGI Constructor]
+    |
+    v
+[Initialize Variables]
+    - _request_method, _upload_to, _processed_body, etc.
+    - Set pipe FDs to -1
+    - _start_time = current time
+    |
+    v
+[TRY Block]
+    |
+    +----> [populateEnvVariables]
+    |         - Set QUERY_STRING, PATH_INFO, REQUEST_METHOD, etc.
+    |         - Handle POST: CONTENT_LENGTH, CONTENT_TYPE, unchunk if needed
+    |         |
+    |         v
+    +----> [getScriptFileName]
+    |         - Check URI: /upload -> ./cgi_bin/upload.py
+    |         - Else: Extract script name, ensure .py, build full path
+    |         - Validate script exists
+    |         |
+    |         v
+    +----> [createAvAndEnv]
+    |         |
+    |         +----> [createAv]
+    |         |         - Set _av: ["/usr/bin/python3", script_path, upload_to, NULL]
+    |         |         - Ensure upload directory exists
+    |         |
+    |         +----> [createEnv]
+    |                   - Build _env from _env_map, HTTP_ headers, QUERY_ params
+    |                   |
+    |                   v
+    +----> [startExecution]
+              |
+              +----> [Create Pipes: _in_pipe, _out_pipe, stderr_pipe]
+              |         - If fails: Throw CGIException
+              |
+              +----> [Fork Process]
+              |         - If fails: Throw CGIException
+              |
+              +----> [Child Process]
+              |         - Redirect STDIN (_in_pipe[0]), STDOUT (_out_pipe[1]), STDERR (stderr_pipe[1])
+              |         - Close unused pipe ends
+              |         - execve("/usr/bin/python3", _av, _env)
+              |         - Exit on failure
+              |
+              +----> [Parent Process]
+                        - Close unused pipe ends (_in_pipe[0], _out_pipe[1], stderr_pipe[1])
+                        - If no body: Close _in_pipe[1], set _input_done
+                        - Store _stderr_fd for polling
+                        |
+                        v
+[CATCH Block]
+    - If exception: Call cleanup(), rethrow
+    |
+    v
+[Execution Continues]
+    |
+    +----> [writeInput] (Called Later in Loop)
+    |         - If !_input_done && _in_pipe[1] open:
+    |         - Write chunks (1024 bytes) of _processed_body to _in_pipe[1]
+    |         - Update _bytes_written
+    |         - Close pipe and set _input_done when done or on error
+    |         |
+    |         v
+    +----> [appendOutput] (Called Later in Loop)
+    |         - Append data from _out_pipe[0] to _output
+    |         |
+    |         v
+    +----> [killIfTimedOut] (Checked in Loop)
+    |         - If time > 20s: Kill _pid, close pipes, set done flags
+    |         |
+    |         v
+[Webserv Polling Loop]
+    - Poll _out_pipe[0], _stderr_fd
+    - Call writeInput, appendOutput as needed
+    - Check timeout with killIfTimedOut
+    |
+    v
+[END: CGI Destructor]
+    - Call cleanup()
+    - Free _av, _env
+    - Close pipes
+    - Kill _pid if running
+
+
+(Webserver creates a CGI object, feeds it input, collects output via pipes, and sends _output to the client.)
