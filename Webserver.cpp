@@ -54,6 +54,7 @@ void Webserver::dispatchEvents()
     {
 		result = 0;
 		Logger::debug("call made by " + std::to_string(it->fd));
+		Logger::debug("Length " + std::to_string(poll_sets.size()));
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
@@ -67,8 +68,7 @@ void Webserver::dispatchEvents()
 					close(it->fd);
 					this->clientsQueue.erase(retrieveClient(it->fd));
 					it = this->poll_sets.erase(it);
-					//it makes an extra loop if i dont break
-					//Logger::debug("call made by " + std::to_string(it->fd));
+                    return ;
 				}
 			}
         }

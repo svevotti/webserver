@@ -1,30 +1,27 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
-#include <stdio.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-#include <map>
-#include "WebServer.hpp"
-#include <iostream>
-#include <fstream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sstream>
-#include <stdexcept>
-#include <dirent.h>
-
 #include "ClientRequest.hpp"
 #include "ServerResponse.hpp"
 #include "InfoServer.hpp"
 #include "ServerSockets.hpp"
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <dirent.h>
+
+#include <vector>
+#include <map>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
 
 typedef struct client {
     int             fd;
@@ -50,8 +47,6 @@ class Webserver {
         int                                     searchPage(std::string path);
         std::string                             prepareResponse(ClientRequest);
         std::vector<struct client>::iterator    retrieveClient(int fd);
-        void                                    addToClientQueue(std::vector<struct client>::iterator it);
-        void                                    clearInRead(std::string &buffer, std::string &response, int *readBytes);
 
     private:
 
