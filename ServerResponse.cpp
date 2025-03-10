@@ -66,7 +66,7 @@ std::string ServerResponse::responseGetMethod()
 	response.clear();
 	//TODO: check why having problems with binary
 	response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
-	Logger::debug("response: " + response);
+	//Logger::debug("response: " + response);
 	return (response);
 }
 

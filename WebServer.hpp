@@ -7,7 +7,7 @@
 #include "ServerSockets.hpp"
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
-#include "Client.hpp"
+#include "ClientHandler.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +24,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#define TIMEOUT 2000
+
 typedef struct client {
     int             fd;
     ClientRequest   request;
@@ -34,30 +36,22 @@ class Webserver {
     public:
         Webserver(InfoServer&);
         ~Webserver();
-        void	                                startServer();
-        void                                    addServerSocketsToPoll(std::vector<int>);
-        int                                     fdIsServerSocket(int);
-        void                                    dispatchEvents();
-        void                                    createNewClient(int);
-        // int                                     readData(int, std::string&, int&);
-        // int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
-        void                                    handleWritingEvents(int, std::vector<struct pollfd>::iterator);
-        // ClientRequest                           ParsingRequest(std::string, int);
-        // ClientRequest                           ParsingRequest(std::string, int);
-        void                                    closeSockets();
-        // int                                     isCgi(std::string);
-        // int                                     searchPage(std::string path);
-        // std::string                             prepareResponse(ClientRequest);
-        int                                     retrieveClientIndex(int fd);
-        std::vector<struct client>::iterator retrieveClient(int fd);
+        void    startServer();
+        void    addServerSocketsToPoll(std::vector<int>);
+        int     fdIsServerSocket(int);
+        void    dispatchEvents();
+        void    createNewClient(int);
+        int     processClient(int fd);
+        void    closeSockets();
+        int     retrieveClientIndex(int fd);
+        void    cleanupClient(int fd);
 
     private:
 
-        InfoServer                  *_serverInfo;
+        InfoServer                  *serverInfo;
         std::vector<struct pollfd>  poll_sets;
         std::vector<int>            serverFds;
-        std::vector<struct client>  clientsQueue;
-        std::vector<class Client*> clientList;
+        std::vector<class ClientHandler> clientList;
 
 };
 #endif

@@ -1,5 +1,5 @@
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef CLIENT_HANDLER_H
+#define CLIENT_HANDLER_H
 
 #include <sys/socket.h>
 #include <iostream>
@@ -20,25 +20,27 @@
 #include "ClientRequest.hpp"
 #include "InfoServer.hpp"
 #include "ServerResponse.hpp"
+
 #define BUFFER 1024
 #define DISCONNECTED 0
 #define NODATA 1
 #define CGI 3
 
-class Client {
+class ClientHandler {
 	public:
-        Client(int, InfoServer);
+        ClientHandler(int, InfoServer);
 
         int     getFd() const;
         ClientRequest getRequest() const;
         std::string  getResponse() const;
 
 
-        int     processClient();
+        int     receiveRequest();
         int     readData(int fd, std::string &str, int &bytes);
         int     isCgi(std::string str);
         int     searchPage(std::string path);
         std::string prepareResponse(ClientRequest request);
+        void        sendResponse();
 
 	private:
         ClientRequest request;
@@ -47,6 +49,6 @@ class Client {
         InfoServer info;
 };
 
-std::ostream &operator<<(std::ostream &output, Client const &obj);
+std::ostream &operator<<(std::ostream &output, ClientHandler const &obj);
 
 #endif

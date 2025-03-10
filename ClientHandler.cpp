@@ -1,29 +1,29 @@
-#include "Client.hpp"
+#include "ClientHandler.hpp"
 
 // Constructor and destructor
-Client::Client(int fd, InfoServer info)
+ClientHandler::ClientHandler(int fd, InfoServer info)
 {
     this->fd = fd;
     this->info = info;
 }
 
 // Getters
-int     Client::getFd() const
+int     ClientHandler::getFd() const
 {
 	return this->fd;
 }
-ClientRequest Client::getRequest() const
+ClientRequest ClientHandler::getRequest() const
 {
 	return this->request;
 }
 
-std::string  Client::getResponse() const
+std::string  ClientHandler::getResponse() const
 {
 	return this->response;
 }
 
 // Main functions
-int Client::readData(int fd, std::string &str, int &bytes)
+int ClientHandler::readData(int fd, std::string &str, int &bytes)
 {
 	int res = 0;
 	char buffer[BUFFER];
@@ -44,69 +44,46 @@ int Client::readData(int fd, std::string &str, int &bytes)
 	return 2;
 }
 
-int Client::processClient(void)
+int ClientHandler::receiveRequest(void)
 {
 	int result;
 	std::string full_buffer;
 	int totBytes = 0;
 
 	result = readData(fd, full_buffer, totBytes);
-	Logger::debug("tot bytes " + std::to_string(totBytes));
 	if (result == DISCONNECTED)
-		return 1;
+		return 0;
 	else if (result == NODATA)
 	{
 		Logger::debug("No data available");
-        return 0;
+        return 1;
 	}
 	else
 	{
-        ClientRequest request(full_buffer, totBytes); //pointer or not?
-		this->request = request;
+        ClientRequest incomingRequest(full_buffer, totBytes); //pointer or not?
+		this->request = incomingRequest;
+		Logger::info("Parsed completed");
 		if (isCgi(this->request.getRequestLine()["Request-URI"]) == true)
 			return CGI;
 		else
 		{
 			this->response = prepareResponse(this->request);
-			response.clear();
-			full_buffer.clear();
-			totBytes = 0;
-			Logger::info("Response created successfully and store in clientQueu");
+			Logger::info("Response created");
 		}
-		std::cout << "here\n" << std::endl;
 	}
-	return 0;
+	return 2;
 }
 
-// int Client::processClient(void)
-// {
-// 	std::string httpRequest =
-// 	"POST /upload HTTP/1.1\r\n"
-// 	"Host: example.com\r\n"
-// 	"Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW\r\n"
-// 	"Content-Length: 335\r\n"
-// 	"Connection: keep-alive\r\n\r\n"
-// 	"------WebKitFormBoundary7MA4YWxkTrZu0gW\r\n"
-// 	"Content-Disposition: form-data; name=\"file\"; filename=\"example.txt\"\r\n"
-// 	"Content-Type: text/plain\r\n\r\n"
-// 	"This is the content of the file.\r\n"
-// 	"------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n";
+void ClientHandler::sendResponse()
+{
+	int bytes = send(this->fd, this->response.c_str(), strlen(this->response.c_str()), 0);
+	if (bytes == -1)
+		Logger::error("Failed send - Sveva check this out");
+	this->response.clear();
+	Logger::info("Response sent to " + std::to_string(this->fd));
+}
 
-// 	Logger::debug("before client request");
-// 	ClientRequest request(httpRequest, httpRequest.length());
-// 	this->request = request;
-// 	if (isCgi(this->request.getRequestLine()["Request-URI"]) == true)
-// 		return 0;
-// 	else
-// 	{
-// 		this->response = prepareResponse(this->request);
-// 		response.clear();
-// 		Logger::info("Response created successfully and store in clientQueu");
-// 	}
-// 	return 0;
-// }
-
-int	Client::searchPage(std::string path)
+int	ClientHandler::searchPage(std::string path)
 {
 	FILE *folder;
 
@@ -117,7 +94,7 @@ int	Client::searchPage(std::string path)
 	return true;
 }
 
-int Client::isCgi(std::string str)
+int ClientHandler::isCgi(std::string str)
 {
 	if (str.find(".py") != std::string::npos)
 		return true;
@@ -126,7 +103,7 @@ int Client::isCgi(std::string str)
 	return true;
 }
 
-std::string Client::prepareResponse(ClientRequest request)
+std::string ClientHandler::prepareResponse(ClientRequest request)
 {
 	std::string response;
 
@@ -149,10 +126,10 @@ std::string Client::prepareResponse(ClientRequest request)
 	return response;
 }
 
-std::ostream &operator<<(std::ostream &output, Client const &obj)
+std::ostream &operator<<(std::ostream &output, ClientHandler const &obj)
 {
         output << "client fd: " << obj.getFd() << std::endl;
-		output << "Client request\n";
+		output << "ClientHandler request\n";
         std::map<std::string, std::string> map;
         std::map<std::string, std::string>::iterator it;
         map = obj.getRequest().getRequestLine();
@@ -167,7 +144,6 @@ std::ostream &operator<<(std::ostream &output, Client const &obj)
         {
                 output << it->first << " : " << it->second << std::endl;
         }
-		return output;
         output<< "response: " << obj.getResponse();
 		return output;
 

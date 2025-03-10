@@ -1,4 +1,4 @@
-#include "Client.hpp"
+#include "ClientHandler.hpp"
 #include "InfoServer.hpp"
 
 #include <iostream>
@@ -19,7 +19,7 @@ int main() {
         "------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n";
 
     // Output the constructed HTTP request
-	Client *client = new Client(1, info);
+	ClientHandler *client = new ClientHandler(1, info);
 
 	client->processClient();
 	

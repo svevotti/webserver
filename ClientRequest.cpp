@@ -74,11 +74,12 @@ void ClientRequest::parseRequestHttp(std::string str, int size)
 	this->headers = request.getHttpHeaders();
 	this->sectionsVec = request.getHttpSections();
 	this->typeBody = request.getHttpTypeBody();
+	Logger::info("Parsing is completed");
 }
 
-std::ostream &operator<<(std::ostream &output, ClientRequest const &obj)
+std::ostream& operator<<(std::ostream &output, ClientRequest const &obj)
 {
-        output << "Client request\n";
+        Logger::debug("ClientRequest outcome");
         std::map<std::string, std::string> map;
         std::map<std::string, std::string>::iterator it;
         map = obj.getRequestLine();

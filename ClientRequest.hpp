@@ -33,6 +33,7 @@ class ClientRequest {
 		std::map<std::string, std::string>	getSectionHeaders(int) const;
 		std::string							getSectionBody(int) const;
 		void 								parseRequestHttp(std::string, int);
+		// friend std::ostream& operator<<(std::ostream &output, ClientRequest const &obj);
 
 	private:
 		std::map<std::string, std::string>	requestLine;
@@ -42,6 +43,6 @@ class ClientRequest {
 		int									typeBody;
 };
 
-std::ostream &operator<<(std::ostream &output, ClientRequest &obj);
+std::ostream& operator<<(std::ostream &output, ClientRequest const &obj);
 
 #endif
