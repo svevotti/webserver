@@ -1,12 +1,15 @@
 #include "ClientRequest.hpp"
 
 // Constructor and destructor
-ClientRequest::ClientRequest(void)
+ClientRequest::ClientRequest(std::string str, int size)
 {
-	
+	this->str = str;
+	this->bytes = size;
 }
 ClientRequest::ClientRequest(ClientRequest const &other)
 {
+	this->str = other.str;
+	this->bytes = other.bytes;
 	this->requestLine = other.requestLine;
 	this->query = other.query;
 	this->headers = other.headers;
@@ -18,6 +21,8 @@ ClientRequest &ClientRequest::operator=(ClientRequest const &other)
 {
 	if (this != &other)
 	{
+		this->str = other.str;
+		this->bytes = other.bytes;
 		this->requestLine = other.requestLine;
 		this->query = other.query;
 		this->headers = other.headers;
@@ -63,11 +68,11 @@ std::string ClientRequest::getSectionBody(int i) const
 }
 
 //main function
-void ClientRequest::parseRequestHttp(std::string str, int size)
+void ClientRequest::parseRequestHttp(void)
 {
 	HttpRequest request;
 	
-	request.HttpParse(str, size);
+	request.HttpParse(this->str, this->bytes);
 	this->requestLine = request.getHttpRequestLine();
 	this->query = request.getHttpUriQueryMap();
 	this->headers = request.getHttpHeaders();

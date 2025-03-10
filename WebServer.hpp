@@ -7,6 +7,7 @@
 #include "ServerSockets.hpp"
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
+#include "Client.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,7 +41,7 @@ class Webserver {
         void                                    createNewClient(int);
         int                                     readData(int, std::string&, int&);
         int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
-        void                                    handleWritingEvents(int, std::vector<struct pollfd>::iterator);
+        void                                    handleWritingEvents(int);
         ClientRequest                           ParsingRequest(std::string, int);
         void                                    closeSockets();
         int                                     isCgi(std::string);
@@ -54,6 +55,7 @@ class Webserver {
         std::vector<struct pollfd>  poll_sets;
         std::vector<int>            serverFds;
         std::vector<struct client>  clientsQueue;
+        std::vector<class Client*> clientList;
 
 };
 #endif
