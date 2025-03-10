@@ -32,7 +32,7 @@ class ClientRequest {
 		std::vector<struct section>			getSections() const;
 		std::map<std::string, std::string>	getSectionHeaders(int) const;
 		std::string							getSectionBody(int) const;
-		void 								parseRequestHttp();
+		void 								parseRequestHttp(std::string, int);
 
 	private:
 		std::map<std::string, std::string>	requestLine;
@@ -40,8 +40,8 @@ class ClientRequest {
 		std::map<std::string, std::string>	headers;
 		std::vector<struct section>			sectionsVec;
 		int									typeBody;
-		std::string							str;
-		int									bytes;
 };
+
+std::ostream &operator<<(std::ostream &output, ClientRequest &obj);
 
 #endif

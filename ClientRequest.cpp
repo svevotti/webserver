@@ -1,15 +1,13 @@
 #include "ClientRequest.hpp"
 
 // Constructor and destructor
+ClientRequest::ClientRequest() {};
 ClientRequest::ClientRequest(std::string str, int size)
 {
-	this->str = str;
-	this->bytes = size;
+	parseRequestHttp(str, size);
 }
 ClientRequest::ClientRequest(ClientRequest const &other)
 {
-	this->str = other.str;
-	this->bytes = other.bytes;
 	this->requestLine = other.requestLine;
 	this->query = other.query;
 	this->headers = other.headers;
@@ -21,8 +19,6 @@ ClientRequest &ClientRequest::operator=(ClientRequest const &other)
 {
 	if (this != &other)
 	{
-		this->str = other.str;
-		this->bytes = other.bytes;
 		this->requestLine = other.requestLine;
 		this->query = other.query;
 		this->headers = other.headers;
@@ -68,14 +64,35 @@ std::string ClientRequest::getSectionBody(int i) const
 }
 
 //main function
-void ClientRequest::parseRequestHttp(void)
+void ClientRequest::parseRequestHttp(std::string str, int size)
 {
 	HttpRequest request;
 	
-	request.HttpParse(this->str, this->bytes);
+	request.HttpParse(str, size);
 	this->requestLine = request.getHttpRequestLine();
 	this->query = request.getHttpUriQueryMap();
 	this->headers = request.getHttpHeaders();
 	this->sectionsVec = request.getHttpSections();
 	this->typeBody = request.getHttpTypeBody();
+}
+
+std::ostream &operator<<(std::ostream &output, ClientRequest const &obj)
+{
+        output << "Client request\n";
+        std::map<std::string, std::string> map;
+        std::map<std::string, std::string>::iterator it;
+        map = obj.getRequestLine();
+        for (it = map.begin();  it != map.end(); it++)
+        {
+                output << it->first << " : " << it->second << std::endl;
+        }
+        output << "headers: \n";
+        map.clear();
+        map = obj.getHeaders();
+        for (it = map.begin();  it != map.end(); it++)
+        {
+                output << it->first << " : " << it->second << std::endl;
+        }
+		return output;
+
 }

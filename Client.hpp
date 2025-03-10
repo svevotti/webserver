@@ -29,18 +29,24 @@ class Client {
 	public:
         Client(int, InfoServer);
 
-        int     getFd();
+        int     getFd() const;
+        ClientRequest getRequest() const;
+        std::string  getResponse() const;
+
 
         int     processClient();
         int     readData(int fd, std::string &str, int &bytes);
         int     isCgi(std::string str);
         int     searchPage(std::string path);
         std::string prepareResponse(ClientRequest request);
+
 	private:
         ClientRequest request;
         std::string response;
         int         fd;
         InfoServer info;
 };
+
+std::ostream &operator<<(std::ostream &output, Client const &obj);
 
 #endif

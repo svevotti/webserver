@@ -39,15 +39,17 @@ class Webserver {
         int                                     fdIsServerSocket(int);
         void                                    dispatchEvents();
         void                                    createNewClient(int);
-        int                                     readData(int, std::string&, int&);
-        int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
-        void                                    handleWritingEvents(int);
-        ClientRequest                           ParsingRequest(std::string, int);
+        // int                                     readData(int, std::string&, int&);
+        // int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
+        void                                    handleWritingEvents(int, std::vector<struct pollfd>::iterator);
+        // ClientRequest                           ParsingRequest(std::string, int);
+        // ClientRequest                           ParsingRequest(std::string, int);
         void                                    closeSockets();
-        int                                     isCgi(std::string);
-        int                                     searchPage(std::string path);
-        std::string                             prepareResponse(ClientRequest);
-        std::vector<struct client>::iterator    retrieveClient(int fd);
+        // int                                     isCgi(std::string);
+        // int                                     searchPage(std::string path);
+        // std::string                             prepareResponse(ClientRequest);
+        int                                     retrieveClientIndex(int fd);
+        std::vector<struct client>::iterator retrieveClient(int fd);
 
     private:
 
