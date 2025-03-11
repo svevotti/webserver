@@ -74,13 +74,14 @@ int ClientHandler::receiveRequest(void)
 	return 2;
 }
 
-void ClientHandler::sendResponse()
+int ClientHandler::sendResponse()
 {
 	int bytes = send(this->fd, this->response.c_str(), strlen(this->response.c_str()), 0);
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	this->response.clear();
 	Logger::info("Response sent to " + std::to_string(this->fd));
+	return bytes;
 }
 
 int	ClientHandler::searchPage(std::string path)
@@ -88,8 +89,9 @@ int	ClientHandler::searchPage(std::string path)
 	FILE *folder;
 
 	folder = fopen(path.c_str(), "rb");
+	Logger::debug("path to file " + path);
 	if (folder == NULL)
-		return false;
+		Logger::error("Error opening file: " + std::string(strerror(errno)));
 	fclose(folder);
 	return true;
 }

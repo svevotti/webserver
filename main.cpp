@@ -14,6 +14,10 @@ int main(void)
 	InfoServer		info;
 	Webserver 	server(info);
 
-	server.startServer();
+	if (server.startServer() == -1)
+	{
+		Logger::error("no sockets available");
+		return (1);
+	}
 	return (0);
 }

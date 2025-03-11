@@ -3,30 +3,29 @@
 #define MAX 100
 
 // Constructor and Destructor
-Webserver::Webserver(InfoServer& info)
+Webserver::Webserver(InfoServer info)
 {
-	this->serverInfo = new InfoServer(info);
-	ServerSockets serverFds(*this->serverInfo);
+	this->serverInfo = info;
+	ServerSockets fds(this->serverInfo);
 
-	if (this->serverFds.size() < 0)
-		Logger::error("Failed creating any server socket");
-	this->serverFds = serverFds.getServerSockets();
+	this->serverFds = fds.getServerSockets();
 	this->poll_sets.reserve(MAX);
 	addServerSocketsToPoll(this->serverFds);
 }
 
 Webserver::~Webserver()
 {
-	delete this->serverInfo;
 	closeSockets();
 }
 
 // Setters and getters
 // Main functions
-void	Webserver::startServer()
+int	Webserver::startServer()
 {
 	int returnPoll;
 
+	if (this->serverFds.size() == 0)
+		return -1;
 	while (1)
 	{
 		Logger::info("Poll is monotoring");
@@ -41,39 +40,7 @@ void	Webserver::startServer()
 		else
 			dispatchEvents();
 	}
-}
-
-int fdIsCGI(int fd)
-{
-	return false;
-}
-
-int	Webserver::processClient(int fd)
-{
-	int i;
-	int result = 0;
-
-	i = retrieveClientIndex(fd);
-	if (i != -1)
-		result = this->clientList[i].receiveRequest();
-	else
-		Logger::error("Client not found - bad news - maybe review");
-	Logger::info("Client received the full request");
-	if (result == DISCONNECTED)
-		return 0;
-	else if (result == CGI)
-		return 3;
-	return 2;
-}
-
-void	Webserver::cleanupClient(int fd)
-{
-	int i;
-
-	Logger::info("Client " + std::to_string(fd) + " disconnected");
-	close(fd);
-	i = retrieveClientIndex(fd);
-	this->clientList.erase(this->clientList.begin() + i);
+	return 0;
 }
 
 void Webserver::dispatchEvents()
@@ -83,7 +50,6 @@ void Webserver::dispatchEvents()
 
     for (it = poll_sets.begin(); it != this->poll_sets.end();) 
     {
-		result = 0;
 		Logger::debug("fd " + std::to_string(it->fd));
         if (it->revents & POLLIN)
         {
@@ -95,37 +61,70 @@ void Webserver::dispatchEvents()
 			}
 			else
 			{
-				result = processClient(it->fd);
+				result = processClient(it);
 				if (result == DISCONNECTED)
-				{
-					cleanupClient(it->fd);
-					it = this->poll_sets.erase(it);
-					return ;
-				}
+					return;
 				else if (result == CGI)
 					printf("set up CGI here\n");
-				//Logger::debug("checking client client fd, request, response");
-				//std::cout << this->clientList[i] << std::endl;
-				it->events = POLLOUT;
-				Logger::info("Set " + std::to_string(it->fd) + " to pollout event");
+				else
+					it->events = POLLOUT;
 			}
         }
 		else if (it->revents & POLLOUT)
 		{
-			int i;
-			i = retrieveClientIndex(it->fd);
-			if (i != -1)
-				this->clientList[i].sendResponse();
-			else
-				Logger::error("Client not found to send to - bad news - please review");
+			result = responseForClient(it->fd);
+			if (result == -1)
+				Logger::error("Some error to define has being occured - review");
 			it->events = POLLIN;
-			Logger::info("Set " + std::to_string(it->fd) + " to pollin event");
 		}
 		it++;
 	}
 }
 
-//utilis
+int Webserver::fdIsCGI(int fd)
+{
+	return false;
+}
+
+
+// Utils
+int	Webserver::processClient(std::vector<struct pollfd>::iterator it)
+{
+	int i;
+	int result = 0;
+
+	i = retrieveClientIndex(it->fd);
+	if (i != -1)
+		result = this->clientList[i].receiveRequest();
+	else
+		Logger::error("Client not found - bad news - maybe review");
+	if (result == DISCONNECTED)
+	{
+		Logger::info("Client " + std::to_string(it->fd) + " disconnected");
+		close(it->fd);
+		i = retrieveClientIndex(it->fd);
+		this->clientList.erase(this->clientList.begin() + i);
+		this->poll_sets.erase(it);
+		return result;
+	}
+	Logger::debug("path to image: " + this->clientList[i].getRequest().getRequestLine()["Request-URI"]);
+	Logger::info("Client received the full request");
+	return result;
+}
+
+int Webserver::responseForClient(int fd)
+{
+	int i;
+	int result = -1;
+
+	i = retrieveClientIndex(fd);
+	if (i != -1)
+		result = this->clientList[i].sendResponse();
+	else
+		Logger::error("Client not found to send to - bad news - please review");
+	return result;
+}
+
 int Webserver::fdIsServerSocket(int fd)
 {
 	int size = this->serverFds.size();
@@ -146,8 +145,8 @@ void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 		serverPoll[i].fd = fds[i];
 		serverPoll[i].events = POLLIN;
 		this->poll_sets.push_back(serverPoll[i]);
+		Logger::info("Add server socket " + std::to_string(this->serverFds[i]) + " to poll sets");
 	}
-	Logger::info("Add server sockets to poll sets");
 }
 
 void Webserver::createNewClient(int fd)
@@ -167,7 +166,7 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	ClientHandler client(clientFd, *this->serverInfo);
+	ClientHandler client(clientFd, this->serverInfo);
 	this->clientList.push_back(client);
 	Logger::info("New client " + std::to_string(clientFd) + " created and added to poll sets");
 }
