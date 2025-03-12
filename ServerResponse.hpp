@@ -17,28 +17,39 @@
 #include "ClientRequest.hpp"
 #include "InfoServer.hpp"
 
+#define HTML 0
+#define IMAGE 1
+
 class ServerResponse {
 	public:
 		ServerResponse(ClientRequest, InfoServer);
 		ServerResponse	&operator=(ServerResponse const &other);
+
+		std::map<int, std::string> getStatusCode() const;
+
 		std::string 	responseGetMethod();
-		std::string		responsePostMethod();
+		std::string		getFileContent(std::string, std::string);
+		int				getContentType(std::string);
+		std::string		extractHtml(std::ifstream&);
+		std::string		extractImage(std::ifstream&);
+
 		std::string		responseDeleteMethod();
+
+		std::string		responsePostMethod();
 		std::string		handleFilesUploads();
-		std::string		getFileContent(std::string path);
-		std::string		getContentType(std::string str);
 		std::string		getFileType(std::map<std::string, std::string> headers);
 		std::string		getFileName(std::map<std::string, std::string> headers);
 		int				checkNameFile(std::string str, std::string path);
-		std::string		GenerateHttpResponse(std::string length);
-		std::string		GenerateStatusCode(int code);
+
+		std::string		generateHttpResponse(std::string length);
+		std::string		generateStatusCode(int code);
+
 		void			createMapStatusCode();
 		std::string		pageNotFound(void);
 
 	private:
 		ClientRequest				request;
 		InfoServer					info;
-		int							statusCode;
 		std::map<int, std::string>	mapStatusCode;
 };
 

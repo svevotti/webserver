@@ -63,6 +63,7 @@ int ClientHandler::receiveRequest(void)
         ClientRequest incomingRequest(full_buffer, totBytes); //pointer or not?
 		this->request = incomingRequest;
 		Logger::info("Parsed completed");
+		Logger::warn(full_buffer);
 		if (isCgi(this->request.getRequestLine()["Request-URI"]) == true)
 			return CGI;
 		else
@@ -76,7 +77,8 @@ int ClientHandler::receiveRequest(void)
 
 int ClientHandler::sendResponse()
 {
-	int bytes = send(this->fd, this->response.c_str(), strlen(this->response.c_str()), 0);
+	int bytes = send(this->fd, this->response.c_str(), 43168, MSG_DONTWAIT);
+	Logger::debug("bytes sent " + std::to_string(bytes));
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	this->response.clear();
@@ -100,7 +102,7 @@ int ClientHandler::isCgi(std::string str)
 {
 	if (str.find(".py") != std::string::npos)
 		return true;
-	if (searchPage(this->info.getServerDocumentRoot() + str) == true)
+	if (searchPage(this->info.getServerRootPath() + str) == true)
 		return false;
 	return true;
 }
