@@ -17,11 +17,10 @@ ServerResponse::ServerResponse(ClientRequest request, InfoServer info)
 	createMapStatusCode();
 	this->request = ClientRequest(request);
 	this->info = InfoServer(info);
-	this->statusCode = 200;
 }
 
 //setters and getters
-//TODO: Simona please add getter for status code
+
 //main functions
 std::string ServerResponse::responseGetMethod()
 {
@@ -54,15 +53,15 @@ std::string ServerResponse::responseGetMethod()
 		pathToTarget += "/index.html";
 	}
 	//check if file exists
-	htmlFile = getFileContent(pathToTarget);
+	htmlFile = getFileContent("", pathToTarget);
 	if (htmlFile.empty())
 		return (response);
 	bodyHtmlLen = htmlFile.length();
 	intermediatestream << bodyHtmlLen;
 	strbodyHtmlLen = intermediatestream.str();
 
-	statusCodeLine = GenerateStatusCode(this->statusCode);
-	httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
+	statusCodeLine = generateStatusCode(200);
+	httpHeaders = generateHttpResponse(strbodyHtmlLen);
 	response.clear();
 	//TODO: check why having problems with binary
 	response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
@@ -70,7 +69,7 @@ std::string ServerResponse::responseGetMethod()
 	return (response);
 }
 
-std::string ServerResponse::GenerateStatusCode(int code)
+std::string ServerResponse::generateStatusCode(int code)
 {
 	std::map<int, std::string>::iterator it = this->mapStatusCode.find(code);
 	if (it != this->mapStatusCode.end())
@@ -188,13 +187,14 @@ std::string ServerResponse::pageNotFound(void)
     return (str);
 }
 
-std::string ServerResponse::getFileContent(std::string path)
+std::string ServerResponse::getFileContent(std::string type, std::string path)
 {
 	std::ifstream file;
 	std::string line;
 	std::string htmlFile;
 	std::string temp;
 
+	(void)type;
 	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
 	if (!file)
 	{
@@ -213,7 +213,7 @@ std::string ServerResponse::getFileContent(std::string path)
 }
 
 //TODO: review this function: add couple more headers maybe
-std::string ServerResponse::GenerateHttpResponse(std::string length)
+std::string ServerResponse::generateHttpResponse(std::string length)
 {
 	std::string httpHeaders;
 	std::string contentType;

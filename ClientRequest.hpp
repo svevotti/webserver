@@ -38,7 +38,7 @@ class ClientRequest {
 	private:
 		std::map<std::string, std::string>	requestLine;
 		std::map<std::string, std::string>	query;
-		std::map<std::string, std::string>	headers;
+		std::map<std::string, std::string>	headers; 
 		std::vector<struct section>			sectionsVec;
 		int									typeBody;
 };

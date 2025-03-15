@@ -60,10 +60,10 @@ int ClientHandler::receiveRequest(void)
 	}
 	else
 	{
-        ClientRequest incomingRequest(full_buffer, totBytes); //pointer or not?
+        ClientRequest incomingRequest(full_buffer, totBytes);
 		this->request = incomingRequest;
 		Logger::info("Parsed completed");
-		Logger::warn(full_buffer);
+		//TODO:check for malformed requests here
 		if (isCgi(this->request.getRequestLine()["Request-URI"]) == true)
 			return CGI;
 		else
@@ -109,6 +109,7 @@ int ClientHandler::isCgi(std::string str)
 
 std::string ClientHandler::prepareResponse(ClientRequest request)
 {
+
 	std::string response;
 
 	std::map<std::string, std::string> httpRequestLine;
