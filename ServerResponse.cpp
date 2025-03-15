@@ -41,7 +41,7 @@ std::string ServerResponse::responseGetMethod()
 	response = pageNotFound();
 	httpRequestLine = request.getRequestLine();
 		//create path to the index.html
-	documentRootPath = info.getServerDocumentRoot();
+	documentRootPath = info.getServerRootPath();
 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
