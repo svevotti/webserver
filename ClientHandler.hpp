@@ -20,6 +20,7 @@
 #include "ClientRequest.hpp"
 #include "InfoServer.hpp"
 #include "ServerResponse.hpp"
+#include "Utils.hpp"
 
 #define BUFFER 1024
 #define DISCONNECTED 0

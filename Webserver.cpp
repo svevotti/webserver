@@ -50,7 +50,7 @@ void Webserver::dispatchEvents()
 
     for (it = poll_sets.begin(); it != this->poll_sets.end();) 
     {
-		Logger::debug("fd " + std::to_string(it->fd));
+		Logger::debug("fd " + Utils::toString(it->fd));
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
@@ -100,7 +100,7 @@ int	Webserver::processClient(std::vector<struct pollfd>::iterator it)
 		Logger::error("Client not found - bad news - maybe review");
 	if (result == DISCONNECTED)
 	{
-		Logger::info("Client " + std::to_string(it->fd) + " disconnected");
+		Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 		close(it->fd);
 		i = retrieveClientIndex(it->fd);
 		this->clientList.erase(this->clientList.begin() + i);
@@ -145,7 +145,7 @@ void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 		serverPoll[i].fd = fds[i];
 		serverPoll[i].events = POLLIN;
 		this->poll_sets.push_back(serverPoll[i]);
-		Logger::info("Add server socket " + std::to_string(this->serverFds[i]) + " to poll sets");
+		Logger::info("Add server socket " + Utils::toString(this->serverFds[i]) + " to poll sets");
 	}
 }
 
@@ -168,7 +168,7 @@ void Webserver::createNewClient(int fd)
 	this->poll_sets.push_back(clientPoll);
 	ClientHandler client(clientFd, this->serverInfo);
 	this->clientList.push_back(client);
-	Logger::info("New client " + std::to_string(clientFd) + " created and added to poll sets");
+	Logger::info("New client " + Utils::toString(clientFd) + " created and added to poll sets");
 }
 
 int Webserver::retrieveClientIndex(int fd)
