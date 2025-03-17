@@ -172,10 +172,13 @@ std::string Webserver::prepareResponse(HttpRequest request)
 		{
 			retrievePage(request, &data);
 		}
-		// else if (httpRequestLine["Method"] == "POST")
-		// {
-		// 	uploadFile(request, &data);
-		// }
+		else if (httpRequestLine["Method"] == "POST")
+		{
+			HttpResponse test;
+			response = test.handleFilesUploads(request, this->serverInfo.getServerDocumentRoot());
+			return response;
+			// uploadFile(request, &data);
+		}
 		// else if (httpRequestLine["Method"] == "DELETE")
 		// {
 		// 	deleteFile(request, &data);

@@ -103,64 +103,7 @@
 // 	return response;
 // }
 
-// std::string HttpResponse::handleFilesUploads()
-// {
-// 	std::map<std::string, std::string> httpRequestLine;
-// 	std::string response;
-// 	std::map<std::string, std::string> headersBody;
-// 	std::string binaryBody;
-// 	std::vector<struct section> sectionBodies;
 
-// 	httpRequestLine = request.getHttpRequestLine();
-// 	sectionBodies = request.getHttpSections();
-// 	headersBody = sectionBodies[0].myMap;
-// 	binaryBody = sectionBodies[0].body;
-// 	if (sectionBodies.size() > 1)
-// 	{
-// 		response = "HTTP/1.1 400 Bad Request\r\n"
-// 								"Content-Type: text/plain\r\n"
-// 								"Content-Length: 0\r\n"
-// 								"Connection: close\r\n"
-// 								"\r\n";
-// 		return response;
-// 	}
-
-// 	std::string requestTarget = httpRequestLine["Request-URI"];
-// 	requestTarget.erase(requestTarget.begin());
-// 	std::string pathFile = info.getServerRootPath() + requestTarget; //it only works if given this path by the client?
-// 	std::string fileName = getFileName(headersBody);
-// 	std::string fileType = getFileType(headersBody);
-// 	if (checkNameFile(fileName, pathFile) != 0)
-// 	{
-// 		std::cout << "File with name already existing, please change it\n";
-// 		response = "HTTP/1.1 400 Bad Request\r\n"
-// 								"Content-Type: text/plain\r\n"
-// 								"Content-Length: 0\r\n"
-// 								"Connection: close\r\n"
-// 								"\r\n";
-// 		return (response);
-// 	}
-// 	pathFile += "/" + fileName;
-// 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-// 	if (file < 0)
-// 	{
-// 		perror("Error opening file");
-// 		return (response);
-// 	}
-// 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
-// 	if (written < 0) {
-// 		perror("Error writing to file");
-// 		close(file);
-// 		exit(1);
-// 	}
-// 	close(file);
-// 	response =
-// 				"HTTP/1.1 200 OK\r\n"
-// 				"Content-Length: 0\r\n"
-// 				"Connection: keep-alive\r\n"
-// 				"\r\n"; //very imporant
-// 	return (response);
-// }
 
 // //utilis
 // std::string HttpResponse::pageNotFound(void)
@@ -180,29 +123,29 @@
 //     return (str);
 // }
 
-// std::string HttpResponse::getFileContent(std::string path)
-// {
-// 	std::ifstream file;
-// 	std::string line;
-// 	std::string htmlFile;
-// 	std::string temp;
+std::string getFileContent(std::string path)
+{
+	std::ifstream file;
+	std::string line;
+	std::string htmlFile;
+	std::string temp;
 
-// 	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-// 	if (!file)
-// 	{
-// 		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-// 		return (htmlFile);
-// 	}
-// 	while (std::getline(file, line))
-// 	{
-// 		if (line.size() == 0)
-// 			continue;
-// 		else
-// 			htmlFile = htmlFile.append(line + "\r\n");
-// 	}
-// 	file.close();
-// 	return (htmlFile);
-// }
+	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
+	if (!file)
+	{
+		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
+		return (htmlFile);
+	}
+	while (std::getline(file, line))
+	{
+		if (line.size() == 0)
+			continue;
+		else
+			htmlFile = htmlFile.append(line + "\r\n");
+	}
+	file.close();
+	return (htmlFile);
+}
 
 // //TODO: review this function: add couple more headers maybe
 // std::string HttpResponse::generateHttpResponse(std::string length)
@@ -218,66 +161,124 @@
 // 	return httpHeaders;
 // }
 
-// std::string HttpResponse::getFileType(std::map<std::string, std::string> headers)
-// {
-// 	std::map<std::string, std::string>::iterator it;
-// 	std::string type;
+std::string getFileType(std::map<std::string, std::string> headers)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::string type;
 
-// 	for (it = headers.begin(); it != headers.end(); it++)
-// 	{
-// 		if (it->first == "Content-Type")
-// 			type = it->second;
-// 	}
-// 	return type;
-// }
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "Content-Type")
+			type = it->second;
+	}
+	return type;
+}
 
-// std::string HttpResponse::getFileName(std::map<std::string, std::string> headers)
-// {
-// 	std::map<std::string, std::string>::iterator it;
-// 	std::string name;
+std::string getFileName(std::map<std::string, std::string> headers)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::string name;
 
-// 	for (it = headers.begin(); it != headers.end(); it++)
-// 	{
-// 		if (it->first == "Content-Disposition")
-// 		{
-// 			if (it->second.find("filename") != std::string::npos)
-// 			{
-// 				std::string fileNameField = it->second.substr(it->second.find("filename"));
-// 				if (fileNameField.find('"') != std::string::npos)
-// 				{
-// 					int indexFirstQuote = fileNameField.find('"');
-// 					int indexSecondQuote = 0;
-// 					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-// 					{
-// 						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-// 					}
-// 					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return name;
-// }
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "Content-Disposition")
+		{
+			if (it->second.find("filename") != std::string::npos)
+			{
+				std::string fileNameField = it->second.substr(it->second.find("filename"));
+				if (fileNameField.find('"') != std::string::npos)
+				{
+					int indexFirstQuote = fileNameField.find('"');
+					int indexSecondQuote = 0;
+					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
+					{
+						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
+					}
+					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
+				}
+			}
+		}
+	}
+	return name;
+}
 
-// int HttpResponse::checkNameFile(std::string str, std::string path)
-// {
-// 	DIR *folder;
-// 	struct dirent *data;
+int checkNameFile(std::string str, std::string path)
+{
+	DIR *folder;
+	struct dirent *data;
 
-// 	folder = opendir(path.c_str());
-// 	std::string convStr;
-// 	if (folder == NULL)
-// 		printf("error opening folder\n");
-// 	while ((data = readdir(folder)))
-// 	{
-// 		convStr = data->d_name;
-// 		if (convStr == str)
-// 			return (1);
-// 	}
-// 	closedir(folder);
-// 	return (0);
-// }
+	folder = opendir(path.c_str());
+	std::string convStr;
+	if (folder == NULL)
+		printf("error opening folder\n");
+	while ((data = readdir(folder)))
+	{
+		convStr = data->d_name;
+		if (convStr == str)
+			return (1);
+	}
+	closedir(folder);
+	return (0);
+}
 
+std::string HttpResponse::handleFilesUploads(HttpRequest request, std::string path)
+{
+	std::map<std::string, std::string> httpRequestLine;
+	std::string response;
+	std::map<std::string, std::string> headersBody;
+	std::string binaryBody;
+	std::vector<struct section> sectionBodies;
+
+	httpRequestLine = request.getHttpRequestLine();
+	sectionBodies = request.getHttpSections();
+	headersBody = sectionBodies[0].myMap;
+	binaryBody = sectionBodies[0].body;
+	if (sectionBodies.size() > 1)
+	{
+		response = "HTTP/1.1 400 Bad Request\r\n"
+								"Content-Type: text/plain\r\n"
+								"Content-Length: 0\r\n"
+								"Connection: close\r\n"
+								"\r\n";
+		return response;
+	}
+
+	std::string requestTarget = httpRequestLine["Request-URI"];
+	requestTarget.erase(requestTarget.begin());
+	std::string pathFile = path + requestTarget; //it only works if given this path by the client?
+	std::string fileName = getFileName(headersBody);
+	std::string fileType = getFileType(headersBody);
+	if (checkNameFile(fileName, pathFile) != 0)
+	{
+		std::cout << "File with name already existing, please change it\n";
+		response = "HTTP/1.1 400 Bad Request\r\n"
+								"Content-Type: text/plain\r\n"
+								"Content-Length: 0\r\n"
+								"Connection: close\r\n"
+								"\r\n";
+		return (response);
+	}
+	pathFile += "/" + fileName;
+	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (file < 0)
+	{
+		perror("Error opening file");
+		return (response);
+	}
+	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
+	if (written < 0) {
+		perror("Error writing to file");
+		close(file);
+		exit(1);
+	}
+	close(file);
+	response =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: keep-alive\r\n"
+				"\r\n"; //very imporant
+	return (response);
+}
 // Constructor and destructor
 HttpResponse::HttpResponse(int code, std::string str)
 {

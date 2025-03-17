@@ -2,6 +2,7 @@
 #define SERVER_RESPONSE_H
 
 #include "Utils.hpp"
+#include "HttpRequest.hpp"
 
 #include <sys/socket.h>
 #include <iostream>
@@ -18,12 +19,14 @@
 
 class HttpResponse {
 	public:
+		HttpResponse() {};
 		HttpResponse(int, std::string);
 		std::string composeRespone();
 		std::string generateStatusLine(int);
 		std::string generateHttpHeaders();
 		std::string verifyType(std::string);
 		std::string findTimeStamp();
+		std::string handleFilesUploads(HttpRequest request, std::string);
 
 	private:
 		int			statusCode;
