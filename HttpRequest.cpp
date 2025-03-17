@@ -249,6 +249,29 @@ std::string HttpRequest::findMethod(std::string inputStr)
 	return ("ERROR");
 }
 
+std::string HttpRequest::decodeQuery(std::string str)
+{
+	std::string newStr;
+	int start = 0;
+	int pos = 0;
+	std::string encode = "%20";
+	std::string replace = " ";
+
+	while (1)
+	{
+		pos = str.find(encode, start);
+		if (pos == std::string::npos)
+		{
+			newStr += str.substr(start);
+			break;
+		}
+		newStr += str.substr(start, pos - start);
+		newStr += replace;
+		start = pos + encode.length();
+	}
+	return newStr;
+}
+
 void HttpRequest::exractQuery(std::string str)
 {
 	std::string url;
@@ -259,7 +282,7 @@ void HttpRequest::exractQuery(std::string str)
 
 	url = str.substr(0, str.find("?"));
 	requestLine["Url"] = url; //url : only url
-	queryString = str.substr(str.find("?") + 1, str.length() - str.find("?"));
+	queryString = decodeQuery(str.substr(str.find("?") + 1, str.length() - str.find("?")));
 	requestLine["Query-string"] = queryString; //query-string only query
 	while (i < queryString.length())
 	{

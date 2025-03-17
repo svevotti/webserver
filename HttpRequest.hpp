@@ -46,6 +46,7 @@ class HttpRequest {
 		std::string							findMethod(std::string);
 		char								*getBoundary(const char *);
 		std::string							unchunkRequest(std::string chunked);
+		std::string							decodeQuery(std::string str);
 
 	private:
 		std::string							str;
