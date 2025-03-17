@@ -28,12 +28,17 @@ typedef struct section {
 
 class HttpRequest {
 	public:
+		HttpRequest() {};
+		HttpRequest(HttpRequest const &other);
 		std::map<std::string, std::string>	getHttpHeaders() const;
 		std::map<std::string, std::string>	getHttpRequestLine() const;
 		std::map<std::string, std::string>	getHttpUriQueryMap() const;
 		std::string							getHttpBodyText() const;
 		int									getHttpTypeBody(void) const;
 		std::vector<struct section>			getHttpSections() const;
+		std::map<std::string, std::string>	getSectionHeaders(int) const;
+		std::string							getSectionBody(int) const;
+
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
 		void								parseRequestLine(std::string);

@@ -26,7 +26,7 @@
 
 typedef struct client {
     int             fd;
-    ClientRequest   request;
+    HttpRequest   request;
     std::string     response;
 }              client;
 
@@ -42,11 +42,11 @@ class Webserver {
         int                                     readData(int, std::string&, int&);
         int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
         void                                    handleWritingEvents(int, std::vector<struct pollfd>::iterator);
-        ClientRequest                           ParsingRequest(std::string, int);
+        HttpRequest                             ParsingRequest(std::string, int);
         void                                    closeSockets();
         int                                     isCgi(std::string);
         int                                     searchPage(std::string path);
-        std::string                             prepareResponse(ClientRequest);
+        std::string                             prepareResponse(HttpRequest);
         std::vector<struct client>::iterator    retrieveClient(int fd);
 
     private:

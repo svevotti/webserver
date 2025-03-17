@@ -53,7 +53,7 @@ void Webserver::dispatchEvents()
     for (it = poll_sets.begin(); it != ite;) 
     {
 		result = 0;
-		Logger::debug("call made by " + Utils::toString(it->fd));
+		Logger::debug("Client: " + Utils::toString(it->fd));
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
@@ -128,7 +128,7 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 			Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
 			return 0;
 		}
-		if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
+		if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
 			printf("send to CGI\n");
 		else
 		{
@@ -150,19 +150,19 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 	return 0;
 }
 
-ClientRequest Webserver::ParsingRequest(std::string str, int size)
+HttpRequest Webserver::ParsingRequest(std::string str, int size)
 {
-	ClientRequest request;
-	request.parseRequestHttp(str, size);
+	HttpRequest request;
+	request.HttpParse(str, size);
 	return request;
 }
 
-std::string Webserver::prepareResponse(ClientRequest request)
+std::string Webserver::prepareResponse(HttpRequest request)
 {
 	std::string response;
 
 	std::map<std::string, std::string> httpRequestLine;
-	httpRequestLine = request.getRequestLine();
+	httpRequestLine = request.getHttpRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
 		ServerResponse serverResponse(request, *this->_serverInfo);

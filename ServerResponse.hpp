@@ -14,12 +14,12 @@
 #include <map>
 #include <cstdio>
 
-#include "ClientRequest.hpp"
+#include "HttpRequest.hpp"
 #include "InfoServer.hpp"
 
 class ServerResponse {
 	public:
-		ServerResponse(ClientRequest, InfoServer);
+		ServerResponse(HttpRequest, InfoServer);
 		ServerResponse	&operator=(ServerResponse const &other);
 		std::string 	responseGetMethod();
 		std::string		responsePostMethod();
@@ -36,7 +36,7 @@ class ServerResponse {
 		std::string		pageNotFound(void);
 
 	private:
-		ClientRequest				request;
+		HttpRequest				request;
 		InfoServer					info;
 		int							statusCode;
 		std::map<int, std::string>	mapStatusCode;
