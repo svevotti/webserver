@@ -17,10 +17,10 @@
 #include "HttpRequest.hpp"
 #include "InfoServer.hpp"
 
-class ServerResponse {
+class HttpResponse {
 	public:
-		ServerResponse(HttpRequest, InfoServer);
-		ServerResponse	&operator=(ServerResponse const &other);
+		HttpResponse(HttpRequest, InfoServer);
+		HttpResponse	&operator=(HttpResponse const &other);
 		std::string 	responseGetMethod();
 		std::string		responsePostMethod();
 		std::string		responseDeleteMethod();

@@ -1,7 +1,7 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
-#include "ServerResponse.hpp"
+#include "HttpResponse.hpp"
 #include "InfoServer.hpp"
 #include "ServerSockets.hpp"
 #include "StringManipulations.hpp"

@@ -10,7 +10,7 @@
 #include <cstring>
 #include <vector>
 
-#include "ServerResponse.hpp"
+#include "HttpResponse.hpp"
 #include "InfoServer.hpp"
 #include "StringManipulations.hpp"
 #include "HttpRequest.hpp"

@@ -1,4 +1,4 @@
-#include "ServerResponse.hpp"
+#include "HttpResponse.hpp"
 #include <fstream>
 #include <dirent.h>
 #include <sstream>
@@ -12,7 +12,7 @@
 #include <cstdio>
 
 //constructor and destructor
-ServerResponse::ServerResponse(HttpRequest request, InfoServer info)
+HttpResponse::HttpResponse(HttpRequest request, InfoServer info)
 {
 	createMapStatusCode();
 	this->request = HttpRequest(request);
@@ -23,7 +23,7 @@ ServerResponse::ServerResponse(HttpRequest request, InfoServer info)
 //setters and getters
 //TODO: Simona please add getter for status code
 //main functions
-std::string ServerResponse::responseGetMethod()
+std::string HttpResponse::responseGetMethod()
 {
 	std::string response;
 	std::string htmlFile;
@@ -70,14 +70,14 @@ std::string ServerResponse::responseGetMethod()
 	return (response);
 }
 
-std::string ServerResponse::GenerateStatusCode(int code)
+std::string HttpResponse::GenerateStatusCode(int code)
 {
 	std::map<int, std::string>::iterator it = this->mapStatusCode.find(code);
 	if (it != this->mapStatusCode.end())
 		return it->second;
 	return "";
 }
-std::string ServerResponse::responsePostMethod()
+std::string HttpResponse::responsePostMethod()
 {
 	std::string response;
 	if (request.getHttpTypeBody() == MULTIPART)
@@ -94,7 +94,7 @@ std::string ServerResponse::responsePostMethod()
 	return (response);
 }
 
-std::string ServerResponse::responseDeleteMethod()
+std::string HttpResponse::responseDeleteMethod()
 {
 	std::string response = pageNotFound();
 	//TODO: check path to resource, if it exits delete, if not send negative response
@@ -111,7 +111,7 @@ std::string ServerResponse::responseDeleteMethod()
 	return response;
 }
 
-std::string ServerResponse::handleFilesUploads()
+std::string HttpResponse::handleFilesUploads()
 {
 	std::map<std::string, std::string> httpRequestLine;
 	std::string response;
@@ -171,7 +171,7 @@ std::string ServerResponse::handleFilesUploads()
 }
 
 //utilis
-std::string ServerResponse::pageNotFound(void)
+std::string HttpResponse::pageNotFound(void)
 {
     std::string str =   "HTTP/1.1 404 Not Found\r\n"
 					    "Content-Type: text/html\r\n"
@@ -188,7 +188,7 @@ std::string ServerResponse::pageNotFound(void)
     return (str);
 }
 
-std::string ServerResponse::getFileContent(std::string path)
+std::string HttpResponse::getFileContent(std::string path)
 {
 	std::ifstream file;
 	std::string line;
@@ -213,7 +213,7 @@ std::string ServerResponse::getFileContent(std::string path)
 }
 
 //TODO: review this function: add couple more headers maybe
-std::string ServerResponse::GenerateHttpResponse(std::string length)
+std::string HttpResponse::GenerateHttpResponse(std::string length)
 {
 	std::string httpHeaders;
 	std::string contentType;
@@ -226,7 +226,7 @@ std::string ServerResponse::GenerateHttpResponse(std::string length)
 	return httpHeaders;
 }
 
-std::string ServerResponse::getFileType(std::map<std::string, std::string> headers)
+std::string HttpResponse::getFileType(std::map<std::string, std::string> headers)
 {
 	std::map<std::string, std::string>::iterator it;
 	std::string type;
@@ -239,7 +239,7 @@ std::string ServerResponse::getFileType(std::map<std::string, std::string> heade
 	return type;
 }
 
-std::string ServerResponse::getFileName(std::map<std::string, std::string> headers)
+std::string HttpResponse::getFileName(std::map<std::string, std::string> headers)
 {
 	std::map<std::string, std::string>::iterator it;
 	std::string name;
@@ -267,7 +267,7 @@ std::string ServerResponse::getFileName(std::map<std::string, std::string> heade
 	return name;
 }
 
-int ServerResponse::checkNameFile(std::string str, std::string path)
+int HttpResponse::checkNameFile(std::string str, std::string path)
 {
 	DIR *folder;
 	struct dirent *data;
@@ -286,7 +286,7 @@ int ServerResponse::checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-void ServerResponse::createMapStatusCode(void)
+void HttpResponse::createMapStatusCode(void)
 {
 	//2xx is for success
 	this->mapStatusCode.insert(std::pair<int, std::string>(200, "200 OK"));

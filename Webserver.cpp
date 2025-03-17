@@ -165,13 +165,13 @@ std::string Webserver::prepareResponse(HttpRequest request)
 	httpRequestLine = request.getHttpRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
-		ServerResponse serverResponse(request, *this->_serverInfo);
+		HttpResponse HttpResponse(request, *this->_serverInfo);
 		if (httpRequestLine["Method"] == "GET")
-			response = serverResponse.responseGetMethod();
+			response = HttpResponse.responseGetMethod();
 		else if (httpRequestLine["Method"] == "POST")
-			response = serverResponse.responsePostMethod();
+			response = HttpResponse.responsePostMethod();
 		else if (httpRequestLine["Method"] == "DELETE")
-			response = serverResponse.responseDeleteMethod();
+			response = HttpResponse.responseDeleteMethod();
 		else
 			Logger::error("Method not found, Sveva, use correct status code line");
 	}
@@ -228,7 +228,6 @@ void Webserver::createNewClient(int fd)
 	Logger::info("New client " + Utils::toString(clientFd) + " created and added to poll sets");
 }
 
-//TODO: add helper function to retrieve fd from vector
 std::vector<struct client>::iterator Webserver::retrieveClient(int fd)
 {
 	std::vector<struct client>::iterator iterClient;
