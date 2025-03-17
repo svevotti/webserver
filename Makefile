@@ -1,6 +1,6 @@
 GNU = c++
 FLAGS = -Wall -Wextra #-Werror
-C_98 = #-std=c++98
+C_98 = -std=c++98
 OBJ_DIR = obj
 CPP_FILES = ServerSockets.cpp main.cpp ClientRequest.cpp ServerResponse.cpp InfoServer.cpp \
 			StringManipulations.cpp Webserver.cpp HttpRequest.cpp Logger.cpp
