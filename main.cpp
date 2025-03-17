@@ -14,6 +14,7 @@ int main(void)
 	InfoServer		info;
 	Webserver 	server(info);
 
-	server.startServer();
+	if (server.startServer() == -1)
+		Logger::error("Could not start the server");
 	return (0);
 }

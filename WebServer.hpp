@@ -33,7 +33,7 @@ class Webserver {
     public:
         Webserver(InfoServer&);
         ~Webserver();
-        void	                                startServer();
+        int	                                    startServer();
         void                                    addServerSocketsToPoll(std::vector<int>);
         int                                     fdIsServerSocket(int);
         void                                    dispatchEvents();
@@ -50,7 +50,7 @@ class Webserver {
 
     private:
 
-        InfoServer                  *_serverInfo;
+        InfoServer                  serverInfo;
         std::vector<struct pollfd>  poll_sets;
         std::vector<int>            serverFds;
         std::vector<struct client>  clientsQueue;
