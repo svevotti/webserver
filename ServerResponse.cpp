@@ -12,10 +12,10 @@
 #include <cstdio>
 
 //constructor and destructor
-ServerResponse::ServerResponse(ClientRequest request, InfoServer info)
+ServerResponse::ServerResponse(HttpRequest request, InfoServer info)
 {
 	createMapStatusCode();
-	this->request = ClientRequest(request);
+	this->request = HttpRequest(request);
 	this->info = InfoServer(info);
 	this->statusCode = 200;
 }
@@ -40,7 +40,7 @@ std::string ServerResponse::responseGetMethod()
 	//TODO: i think the 404 page can be hardcode it
 	//TODO: need to check curl -O why is not downloading
 	response = pageNotFound();
-	httpRequestLine = request.getRequestLine();
+	httpRequestLine = request.getHttpRequestLine();
 		//create path to the index.html
 	documentRootPath = info.getServerDocumentRoot();
 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
@@ -65,7 +65,7 @@ std::string ServerResponse::responseGetMethod()
 	httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
 	response.clear();
 	//TODO: check why having problems with binary
-	response += request.getRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
+	response += request.getHttpRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
 	Logger::debug("response: " + response);
 	return (response);
 }
@@ -80,9 +80,9 @@ std::string ServerResponse::GenerateStatusCode(int code)
 std::string ServerResponse::responsePostMethod()
 {
 	std::string response;
-	if (request.getTypeBody() == MULTIPART)
+	if (request.getHttpTypeBody() == MULTIPART)
 		response = handleFilesUploads();
-	else if (request.getTypeBody() == TEXT)
+	else if (request.getHttpTypeBody() == TEXT)
 	{
 		response =
 				"HTTP/1.1 200 OK\r\n"
@@ -98,7 +98,7 @@ std::string ServerResponse::responseDeleteMethod()
 {
 	std::string response = pageNotFound();
 	//TODO: check path to resource, if it exits delete, if not send negative response
-	std::string pathToResource = info.getServerRootPath() + request.getRequestLine()["Request-URI"];
+	std::string pathToResource = info.getServerRootPath() + request.getHttpRequestLine()["Request-URI"];
 	std::ifstream file(pathToResource.c_str());
 	if (!(file.good()))
 		return response;
@@ -119,8 +119,8 @@ std::string ServerResponse::handleFilesUploads()
 	std::string binaryBody;
 	std::vector<struct section> sectionBodies;
 
-	httpRequestLine = request.getRequestLine();
-	sectionBodies = request.getSections();
+	httpRequestLine = request.getHttpRequestLine();
+	sectionBodies = request.getHttpSections();
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)

@@ -8,7 +8,14 @@
 #include <cstdio>
 
 // Constructor and Destructor
-
+HttpRequest::HttpRequest(HttpRequest const &other)
+{
+	this->requestLine = other.requestLine;
+	this->query = other.query;
+	this->headers = other.headers;
+	this->sectionsVec = other.sectionsVec;
+	this->typeBody = other.typeBody;
+}
 // Setters and getters
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
 {
@@ -35,13 +42,22 @@ int HttpRequest::getHttpTypeBody(void) const
 	return typeBody;
 }
 
+std::map<std::string, std::string> HttpRequest::getSectionHeaders(int i) const
+{
+	return(this->sectionsVec[i].myMap);
+}
+
+std::string HttpRequest::getSectionBody(int i) const
+{
+	return(this->sectionsVec[i].body);
+}
+
 // Main functions
 void HttpRequest::HttpParse(std::string str, int size)
 {
     this->str = str;
     this->size = size;
     parseRequestHttp();
-	//TODO: check if http is correct?
 }
 
 void HttpRequest::parseRequestHttp(void)
