@@ -8,6 +8,7 @@
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
 #include "ClientHandler.hpp"
+#include "Utils.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>

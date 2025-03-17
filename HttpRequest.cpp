@@ -53,13 +53,46 @@ void HttpRequest::parseRequestHttp(void)
 
 	parseRequestLine(inputString);
 	getline(request, line);
-	parseHeaders(request);
+	parseHeaders(request); //NOTE: found out the headers' fileds are case insensitive, should lowercase
 	//TODO:add logic for transfer-encoding
     it = headers.find("Content-Length");
 	if (it != headers.end())
 		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
 	else
-		typeBody = EMPTY;	
+		typeBody = EMPTY;
+}
+
+std::string HttpRequest::unchunkRequest(std::string chunked) 
+{
+	std::string::size_type bodyStart = chunked.find("\r\n\r\n");
+	std::string newStr;
+    std::string line;
+    long chunk_size;
+	std::string unchunked;
+
+	if (bodyStart != std::string::npos)
+	{
+		bodyStart += 4;
+		newStr = chunked.substr(bodyStart, chunked.length() - bodyStart - 2);
+	}
+	std::istringstream iss(newStr);
+	while (std::getline(iss, line)) 
+    {
+        if (line == "\r")
+			continue;
+        char* end_ptr;
+        chunk_size = strtol(line.c_str(), &end_ptr, 16);
+		if (chunk_size == 0)
+			break;
+        if (*end_ptr != '\r' || chunk_size < 0)
+			Logger::error("Invalid chunk size");
+        std::vector<char> buffer(chunk_size);
+        iss.read(&buffer[0], chunk_size);
+        if (iss.gcount() != static_cast<std::streamsize>(chunk_size))
+			Logger::error("Failed to read chunk data");
+        unchunked.append(&buffer[0], chunk_size);
+    }
+    return unchunked;
 }
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
@@ -69,23 +102,35 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 
 	if (method == "POST")
 	{
-		if (contentType.find("boundary") != std::string::npos) //multi format data
+		std::map<std::string, std::string>::iterator it;
+		it = headers.find("Transfer-encoding");
+		if (it != headers.end())
 		{
-			this->typeBody = MULTIPART;
-			parseMultiPartBody(buffer, size);
+			this->typeBody = CHUNKED;
+			data.indexBinary = 0;
+			data.body = unchunkRequest(buffer);
+			sectionsVec.push_back(data);
 		}
 		else
 		{
-			struct section data;
-			typeBody = TEXT;
-			data.indexBinary = 0;
-			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
-			if (bodyStart != std::string::npos)
+			if (contentType.find("boundary") != std::string::npos) //multi format data
 			{
-				bodyStart += 4;
-				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
+				this->typeBody = MULTIPART;
+				parseMultiPartBody(buffer, size);
 			}
-			sectionsVec.push_back(data);	
+			else
+			{
+				struct section data;
+				typeBody = TEXT;
+				data.indexBinary = 0;
+				std::string::size_type bodyStart = buffer.find("\r\n\r\n");
+				if (bodyStart != std::string::npos)
+				{
+					bodyStart += 4;
+					data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
+				}
+				sectionsVec.push_back(data);	
+			}
 		}
 	}
 	else
@@ -175,7 +220,7 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	{
 		if (line.find_first_not_of("\r\n") == std::string::npos)
 			break ;
-		indexBinary += line.length() + 1; //ADD \n in the count
+		indexBinary += line.length() + 1;
 		if (line.find(b) != std::string::npos)
 			continue;
 		else
@@ -190,13 +235,6 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	data.indexBinary = indexBinary+2;
 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
 	sectionsVec.push_back(data);
-	// streamHeaders.clear();
-	// line.clear();
-	// key.clear();
-	// value.clear();
-	// data.myMap.clear();
-	// indexBinary = 0;
-	// data.body.clear();
 }
 
 // Utils

@@ -19,6 +19,7 @@
 #define EMPTY 0
 #define TEXT 1
 #define MULTIPART 2
+#define CHUNKED 3
 
 typedef struct section {
 	std::map<std::string, std::string>	myMap;
@@ -44,6 +45,7 @@ class HttpRequest {
 		void								extractSections(std::string, std::vector<int>, int, std::string);
 		std::string							findMethod(std::string);
 		char								*getBoundary(const char *);
+		std::string							unchunkRequest(std::string chunked);
 
 	private:
 		std::string							str;

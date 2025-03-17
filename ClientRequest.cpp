@@ -94,6 +94,10 @@ std::ostream& operator<<(std::ostream &output, ClientRequest const &obj)
         {
                 output << it->first << " : " << it->second << std::endl;
         }
+		output << "body: \n";
+		std::string body;
+		body = obj.getSectionBody(0);
+		output << body;
 		return output;
 
 }

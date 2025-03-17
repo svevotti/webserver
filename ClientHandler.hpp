@@ -20,6 +20,7 @@
 #include "ClientRequest.hpp"
 #include "InfoServer.hpp"
 #include "ServerResponse.hpp"
+#include "Utils.hpp"
 
 #define BUFFER 1024
 #define DISCONNECTED 0
@@ -29,25 +30,25 @@
 
 class ClientHandler {
 	public:
-                ClientHandler(int, InfoServer);
+        ClientHandler(int, InfoServer);
 
-                int     getFd() const;
-                ClientRequest getRequest() const;
-                std::string  getResponse() const;
+        int     getFd() const;
+        ClientRequest getRequest() const;
+        std::string  getResponse() const;
 
 
-                int     receiveRequest();
-                int     readData(int fd, std::string &str, int &bytes);
-                int     isCgi(std::string str);
-                int     searchPage(std::string path);
-                std::string prepareResponse(ClientRequest request);
-                int        sendResponse();
+        int     receiveRequest();
+        int     readData(int fd, std::string &str, int &bytes);
+        int     isCgi(std::string str);
+        int     searchPage(std::string path);
+        std::string prepareResponse(ClientRequest request);
+        int        sendResponse();
 
 	private:
-                ClientRequest request;
-                std::string response;
-                int         fd;
-                InfoServer info;
+        ClientRequest request;
+        std::string response;
+        int         fd;
+        InfoServer info;
 };
 
 std::ostream &operator<<(std::ostream &output, ClientHandler const &obj);

@@ -63,7 +63,6 @@ int ClientHandler::receiveRequest(void)
         ClientRequest incomingRequest(full_buffer, totBytes);
 		this->request = incomingRequest;
 		Logger::info("Parsed completed");
-		//TODO:check for malformed requests here
 		if (isCgi(this->request.getRequestLine()["Request-URI"]) == true)
 			return CGI;
 		else
@@ -78,11 +77,11 @@ int ClientHandler::receiveRequest(void)
 int ClientHandler::sendResponse()
 {
 	int bytes = send(this->fd, this->response.c_str(), 43168, MSG_DONTWAIT);
-	Logger::debug("bytes sent " + std::to_string(bytes));
+	Logger::debug("bytes sent " + Utils::toString(bytes));
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	this->response.clear();
-	Logger::info("Response sent to " + std::to_string(this->fd));
+	Logger::info("Response sent to " + Utils::toString(this->fd));
 	return bytes;
 }
 
