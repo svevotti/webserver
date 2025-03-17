@@ -2,10 +2,10 @@ GNU = c++
 FLAGS = -Wall -Wextra #-Werror
 C_98 = -std=c++98
 OBJ_DIR = obj
-CPP_FILES = ServerSockets.cpp main.cpp ServerResponse.cpp InfoServer.cpp \
+CPP_FILES = ServerSockets.cpp main.cpp HttpResponse.cpp InfoServer.cpp \
 			StringManipulations.cpp Webserver.cpp HttpRequest.cpp Logger.cpp
 CPP_OBJ = $(OBJ_DIR)/ServerSockets.o $(OBJ_DIR)/main.o \
-          $(OBJ_DIR)/ServerResponse.o $(OBJ_DIR)/InfoServer.o \
+          $(OBJ_DIR)/HttpResponse.o $(OBJ_DIR)/InfoServer.o \
           $(OBJ_DIR)/StringManipulations.o $(OBJ_DIR)/Logger.o \
 		  $(OBJ_DIR)/Webserver.o $(OBJ_DIR)/HttpRequest.o
 
