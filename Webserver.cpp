@@ -30,7 +30,7 @@ void	Webserver::startServer()
 
 	while (1)
 	{
-		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 20 * 1000);
+		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 2 * 1000);
 		if (returnPoll == -1)
 		{
 			Logger::error("Failed poll: " + std::string(strerror(errno)));
@@ -53,8 +53,7 @@ void Webserver::dispatchEvents()
     for (it = poll_sets.begin(); it != ite;) 
     {
 		result = 0;
-		Logger::debug("call made by " + std::to_string(it->fd));
-		Logger::debug("Length " + std::to_string(poll_sets.size()));
+		Logger::debug("call made by " + Utils::toString(it->fd));
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
@@ -64,7 +63,7 @@ void Webserver::dispatchEvents()
 				result = handleReadEvents(it->fd, it);
 				if (result == 1)
 				{
-					Logger::info("Client " + std::to_string(it->fd) + " disconnected");
+					Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 					close(it->fd);
 					this->clientsQueue.erase(retrieveClient(it->fd));
 					it = this->poll_sets.erase(it);
@@ -87,15 +86,15 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 	iterClient = retrieveClient(fd);
 	if (iterClient == endClient)
 	{
-		Logger::error("Failed to find client " + std::to_string(fd));
+		Logger::error("Failed to find client " + Utils::toString(fd));
 		return;
 	}
 	//TODO:does it behave as recv?
-	Logger::debug("bytes to send " + std::to_string(iterClient->response.size()));
+	Logger::debug("bytes to send " + Utils::toString(iterClient->response.size()));
 	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), 0);
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
-	Logger::info("these bytes were sent " + std::to_string(bytes));
+	Logger::info("these bytes were sent " + Utils::toString(bytes));
 	it->events = POLLIN;
 	iterClient->response.clear();
 	//clientsQueue.erase(iterClient);
@@ -110,7 +109,7 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 	std::string full_buffer;
 	int totBytes = 0;
 	bytesRecv = readData(fd, full_buffer, totBytes);
-	Logger::debug("Bytes " + std::to_string(totBytes));
+	Logger::debug("Bytes " + Utils::toString(totBytes));
 	if (bytesRecv == 0)
 		return 1;
 	else if (bytesRecv == -1 && totBytes == 0)
@@ -126,7 +125,7 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 			clientIt->request = ParsingRequest(full_buffer, totBytes);
 		else
 		{
-			Logger::debug("Client " + std::to_string(clientIt->fd) + " not found");
+			Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
 			return 0;
 		}
 		if (isCgi(clientIt->request.getRequestLine()["Request-URI"]) == true)
@@ -226,7 +225,7 @@ void Webserver::createNewClient(int fd)
 	struct client newClient;
 	newClient.fd = clientFd;
 	this->clientsQueue.push_back(newClient);
-	Logger::info("New client " + std::to_string(clientFd) + " created and added to poll sets");
+	Logger::info("New client " + Utils::toString(clientFd) + " created and added to poll sets");
 }
 
 //TODO: add helper function to retrieve fd from vector

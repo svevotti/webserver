@@ -7,6 +7,7 @@
 #include "ServerSockets.hpp"
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
+#include "Utils.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
