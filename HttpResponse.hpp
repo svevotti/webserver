@@ -1,6 +1,8 @@
 #ifndef SERVER_RESPONSE_H
 #define SERVER_RESPONSE_H
 
+#include "Utils.hpp"
+
 #include <sys/socket.h>
 #include <iostream>
 #include <sys/types.h> 
@@ -14,32 +16,20 @@
 #include <map>
 #include <cstdio>
 
-#include "HttpRequest.hpp"
-#include "InfoServer.hpp"
-
 class HttpResponse {
 	public:
-		HttpResponse(HttpRequest, InfoServer);
-		HttpResponse	&operator=(HttpResponse const &other);
-		std::string 	responseGetMethod();
-		std::string		responsePostMethod();
-		std::string		responseDeleteMethod();
-		std::string		handleFilesUploads();
-		std::string		getFileContent(std::string path);
-		std::string		getContentType(std::string str);
-		std::string		getFileType(std::map<std::string, std::string> headers);
-		std::string		getFileName(std::map<std::string, std::string> headers);
-		int				checkNameFile(std::string str, std::string path);
-		std::string		GenerateHttpResponse(std::string length);
-		std::string		GenerateStatusCode(int code);
-		void			createMapStatusCode();
-		std::string		pageNotFound(void);
+		HttpResponse(int, std::string);
+		std::string composeRespone();
+		std::string generateStatusLine(int);
+		std::string generateHttpHeaders();
+		std::string verifyType(std::string);
+		std::string findTimeStamp();
 
 	private:
-		HttpRequest				request;
-		InfoServer					info;
-		int							statusCode;
-		std::map<int, std::string>	mapStatusCode;
+		int			statusCode;
+		std::string body;
+		std::map<int, std::string> mapStatusCode;
+		
 };
 
 #endif

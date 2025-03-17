@@ -158,23 +158,32 @@ HttpRequest Webserver::ParsingRequest(std::string str, int size)
 	return request;
 }
 
+//prepare response: check for method: call specific functions, return status code somehow, call httpresponse
 std::string Webserver::prepareResponse(HttpRequest request)
 {
 	std::string response;
+	struct response data;
 
 	std::map<std::string, std::string> httpRequestLine;
 	httpRequestLine = request.getHttpRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
-		HttpResponse HttpResponse(request, this->serverInfo);
 		if (httpRequestLine["Method"] == "GET")
-			response = HttpResponse.responseGetMethod();
-		else if (httpRequestLine["Method"] == "POST")
-			response = HttpResponse.responsePostMethod();
-		else if (httpRequestLine["Method"] == "DELETE")
-			response = HttpResponse.responseDeleteMethod();
+		{
+			retrievePage(request, &data);
+		}
+		// else if (httpRequestLine["Method"] == "POST")
+		// {
+		// 	uploadFile(request, &data);
+		// }
+		// else if (httpRequestLine["Method"] == "DELETE")
+		// {
+		// 	deleteFile(request, &data);
+		// }
 		else
 			Logger::error("Method not found, Sveva, use correct status code line");
+		HttpResponse http(data.code, data.body);
+		response = http.composeRespone();
 	}
 	else
 		Logger::error("Method not found, Sveva, use correct status code line");
@@ -288,4 +297,87 @@ void	Webserver::closeSockets()
 		if(this->poll_sets[i].fd >= 0)
 			close(this->poll_sets[i].fd);
 	}
+}
+
+ /*to move these in client handler*/
+ bool fileExists(std::string path)
+{
+	std::ifstream file;
+	std::string line;
+	std::string htmlFile;
+	std::string temp;
+
+	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
+	if (!file)
+	{
+		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
+		return (false);
+	}
+	file.close();
+	return true;
+}
+
+std::string extractContent(std::string path)
+{
+	std::ifstream file;
+	std::string line;
+	std::string htmlFile;
+	std::string temp;
+
+	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
+	if (!file)
+	{
+		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
+		return (htmlFile);
+	}
+	while (std::getline(file, line))
+	{
+		if (line.size() == 0)
+			continue;
+		else
+			htmlFile = htmlFile.append(line + "\r\n");
+	}
+	file.close();
+	return (htmlFile);
+}
+
+void Webserver::retrievePage(HttpRequest request, struct response *data)
+{
+	std::string response;
+	std::string htmlPage;
+	int bodyHtmlLen;
+	std::ostringstream intermediatestream;
+	std::string strbodyHtmlLen;
+	std::string httpHeaders;
+	std::string statusCodeLine;
+	std::string documentRootPath;
+	std::string pathToTarget;
+	struct stat pathStat;
+	std::map<std::string, std::string> httpRequestLine;
+
+	//TODO: need to check curl -O why is not downloading - not working cause i can't do it with getline
+	httpRequestLine = request.getHttpRequestLine();
+	documentRootPath = this->serverInfo.getServerDocumentRoot();
+	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
+	if (stat(pathToTarget.c_str(), &pathStat) != 0)
+		Logger::error("Failed stat: " + std::string(strerror(errno)));
+	if (S_ISDIR(pathStat.st_mode))
+	{
+		if (pathToTarget[pathToTarget.length()-1] == '/')
+			pathToTarget += "index.html";
+		else
+		pathToTarget += "/index.html";
+	}
+	//check path exists
+	if (fileExists(pathToTarget) == false)
+	{
+		data->code = 404;
+		htmlPage = "./server_root/404.html";
+	}
+	else
+	{
+		data->code = 200;
+		htmlPage = pathToTarget;
+	}
+	data->body = extractContent(htmlPage);
 }
