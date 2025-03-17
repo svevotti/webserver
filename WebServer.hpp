@@ -15,7 +15,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <sys/types.h> 
+#include <sys/stat.h>
 
+#include <cstdio>
 #include <vector>
 #include <map>
 #include <iostream>
@@ -28,6 +31,11 @@ typedef struct client {
     HttpRequest   request;
     std::string     response;
 }              client;
+
+typedef struct response {
+    int             code;
+    std::string     body;
+}              response;
 
 class Webserver {
     public:
@@ -47,6 +55,8 @@ class Webserver {
         int                                     searchPage(std::string path);
         std::string                             prepareResponse(HttpRequest);
         std::vector<struct client>::iterator    retrieveClient(int fd);
+
+        void                                    retrievePage(HttpRequest request, struct response *);
 
     private:
 
