@@ -14,7 +14,6 @@
 #include <map>
 #include <vector>
 #include "StringManipulations.hpp"
-#include "ClientRequest.hpp"
 
 #define EMPTY 0
 #define TEXT 1
