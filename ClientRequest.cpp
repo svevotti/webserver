@@ -96,7 +96,8 @@ std::ostream& operator<<(std::ostream &output, ClientRequest const &obj)
         }
 		output << "body: \n";
 		std::string body;
-		body = obj.getSectionBody(0);
+		if (!(obj.getSections().empty()))
+			body = obj.getSectionBody(0);
 		output << body;
 		return output;
 
