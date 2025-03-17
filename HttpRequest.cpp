@@ -66,42 +66,88 @@ void HttpRequest::parseRequestHttp(void)
 	std::istringstream request(inputString);
 	std::string line;
     std::map<std::string, std::string>::iterator it;
+	std::map<std::string, std::string>::iterator it1;
 
 	parseRequestLine(inputString);
 	getline(request, line);
 	parseHeaders(request);
-	//TODO:add logic for transfer-encoding
     it = headers.find("Content-Length");
-	if (it != headers.end())
+	it1 = headers.find("Transfer-Encoding");
+	if (it != headers.end() || it1 != headers.end())
 		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
 	else
 		typeBody = EMPTY;	
+}
+
+std::string HttpRequest::unchunkRequest(std::string chunked) 
+{
+	std::string::size_type bodyStart = chunked.find("\r\n\r\n");
+	std::string newStr;
+    std::string line;
+    long chunk_size;
+	std::string unchunked;
+
+	if (bodyStart != std::string::npos)
+	{
+		bodyStart += 4;
+		newStr = chunked.substr(bodyStart, chunked.length() - bodyStart - 2);
+	}
+	std::istringstream iss(newStr);
+	while (std::getline(iss, line)) 
+    {
+        if (line == "\r")
+			continue;
+        char* end_ptr;
+        chunk_size = strtol(line.c_str(), &end_ptr, 16);
+		if (chunk_size == 0)
+			break;
+        if (*end_ptr != '\r' || chunk_size < 0)
+			Logger::error("Invalid chunk size");
+        std::vector<char> buffer(chunk_size);
+        iss.read(&buffer[0], chunk_size);
+        if (iss.gcount() != static_cast<std::streamsize>(chunk_size))
+			Logger::error("Failed to read chunk data");
+        unchunked.append(&buffer[0], chunk_size);
+    }
+    return unchunked;
 }
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 {
 	std::string contentType = headers["Content-Type"];
 	struct section data;
+	std::map<std::string, std::string>::iterator it;
 
 	if (method == "POST")
 	{
-		if (contentType.find("boundary") != std::string::npos) //multi format data
+		it = headers.find("Transfer-Encoding");
+		if (it != headers.end())
 		{
-			this->typeBody = MULTIPART;
-			parseMultiPartBody(buffer, size);
+			this->typeBody = CHUNKED;
+			data.indexBinary = 0;
+			data.body = unchunkRequest(buffer);
+			sectionsVec.push_back(data);
 		}
 		else
 		{
-			struct section data;
-			typeBody = TEXT;
-			data.indexBinary = 0;
-			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
-			if (bodyStart != std::string::npos)
+			if (contentType.find("boundary") != std::string::npos) //multi format data
 			{
-				bodyStart += 4;
-				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
+				this->typeBody = MULTIPART;
+				parseMultiPartBody(buffer, size);
 			}
-			sectionsVec.push_back(data);	
+			else
+			{
+				struct section data;
+				typeBody = TEXT;
+				data.indexBinary = 0;
+				std::string::size_type bodyStart = buffer.find("\r\n\r\n");
+				if (bodyStart != std::string::npos)
+				{
+					bodyStart += 4;
+					data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
+				}
+				sectionsVec.push_back(data);	
+			}
 		}
 	}
 	else
@@ -174,6 +220,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	}
 	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
 		extractSections(buffer, boundariesIndexes, i, b);
+	delete b;
 }
 
 void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, int i, std::string b)
@@ -206,13 +253,6 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	data.indexBinary = indexBinary+2;
 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
 	sectionsVec.push_back(data);
-	// streamHeaders.clear();
-	// line.clear();
-	// key.clear();
-	// value.clear();
-	// data.myMap.clear();
-	// indexBinary = 0;
-	// data.body.clear();
 }
 
 // Utils
@@ -225,6 +265,29 @@ std::string HttpRequest::findMethod(std::string inputStr)
 	else if (inputStr.find("DELETE") != std::string::npos)
 		return ("DELETE");
 	return ("ERROR");
+}
+
+std::string HttpRequest::decodeQuery(std::string str)
+{
+	std::string newStr;
+	int start = 0;
+	size_t pos = 0;
+	std::string encode = "%20";
+	std::string replace = " ";
+
+	while (1)
+	{
+		pos = str.find(encode, start);
+		if (pos == std::string::npos)
+		{
+			newStr += str.substr(start);
+			break;
+		}
+		newStr += str.substr(start, pos - start);
+		newStr += replace;
+		start = pos + encode.length();
+	}
+	return newStr;
 }
 
 void HttpRequest::exractQuery(std::string str)
