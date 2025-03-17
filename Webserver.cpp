@@ -3,13 +3,12 @@
 #define MAX 100
 
 // Constructor and Destructor
+//TODO: if there are no sockets. webserver should not start
 Webserver::Webserver(InfoServer& info)
 {
-	this->_serverInfo = new InfoServer(info);
-	ServerSockets serverFds(*this->_serverInfo);
+	this->serverInfo = InfoServer(info);
+	ServerSockets serverFds(this->serverInfo);
 
-	if (this->serverFds.size() < 0)
-		Logger::error("Failed creating any server socket");
 	this->serverFds = serverFds.getServerSockets();
 	this->poll_sets.reserve(MAX);
 	addServerSocketsToPoll(this->serverFds);
@@ -17,17 +16,18 @@ Webserver::Webserver(InfoServer& info)
 
 Webserver::~Webserver()
 {
-	delete this->_serverInfo;
 	closeSockets();
 }
 
 // Setters and getters
 
 // Main functions
-void	Webserver::startServer()
+int	Webserver::startServer()
 {
 	int returnPoll;
 
+	if (this->serverFds.size() < 0)
+		return -1;
 	while (1)
 	{
 		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 2 * 1000);
@@ -41,6 +41,7 @@ void	Webserver::startServer()
 		else
 			dispatchEvents();
 	}
+	return 0;
 }
 
 void Webserver::dispatchEvents()
@@ -165,7 +166,7 @@ std::string Webserver::prepareResponse(HttpRequest request)
 	httpRequestLine = request.getHttpRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
-		HttpResponse HttpResponse(request, *this->_serverInfo);
+		HttpResponse HttpResponse(request, this->serverInfo);
 		if (httpRequestLine["Method"] == "GET")
 			response = HttpResponse.responseGetMethod();
 		else if (httpRequestLine["Method"] == "POST")
@@ -274,7 +275,7 @@ int Webserver::isCgi(std::string str)
 {
 	if (str.find(".py") != std::string::npos)
 		return true;
-	if (searchPage(this->_serverInfo->getServerDocumentRoot() + str) == true)
+	if (searchPage(this->serverInfo.getServerDocumentRoot() + str) == true)
 		return false;
 	return true;
 }
