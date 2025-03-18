@@ -13,6 +13,14 @@ class Utils {
 			return oss.str();
 		}
 
+		static int toInt(std::string str)
+		{
+			std::stringstream ss(str);
+			int number;
+			ss >> number;
+			return number;
+		}
+
 	private:
 		Utils();		
 };
