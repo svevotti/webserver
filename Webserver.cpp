@@ -176,10 +176,10 @@ std::string Webserver::prepareResponse(HttpRequest request)
 		{
 			uploadFile(request, &data);
 		}
-		// else if (httpRequestLine["Method"] == "DELETE")
-		// {
-		// 	deleteFile(request, &data);
-		// }
+		else if (httpRequestLine["Method"] == "DELETE")
+		{
+			deleteFile(request, &data);
+		}
 		else
 			Logger::error("Method not found, Sveva, use correct status code line");
 		HttpResponse http(data.code, data.body);
@@ -489,4 +489,22 @@ void Webserver::uploadFile(HttpRequest request, struct response *data)
 	}
 	close(file);
 	data->code = 200;
+}
+
+void Webserver::deleteFile(HttpRequest request, struct response *data)
+{
+	std::string htmlFile;
+	std::string pathToResource = this->serverInfo.getServerRootPath() + request.getHttpRequestLine()["Request-URI"];
+	std::ifstream file(pathToResource.c_str());
+	if (!(file.good()))
+	{
+		data->code = 400;
+		htmlFile = "./server_root/400.html";
+		data->body = extractContent(htmlFile);
+	}
+	else
+	{
+		remove(pathToResource.c_str());
+		data->code = 200;
+	}
 }
