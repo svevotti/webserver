@@ -26,7 +26,6 @@ class HttpResponse {
 		std::string generateHttpHeaders();
 		std::string verifyType(std::string);
 		std::string findTimeStamp();
-		std::string handleFilesUploads(HttpRequest request, std::string);
 
 	private:
 		int			statusCode;

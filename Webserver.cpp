@@ -26,7 +26,7 @@ int	Webserver::startServer()
 {
 	int returnPoll;
 
-	if (this->serverFds.size() < 0)
+	if (this->serverFds.size() == 0)
 		return -1;
 	while (1)
 	{
@@ -135,10 +135,9 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 		{
 			struct client client;
 			response = prepareResponse(clientIt->request);
-			clientIt->response = response;
 			client.fd = clientIt->fd;
 			client.request = clientIt->request;
-			client.response = clientIt->response;
+			client.response = response;
 			response.clear();
 			this->clientsQueue.erase(clientIt);
 			this->clientsQueue.push_back(client);
@@ -162,6 +161,7 @@ HttpRequest Webserver::ParsingRequest(std::string str, int size)
 std::string Webserver::prepareResponse(HttpRequest request)
 {
 	std::string response;
+	// Try out try/catch logic
 	struct response data;
 
 	std::map<std::string, std::string> httpRequestLine;
@@ -174,10 +174,7 @@ std::string Webserver::prepareResponse(HttpRequest request)
 		}
 		else if (httpRequestLine["Method"] == "POST")
 		{
-			HttpResponse test;
-			response = test.handleFilesUploads(request, this->serverInfo.getServerDocumentRoot());
-			return response;
-			// uploadFile(request, &data);
+			uploadFile(request, &data);
 		}
 		// else if (httpRequestLine["Method"] == "DELETE")
 		// {
@@ -209,6 +206,8 @@ void Webserver::addServerSocketsToPoll(std::vector<int> fds)
 {
     struct pollfd serverPoll[MAX];
 	int clientsNumber = (int)fds.size();
+	if (clientsNumber == 0)
+		return;
 	for (int i = 0; i < clientsNumber; i++)
 	{
 		serverPoll[i].fd = fds[i];
@@ -383,4 +382,111 @@ void Webserver::retrievePage(HttpRequest request, struct response *data)
 		htmlPage = pathToTarget;
 	}
 	data->body = extractContent(htmlPage);
+}
+
+std::string getFileType(std::map<std::string, std::string> headers)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::string type;
+
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "Content-Type")
+			type = it->second;
+	}
+	return type;
+}
+
+std::string getFileName(std::map<std::string, std::string> headers)
+{
+	std::map<std::string, std::string>::iterator it;
+	std::string name;
+
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "Content-Disposition")
+		{
+			if (it->second.find("filename") != std::string::npos)
+			{
+				std::string fileNameField = it->second.substr(it->second.find("filename"));
+				if (fileNameField.find('"') != std::string::npos)
+				{
+					int indexFirstQuote = fileNameField.find('"');
+					int indexSecondQuote = 0;
+					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
+					{
+						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
+					}
+					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
+				}
+			}
+		}
+	}
+	return name;
+}
+
+int checkNameFile(std::string str, std::string path)
+{
+	DIR *folder;
+	struct dirent *data;
+
+	folder = opendir(path.c_str());
+	std::string convStr;
+	if (folder == NULL)
+		printf("error opening folder\n");
+	while ((data = readdir(folder)))
+	{
+		convStr = data->d_name;
+		if (convStr == str)
+			return (1);
+	}
+	closedir(folder);
+	return (0);
+}
+
+void Webserver::uploadFile(HttpRequest request, struct response *data)
+{
+	std::map<std::string, std::string> httpRequestLine;
+	std::string response;
+	std::map<std::string, std::string> headersBody;
+	std::string binaryBody;
+	std::vector<struct section> sectionBodies;
+
+	httpRequestLine = request.getHttpRequestLine();
+	sectionBodies = request.getHttpSections();
+	headersBody = sectionBodies[0].myMap;
+	binaryBody = sectionBodies[0].body;
+	if (sectionBodies.size() > 1)
+	{
+		data->code = 400;
+		data->body = extractContent("./server_root/400.html");
+		return;
+	}
+
+	std::string requestTarget = httpRequestLine["Request-URI"];
+	requestTarget.erase(requestTarget.begin());
+	std::string pathFile = this->serverInfo.getServerRootPath() + requestTarget; //it only works if given this path by the client?
+	std::string fileName = getFileName(headersBody);
+	std::string fileType = getFileType(headersBody);
+	if (checkNameFile(fileName, pathFile) != 0)
+	{
+		data->code = 400;
+		data->body = extractContent("./server_root/400.html");
+		return;
+	}
+	pathFile += "/" + fileName;
+	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (file < 0)
+	{
+		perror("Error opening file");
+		return;
+	}
+	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
+	if (written < 0) {
+		perror("Error writing to file");
+		close(file);
+		exit(1);
+	}
+	close(file);
+	data->code = 200;
 }

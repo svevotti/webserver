@@ -15,76 +15,6 @@
 
 //setters and getters
 //main functions
-// std::string HttpResponse::responseGetMethod()
-// {
-// 	std::string response;
-// 	std::string htmlFile;
-// 	int bodyHtmlLen;
-// 	std::ostringstream intermediatestream;
-// 	std::string strbodyHtmlLen;
-// 	std::string httpHeaders;
-// 	std::string statusCodeLine;
-// 	std::string documentRootPath;
-// 	std::string pathToTarget;
-// 	struct stat pathStat;
-// 	std::map<std::string, std::string> httpRequestLine;
-
-// 	//TODO: i think the 404 page can be hardcode it
-// 	//TODO: need to check curl -O why is not downloading
-// 	response = pageNotFound();
-// 	httpRequestLine = request.getHttpRequestLine();
-// 		//create path to the index.html
-// 	documentRootPath = info.getServerDocumentRoot();
-// 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
-// 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
-// 		Logger::error("Failed stat: " + std::string(strerror(errno)));
-// 	if (S_ISDIR(pathStat.st_mode))
-// 	{
-// 		if (pathToTarget[pathToTarget.length()-1] == '/')
-// 			pathToTarget += "index.html";
-// 		else
-// 		pathToTarget += "/index.html";
-// 	}
-// 	//check if file exists
-// 	htmlFile = getFileContent(pathToTarget);
-// 	if (htmlFile.empty())
-// 		return (response);
-// 	bodyHtmlLen = htmlFile.length();
-// 	intermediatestream << bodyHtmlLen;
-// 	strbodyHtmlLen = intermediatestream.str();
-
-// 	statusCodeLine = GenerateStatusCode(this->statusCode);
-// 	httpHeaders = GenerateHttpResponse(strbodyHtmlLen);
-// 	response.clear();
-// 	//TODO: check why having problems with binary
-// 	response += request.getHttpRequestLine()["Protocol"] + " " + statusCodeLine + "\r\n" + httpHeaders + htmlFile;
-// 	Logger::debug("response: " + response);
-// 	return (response);
-// }
-
-// std::string HttpResponse::generateStatusCode(int code)
-// {
-// 	std::map<int, std::string>::iterator it = this->mapStatusCode.find(code);
-// 	if (it != this->mapStatusCode.end())
-// 		return it->second;
-// 	return "";
-// }
-// std::string HttpResponse::responsePostMethod()
-// {
-// 	std::string response;
-// 	if (request.getHttpTypeBody() == MULTIPART)
-// 		response = handleFilesUploads();
-// 	else if (request.getHttpTypeBody() == TEXT)
-// 	{
-// 		response =
-// 				"HTTP/1.1 200 OK\r\n"
-// 				"Content-Length: 0\r\n"
-// 				"Connection: keep-alive\r\n"
-// 				"\r\n"; //very imporan
-// 		printf("do something with text body\n");
-// 	}
-// 	return (response);
-// }
 
 // std::string HttpResponse::responseDeleteMethod()
 // {
@@ -103,182 +33,6 @@
 // 	return response;
 // }
 
-
-
-// //utilis
-// std::string HttpResponse::pageNotFound(void)
-// {
-//     std::string str =   "HTTP/1.1 404 Not Found\r\n"
-// 					    "Content-Type: text/html\r\n"
-// 					    "Content-Length: 103\r\n" //need to exactly the message's len, or it doesn't work
-// 					    "\r\n"
-// 					    "<html>\r\n"
-// 					    "<header>\r\n"
-// 					    "<title>Not Found</title>\r\n"
-// 					    "</header>\r\n"
-// 					    "<body>\r\n"
-// 					    "<h1>Not Found!!</h1>\r\n"
-// 					    "</body>\r\n"
-// 					    "</html>\r\n";
-//     return (str);
-// }
-
-std::string getFileContent(std::string path)
-{
-	std::ifstream file;
-	std::string line;
-	std::string htmlFile;
-	std::string temp;
-
-	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-	if (!file)
-	{
-		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-		return (htmlFile);
-	}
-	while (std::getline(file, line))
-	{
-		if (line.size() == 0)
-			continue;
-		else
-			htmlFile = htmlFile.append(line + "\r\n");
-	}
-	file.close();
-	return (htmlFile);
-}
-
-// //TODO: review this function: add couple more headers maybe
-// std::string HttpResponse::generateHttpResponse(std::string length)
-// {
-// 	std::string httpHeaders;
-// 	std::string contentType;
-// 	std::string fileType;
-// 	std::string fileExtension;
-
-// 	httpHeaders += "Content-Length: " + length + "\r\n";
-// 	httpHeaders += "Connection: keep-alive\r\n"; //client end connection right away, keep-alive
-// 	httpHeaders += "\r\n";
-// 	return httpHeaders;
-// }
-
-std::string getFileType(std::map<std::string, std::string> headers)
-{
-	std::map<std::string, std::string>::iterator it;
-	std::string type;
-
-	for (it = headers.begin(); it != headers.end(); it++)
-	{
-		if (it->first == "Content-Type")
-			type = it->second;
-	}
-	return type;
-}
-
-std::string getFileName(std::map<std::string, std::string> headers)
-{
-	std::map<std::string, std::string>::iterator it;
-	std::string name;
-
-	for (it = headers.begin(); it != headers.end(); it++)
-	{
-		if (it->first == "Content-Disposition")
-		{
-			if (it->second.find("filename") != std::string::npos)
-			{
-				std::string fileNameField = it->second.substr(it->second.find("filename"));
-				if (fileNameField.find('"') != std::string::npos)
-				{
-					int indexFirstQuote = fileNameField.find('"');
-					int indexSecondQuote = 0;
-					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-					{
-						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-					}
-					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-				}
-			}
-		}
-	}
-	return name;
-}
-
-int checkNameFile(std::string str, std::string path)
-{
-	DIR *folder;
-	struct dirent *data;
-
-	folder = opendir(path.c_str());
-	std::string convStr;
-	if (folder == NULL)
-		printf("error opening folder\n");
-	while ((data = readdir(folder)))
-	{
-		convStr = data->d_name;
-		if (convStr == str)
-			return (1);
-	}
-	closedir(folder);
-	return (0);
-}
-
-std::string HttpResponse::handleFilesUploads(HttpRequest request, std::string path)
-{
-	std::map<std::string, std::string> httpRequestLine;
-	std::string response;
-	std::map<std::string, std::string> headersBody;
-	std::string binaryBody;
-	std::vector<struct section> sectionBodies;
-
-	httpRequestLine = request.getHttpRequestLine();
-	sectionBodies = request.getHttpSections();
-	headersBody = sectionBodies[0].myMap;
-	binaryBody = sectionBodies[0].body;
-	if (sectionBodies.size() > 1)
-	{
-		response = "HTTP/1.1 400 Bad Request\r\n"
-								"Content-Type: text/plain\r\n"
-								"Content-Length: 0\r\n"
-								"Connection: close\r\n"
-								"\r\n";
-		return response;
-	}
-
-	std::string requestTarget = httpRequestLine["Request-URI"];
-	requestTarget.erase(requestTarget.begin());
-	std::string pathFile = path + requestTarget; //it only works if given this path by the client?
-	std::string fileName = getFileName(headersBody);
-	std::string fileType = getFileType(headersBody);
-	if (checkNameFile(fileName, pathFile) != 0)
-	{
-		std::cout << "File with name already existing, please change it\n";
-		response = "HTTP/1.1 400 Bad Request\r\n"
-								"Content-Type: text/plain\r\n"
-								"Content-Length: 0\r\n"
-								"Connection: close\r\n"
-								"\r\n";
-		return (response);
-	}
-	pathFile += "/" + fileName;
-	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (file < 0)
-	{
-		perror("Error opening file");
-		return (response);
-	}
-	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
-	if (written < 0) {
-		perror("Error writing to file");
-		close(file);
-		exit(1);
-	}
-	close(file);
-	response =
-				"HTTP/1.1 200 OK\r\n"
-				"Content-Length: 0\r\n"
-				"Connection: keep-alive\r\n"
-				"\r\n"; //very imporant
-	return (response);
-}
 // Constructor and destructor
 HttpResponse::HttpResponse(int code, std::string str)
 {
@@ -319,9 +73,9 @@ std::string HttpResponse::composeRespone(void)
 	statusLine = generateStatusLine(this->statusCode);
 	response += statusLine;
 	headers = generateHttpHeaders(); //dynamic assemble depending on method?
-	response += headers;
-	if (!(this->body.empty()))
-		response += "\r\n" + this->body;
+	response += headers + "\r\n";
+	response += this->body;
+	//Logger::debug("response: " + response);
 	return response;
 }
 
@@ -346,10 +100,10 @@ std::string HttpResponse::generateHttpHeaders(void)
 	if (!(this->body.empty()))
 	{
 		type = verifyType(this->body); //now only html or jpeg
-		length = Utils::toString(this->body.size());
 		headers += "Content-Type: " + type + "\r\n";
-		headers += "Content-Length: " + length + "\r\n";
 	}
+	length = Utils::toString(this->body.size());
+	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";
 	headers += "Date: " + timeStamp;
 	headers += "Cache-Control: no-cache\r\n";
