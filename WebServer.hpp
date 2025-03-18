@@ -42,22 +42,23 @@ class Webserver {
         Webserver(InfoServer&);
         ~Webserver();
         int	                                    startServer();
-        void                                    addServerSocketsToPoll(std::vector<int>);
-        int                                     fdIsServerSocket(int);
-        void                                    dispatchEvents();
-        void                                    createNewClient(int);
-        int                                     readData(int, std::string&, int&);
-        int                                     handleReadEvents(int, std::vector<struct pollfd>::iterator);
-        void                                    handleWritingEvents(int, std::vector<struct pollfd>::iterator);
-        HttpRequest                             ParsingRequest(std::string, int);
-        void                                    closeSockets();
-        int                                     isCgi(std::string);
+        void                                    addServerSocketsToPoll(std::vector<int> vec);
+        int                                     fdIsServerSocket(int fd);
+        void                                    dispatchEvents(void);
+        void                                    createNewClient(int fd);
+        int                                     readData(int fd, std::string& buffer, int& bytes);
+        int                                     handleReadEvents(int fd, std::vector<struct pollfd>::iterator it);
+        void                                    handleWritingEvents(int fd, std::vector<struct pollfd>::iterator it);
+        HttpRequest                             ParsingRequest(std::string buffer, int size);
+        void                                    closeSockets(void);
+        int                                     isCgi(std::string path);
         int                                     searchPage(std::string path);
-        std::string                             prepareResponse(HttpRequest);
+        std::string                             prepareResponse(HttpRequest request);
         std::vector<struct client>::iterator    retrieveClient(int fd);
 
-        void                                    retrievePage(HttpRequest request, struct response *);
-       void                            uploadFile(HttpRequest request, struct response*);
+        void                                    retrievePage(HttpRequest request, struct response *data);
+       void                                     uploadFile(HttpRequest request, struct response *data);
+       void                                     deleteFile(HttpRequest request, struct response *data);
 
     private:
 

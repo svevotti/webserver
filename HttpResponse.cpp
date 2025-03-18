@@ -11,28 +11,6 @@
 #include <ctime>
 #include <cstdio>
 
-//constructor and destructor
-
-//setters and getters
-//main functions
-
-// std::string HttpResponse::responseDeleteMethod()
-// {
-// 	std::string response = pageNotFound();
-// 	//TODO: check path to resource, if it exits delete, if not send negative response
-// 	std::string pathToResource = info.getServerRootPath() + request.getHttpRequestLine()["Request-URI"];
-// 	std::ifstream file(pathToResource.c_str());
-// 	if (!(file.good()))
-// 		return response;
-// 	remove(pathToResource.c_str());
-// 	response =
-// 				"HTTP/1.1 200 OK\r\n"
-// 				"Content-Length: 0\r\n"
-// 				"Connection: keep-alive\r\n"
-// 				"\r\n"; //very imporant
-// 	return response;
-// }
-
 // Constructor and destructor
 HttpResponse::HttpResponse(int code, std::string str)
 {
