@@ -57,6 +57,7 @@ class Webserver {
         std::vector<struct client>::iterator    retrieveClient(int fd);
 
         void                                    retrievePage(HttpRequest request, struct response *);
+       void                            uploadFile(HttpRequest request, struct response*);
 
     private:
 
