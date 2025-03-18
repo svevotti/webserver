@@ -13,11 +13,9 @@
 
 class Config {
 	private:
-		Config( void );
-
+		std::vector<InfoServer*>	_servlist;
 
 	public:
-		std::vector<InfoServer*>	_servlist;
 		Config( const std::string& configFile);
 		Config( const Config& copy);
 		Config& operator=(const Config& copy);
@@ -27,6 +25,9 @@ class Config {
 		std::set<std::string>	parseMethods(std::string method_list);
 		bool parseConfigFile(const std::string &configFile);
 		bool	trimLine(std::string& line);
+
+		void	setServerList( const std::vector<InfoServer*> servlist );
+		std::vector<InfoServer*>	getServList( void );
 };
 
 struct mylocations {

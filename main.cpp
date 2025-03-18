@@ -6,36 +6,48 @@ bool	test(Config &conf)
 	std::map<std::string, std::string>::iterator	mapIt;
 	std::map<std::string, Route>::iterator			locMetIt;
 	std::set<std::string>::iterator					setIt;
+	std::map<std::string, std::string>::iterator	varIt;
 	int	i;
 
 	i = 0;
-	for(servIt = conf._servlist.begin(); servIt != conf._servlist.end(); servIt++)
+	std::vector<InfoServer*> server;
+	server = conf.getServList();
+	for(servIt = server.begin(); servIt != server.end(); servIt++)
 	{
 		i++;
 		std::cout << "Checking server " << i << std::endl << std::endl;
 		std::cout << "Checking harcoded variables" << std::endl << std::endl;
-		if ((*servIt)->_ip != "")
-			std::cout << "IP is " << (*servIt)->_ip <<std::endl;
+		if ((*servIt)->getIP() != "")
+			std::cout << "IP is " << (*servIt)->getIP() <<std::endl;
 		else
 			std::cout << "IP doesn't exist!" << std::endl;
-		if ((*servIt)->_index != "")
-			std::cout << "Index is " << (*servIt)->_index <<std::endl;
+		if ((*servIt)->getIndex() != "")
+			std::cout << "Index is " << (*servIt)->getIndex() <<std::endl;
 		else
 			std::cout << "Index doesn't exist!" << std::endl;
-		if ((*servIt)->_root != "")
-			std::cout << "Root is " << (*servIt)->_root <<std::endl;
+		if ((*servIt)->getRoot() != "")
+			std::cout << "Root is " << (*servIt)->getRoot() <<std::endl;
 		else
 			std::cout << "Root doesn't exist!" << std::endl;
-		if ((*servIt)->_port != "")
-			std::cout << "Port is " << (*servIt)->_port <<std::endl;
+		if ((*servIt)->getPort() != "")
+			std::cout << "Port is " << (*servIt)->getPort() <<std::endl;
 		else
 			std::cout << "Port doesn't exist!" << std::endl;
 
 		std::cout << std::endl << "Checking all the settings" << std::endl << std::endl;
-		for(mapIt = (*servIt)->_settings.begin(); mapIt != (*servIt)->_settings.end(); mapIt++)
-			std::cout << mapIt->first << ":" << mapIt->second << std::endl;
+
+		std::map<std::string, std::string> map;
+
+		map = (*servIt)->getSetting();
+		for(mapIt = map.begin(); mapIt != map.end(); mapIt++)
+			std::cout << mapIt->first << " = " << mapIt->second << std::endl;
+
 		std::cout << std::endl << "Checking all locations" << std::endl << std::endl;
-		for(locMetIt = (*servIt)->_routes.begin(); locMetIt != (*servIt)->_routes.end(); locMetIt++)
+
+		std::map<std::string, Route> routes;
+
+		routes = (*servIt)->getRoute();
+		for(locMetIt = routes.begin(); locMetIt != routes.end(); locMetIt++)
 		{
 			std::cout << "Checking location " << locMetIt->first << std::endl << std::endl;
 			std::cout << "URI: " << locMetIt->second.uri << std::endl;
@@ -47,10 +59,28 @@ bool	test(Config &conf)
 			std::cout << "Allowed methods: ";
 			for(setIt = locMetIt->second.methods.begin(); setIt != locMetIt->second.methods.end(); setIt++)
 				std::cout << (*setIt) << " ";
-			std::cout << std::endl << std::endl;;
+			std::cout << std::endl << "Other variables:" << std::endl;
+			for(varIt = locMetIt->second.locSettings.begin(); varIt != locMetIt->second.locSettings.end(); varIt++)
+				std::cout << varIt->first << " = " << varIt->second << std::endl;
+			std::cout << std::endl;
 		}
+		Route cgi_route;
+		cgi_route = (*servIt)->getCGI();
+		std::cout << "Checking CGI route " << std::endl << std::endl;
+			std::cout << "URI: " << cgi_route.uri << std::endl;
+			std::cout << "Path: " << cgi_route.path << std::endl;
+			if (cgi_route.internal)
+				std::cout << "It is internal!" << std::endl;
+			else
+				std::cout << "It is not internal!" << std::endl;
+			std::cout << "Allowed methods: ";
+			for(setIt = cgi_route.methods.begin(); setIt != cgi_route.methods.end(); setIt++)
+				std::cout << (*setIt) << " ";
+			std::cout << std::endl << "Other variables:" << std::endl;
+			for(varIt = cgi_route.locSettings.begin(); varIt != cgi_route.locSettings.end(); varIt++)
+				std::cout << varIt->first << " = " << varIt->second << std::endl;
+			std::cout << std::endl;
 	}
-	std::cout << conf._servlist[0]->_index <<std::endl;
 	return true;
 }
 
@@ -62,7 +92,6 @@ int	main(int argc, char** argv){
 	}
 		Config	configuration(argv[1]);
 	std::cout << "Finished configuration!" << std::endl;
-	std::cout << configuration._servlist.at(0)->_ip << std::endl;
 	if (test(configuration))
 		std::cout << "All worked well!" << std::endl;
 	else

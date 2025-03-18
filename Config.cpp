@@ -1,10 +1,6 @@
 #include "Config.hpp"
 
 //default constructor (only for orthodox form)
-Config::Config( void ) {
-	parseConfigFile("default.conf");
-}
-
 //Copy constructor
 Config::Config( const Config& copy) {
 	*this = copy;
@@ -33,6 +29,15 @@ Config::Config( const std::string& configFile) {
 	parseConfigFile(configFile);
 
 }
+
+void	Config::setServerList( const std::vector<InfoServer*> servlist ) {
+	_servlist = servlist;
+}
+
+std::vector<InfoServer*>	Config::getServList( void ) {
+	return (_servlist);
+}
+
 
 std::set<std::string>	Config::parseMethods(std::string method_list)
 {
@@ -74,6 +79,13 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 		{
 			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
 			{
+				if (location == "/cgi-bin/")
+					server->setCGI(route);
+				server->setRoutes(route.uri, route);
+				return true;
+			}
+			else if (route.uri == "/old-page/")
+			{
 				server->setRoutes(route.uri, route);
 				return true;
 			}
@@ -91,14 +103,11 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
 				value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
 				if (key == "root")
-				{
 					route.path =(value + route.uri);
-					std::cout << "Path is: " << route.path << std::endl;
-				}
 				else if (key == "allow")
-				{
 					route.methods = parseMethods(value);
-				}
+				else
+					route.locSettings[key] = value;
 			}
 			else if (line == "internal;")
 				route.internal = true;
@@ -123,7 +132,7 @@ bool	Config::parseServer(std::istream &conf)
 
 		if (line == "}") //When we get to the end of the block, we exit
 		{
-			if(!server->_port.empty() && !server->_ip.empty() && !server->_root.empty() && server->isIPValid(server->_ip)) //Checks for minimal info, can be made an external checker function
+			if(!server->getPort().empty() && !server->getIP().empty() && !server->getRoot().empty() && server->isIPValid(server->getIP())) //Checks for minimal info, can be made an external checker function
 			{
 				_servlist.push_back(server);
 				return true;
@@ -149,7 +158,7 @@ bool	Config::parseServer(std::istream &conf)
 			key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
 			value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
 
-			server->_settings[key] = value;
+			server->setSetting(key, value);
 			if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
 			{
 				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535)
@@ -213,7 +222,6 @@ bool	Config::parseConfigFile(const std::string &configFile)
 		if (line.find("server ") != std::string::npos)
 		{
 			started_server = parseServer(conf);
-			std::cout << _servlist.at(0)->_ip << std::endl;
 			if (started_server == false)
 			{
 				std::cout << "Something went wrong in parseServer" <<std::endl;

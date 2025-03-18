@@ -46,6 +46,42 @@ void	InfoServer::setRoutes( const std::string &uri, const Route &route){
 	this->_routes[uri] = route;
 }
 
+void	InfoServer::setCGI( const Route &route){
+	this->_cgi = route;
+}
+
+void	InfoServer::setSetting( const std::string key, const std::string &value) {
+	this->_settings[key] = value;
+}
+
+std::string	InfoServer::getPort( void ) {
+	return (_port);
+}
+
+std::string	InfoServer::getIP ( void ) {
+	return (_ip);
+}
+
+std::string	InfoServer::getRoot ( void ) {
+	return (_root);
+}
+
+std::string	InfoServer::getIndex ( void ) {
+	return (_index);
+}
+
+std::map<std::string, std::string>	InfoServer::getSetting ( void ) {
+	return (_settings);
+}
+
+std::map<std::string, Route>	InfoServer::getRoute ( void ) {
+	return (_routes);
+}
+
+Route	InfoServer::getCGI ( void ) {
+	return (_cgi);
+}
+
 bool	InfoServer::isIPValid( std::string ip ) {
 	int	ndots = 0;
 	if (ip == "localhost")
