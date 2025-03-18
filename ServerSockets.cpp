@@ -69,17 +69,18 @@ int ServerSockets::createSocket(const char* portNumber)
 	{
 		Logger::error("Failed set socket: " + std::string(strerror(errno)));
 		close(fd);
+		return (-1);
 	}
 	if (bind(fd, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
 	{
 		Logger::error("Failed bind socket: " + std::string(strerror(errno)));
-		close(fd);
+		return (-1);
 	}
 	freeaddrinfo(serverInfo);
 	if (listen(fd, 5) == -1)
 	{
 		Logger::error("Failed listen socket: " + std::string(strerror(errno)));
-		close (fd);
+		return (-1);
 	}
 	return (fd);
 }
