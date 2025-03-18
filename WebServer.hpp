@@ -7,6 +7,7 @@
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
+#include "HttpException.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,9 +57,9 @@ class Webserver {
         std::string                             prepareResponse(HttpRequest request);
         std::vector<struct client>::iterator    retrieveClient(int fd);
 
-        void                                    retrievePage(HttpRequest request, struct response *data);
-       void                                     uploadFile(HttpRequest request, struct response *data);
-       void                                     deleteFile(HttpRequest request, struct response *data);
+        std::string                                    retrievePage(HttpRequest request);
+        std::string                                       uploadFile(HttpRequest request);
+        std::string                                          deleteFile(HttpRequest request);
 
     private:
 

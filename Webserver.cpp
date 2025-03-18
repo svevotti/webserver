@@ -116,7 +116,7 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 	else if (bytesRecv == -1 && totBytes == 0)
 	{
 		Logger::debug("recv return -1");
-		return 0;
+		return 1;
 	}
 	else
 	{
@@ -160,29 +160,43 @@ HttpRequest Webserver::ParsingRequest(std::string str, int size)
 //prepare response: check for method: call specific functions, return status code somehow, call httpresponse
 std::string Webserver::prepareResponse(HttpRequest request)
 {
+	std::string body;
 	std::string response;
 	// Try out try/catch logic
 	struct response data;
+	int code;
 
 	std::map<std::string, std::string> httpRequestLine;
 	httpRequestLine = request.getHttpRequestLine();
 	if (httpRequestLine.find("Method") != httpRequestLine.end())
 	{
-		if (httpRequestLine["Method"] == "GET")
+		try
 		{
-			retrievePage(request, &data);
+			if (httpRequestLine["Method"] == "GET")
+			{
+				body = retrievePage(request);
+				code = 200;
+			}
+			else if (httpRequestLine["Method"] == "POST")
+			{
+				body = uploadFile(request);
+				code = 201;
+			}
+			else if (httpRequestLine["Method"] == "DELETE")
+			{
+				body = deleteFile(request);
+				code = 200;
+			}
+			else
+				throw MethodNotAllowedException("./server_root/public_html/405.html");
 		}
-		else if (httpRequestLine["Method"] == "POST")
+		catch(const NotFoundException& e)
 		{
-			uploadFile(request, &data);
+			Logger::error(e.what());
+			code = e.getCode();
+			body = e.getBody();
 		}
-		else if (httpRequestLine["Method"] == "DELETE")
-		{
-			deleteFile(request, &data);
-		}
-		else
-			Logger::error("Method not found, Sveva, use correct status code line");
-		HttpResponse http(data.code, data.body);
+		HttpResponse http(code, body);
 		response = http.composeRespone();
 	}
 	else
@@ -343,9 +357,9 @@ std::string extractContent(std::string path)
 	return (htmlFile);
 }
 
-void Webserver::retrievePage(HttpRequest request, struct response *data)
+std::string Webserver::retrievePage(HttpRequest request)
 {
-	std::string response;
+	std::string body;
 	std::string htmlPage;
 	int bodyHtmlLen;
 	std::ostringstream intermediatestream;
@@ -372,16 +386,11 @@ void Webserver::retrievePage(HttpRequest request, struct response *data)
 	}
 	//check path exists
 	if (fileExists(pathToTarget) == false)
-	{
-		data->code = 404;
-		htmlPage = "./server_root/404.html";
-	}
+		throw NotFoundException("./server_root/public_html/404.html");
 	else
-	{
-		data->code = 200;
 		htmlPage = pathToTarget;
-	}
-	data->body = extractContent(htmlPage);
+	body = extractContent(htmlPage);
+	return body;
 }
 
 std::string getFileType(std::map<std::string, std::string> headers)
@@ -444,10 +453,10 @@ int checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-void Webserver::uploadFile(HttpRequest request, struct response *data)
+std::string Webserver::uploadFile(HttpRequest request)
 {
 	std::map<std::string, std::string> httpRequestLine;
-	std::string response;
+	std::string body;
 	std::map<std::string, std::string> headersBody;
 	std::string binaryBody;
 	std::vector<struct section> sectionBodies;
@@ -457,54 +466,39 @@ void Webserver::uploadFile(HttpRequest request, struct response *data)
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)
-	{
-		data->code = 400;
-		data->body = extractContent("./server_root/400.html");
-		return;
-	}
-
+		throw ServiceUnavailabledException("./server_root/public_html/503.html");
 	std::string requestTarget = httpRequestLine["Request-URI"];
 	requestTarget.erase(requestTarget.begin());
 	std::string pathFile = this->serverInfo.getServerRootPath() + requestTarget; //it only works if given this path by the client?
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
-	if (checkNameFile(fileName, pathFile) != 0)
-	{
-		data->code = 400;
-		data->body = extractContent("./server_root/400.html");
-		return;
-	}
+	if (checkNameFile(fileName, pathFile) == 1)
+		throw ConflictException();
 	pathFile += "/" + fileName;
 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 	{
 		perror("Error opening file");
-		return;
+		throw BadRequestException("./server_root/public_html/400.html");
 	}
 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
 	if (written < 0) {
 		perror("Error writing to file");
 		close(file);
-		exit(1);
+		throw BadRequestException("./server_root/public_html/400.html");
 	}
 	close(file);
-	data->code = 200;
+	return body;
 }
 
-void Webserver::deleteFile(HttpRequest request, struct response *data)
+std::string      Webserver::deleteFile(HttpRequest request)
 {
-	std::string htmlFile;
-	std::string pathToResource = this->serverInfo.getServerRootPath() + request.getHttpRequestLine()["Request-URI"];
+	std::string body;
+	std::string pathToResource = "./" + request.getHttpRequestLine()["Request-URI"];
 	std::ifstream file(pathToResource.c_str());
 	if (!(file.good()))
-	{
-		data->code = 400;
-		htmlFile = "./server_root/400.html";
-		data->body = extractContent(htmlFile);
-	}
+		throw NotFoundException(pathToResource);
 	else
-	{
 		remove(pathToResource.c_str());
-		data->code = 200;
-	}
+	return body;
 }
