@@ -92,13 +92,12 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 	}
 	//TODO:does it behave as recv?
 	Logger::debug("bytes to send " + Utils::toString(iterClient->response.size()));
-	int bytes = send(fd, iterClient->response.c_str(), strlen(iterClient->response.c_str()), 0);
+	int bytes = send(fd, iterClient->response.c_str(), iterClient->response.size(), 0);
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	Logger::info("these bytes were sent " + Utils::toString(bytes));
 	it->events = POLLIN;
 	iterClient->response.clear();
-	//clientsQueue.erase(iterClient);
 }
 
 int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
@@ -157,7 +156,6 @@ HttpRequest Webserver::ParsingRequest(std::string str, int size)
 	return request;
 }
 
-//prepare response: check for method: call specific functions, return status code somehow, call httpresponse
 std::string Webserver::prepareResponse(HttpRequest request)
 {
 	std::string body;
@@ -175,6 +173,7 @@ std::string Webserver::prepareResponse(HttpRequest request)
 			if (httpRequestLine["Method"] == "GET")
 			{
 				body = retrievePage(request);
+				Logger::debug("body " + body);
 				code = 200;
 			}
 			else if (httpRequestLine["Method"] == "POST")
@@ -333,29 +332,59 @@ void	Webserver::closeSockets()
 	return true;
 }
 
+// std::string extractContent(std::string path)
+// {
+// 	std::ifstream file;
+// 	std::string line;
+// 	std::string htmlFile;
+// 	std::string temp;
+
+// 	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
+// 	if (!file)
+// 	{
+// 		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
+// 		return (htmlFile);
+// 	}
+// 	while (std::getline(file, line))
+// 	{
+// 		if (line.size() == 0)
+// 			continue;
+// 		else
+// 			htmlFile = htmlFile.append(line + "\r\n");
+// 	}
+// 	file.close();
+// 	return (htmlFile);
+// }
 std::string extractContent(std::string path)
 {
-	std::ifstream file;
-	std::string line;
-	std::string htmlFile;
-	std::string temp;
+	std::ifstream inputFile(path, std::ios::binary); // Open the file in binary mode
 
-	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-	if (!file)
-	{
-		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-		return (htmlFile);
+		if (!inputFile) { // Check if the file opened successfully
+			std::cerr << "Error opening file." << std::endl;
+			return ""; // Exit with an error code
+		}
+
+		// Move the cursor to the end of the file to determine its size
+		inputFile.seekg(0, std::ios::end);
+		std::streamsize size = inputFile.tellg(); // Get the size of the file
+		inputFile.seekg(0, std::ios::beg); // Move the cursor back to the beginning
+
+		// Create a string with the size of the file
+		std::string buffer; // Initialize a string with the size of the file
+		buffer.resize(size);
+		// Read the binary data into the string
+		if (inputFile.read(&buffer[0], size)) {
+			// Successfully read the data
+			std::cout << "Read " << size << " bytes from the file." << std::endl;
+		} else {
+			std::cerr << "Error reading file." << std::endl;
+		}
+
+		inputFile.close(); // Close the file
+		Logger::debug("size body: " + Utils::toString(size));
+		Logger::debug("size body with method: " + Utils::toString(buffer.size()));
+		return buffer; // Exit successful
 	}
-	while (std::getline(file, line))
-	{
-		if (line.size() == 0)
-			continue;
-		else
-			htmlFile = htmlFile.append(line + "\r\n");
-	}
-	file.close();
-	return (htmlFile);
-}
 
 std::string Webserver::retrievePage(HttpRequest request)
 {
@@ -375,6 +404,7 @@ std::string Webserver::retrievePage(HttpRequest request)
 	httpRequestLine = request.getHttpRequestLine();
 	documentRootPath = this->serverInfo.getServerDocumentRoot();
 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
+	Logger::debug(pathToTarget);
 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
 	if (S_ISDIR(pathStat.st_mode))
