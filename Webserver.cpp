@@ -50,6 +50,58 @@ bool Webserver::fdIsCGI(int fd)
 	return false;
 }
 
+int Webserver::processClient(int fd)
+{
+	int result;
+	std::vector<ClientHandler>::iterator clientIt;
+
+	clientIt = retrieveClient(fd);
+	if (clientIt == this->clientsList.end())
+	{
+		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
+		return 0;
+	}
+	result = clientIt->readData(fd, clientIt->raw_data, clientIt->totbytes);
+	if (result == 0 || result == 1)
+		return 1;
+	else
+	{
+		if (clientIt->raw_data.find("GET") != std::string::npos)
+		{
+			clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
+			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
+				return 3;
+			else
+			{
+					clientIt->response = prepareResponse(clientIt->request);
+					clientIt->totbytes = 0;
+					clientIt->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
+			}
+		}
+		else if (clientIt->raw_data.find("Content-Length") != std::string::npos)
+		{
+			if (clientIt->totbytes >= 2873) //don't forget to extract the actual size from conentent length
+			{
+				clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
+				Logger::debug("Done parsing");
+				if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
+					return 3;
+				else
+				{
+					clientIt->response = prepareResponse(clientIt->request);
+					clientIt->totbytes = 0;
+					clientIt->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
@@ -71,7 +123,8 @@ void Webserver::dispatchEvents()
 			}
 			else
 			{
-				result = handleReadEvents(it->fd);
+				result = processClient(it->fd);
+				// result = handleReadEvents(it->fd);
 				if (result == DISCONNECTED)
 				{
 					removeClient(it->fd);
@@ -118,68 +171,68 @@ void Webserver::handleWritingEvents(int fd)
 	iterClient->request.cleanProperties();
 }
 
-int Webserver::handleReadEvents(int fd)
-{
-	int result;
+// int Webserver::handleReadEvents(int fd)
+// {
+// 	int result;
 
-	std::vector<ClientHandler>::iterator clientIt;
-	clientIt = retrieveClient(fd);
-	result = readData(fd, clientIt->raw_data, clientIt->totbytes);
-	if (result == 0 || result == 1)
-		return 1;
-	else
-	{
-		if (clientIt->raw_data.find("GET") != std::string::npos)
-		{
-			clientIt = retrieveClient(fd);
-			if (clientIt != this->clientsList.end())
-				clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
-			else
-			{
-				Logger::error("Client " + Utils::toString(clientIt->fd) + " not found");
-				Logger::error("Fd " + Utils::toString(fd));
-				return 0;
-			}
-			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
-				return 3;
-			else
-			{
-					clientIt->response = prepareResponse(clientIt->request);
-					clientIt->totbytes = 0;
-					clientIt->raw_data.clear();
-					Logger::info("Response created successfully and store in clientQueu");
-					return 2;
-			}
-		}
-		else if (clientIt->raw_data.find("Content-Length") != std::string::npos)
-		{
-			if (clientIt->totbytes >= 2873)
-			{
-				clientIt = retrieveClient(fd);
-				if (clientIt != this->clientsList.end())
-					clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
-				else
-				{
-					Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
-					return 0;
-				}
-				Logger::debug("Done parsing");
-				if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
-					printf("send to CGI\n");
-				else
-				{
+// 	std::vector<ClientHandler>::iterator clientIt;
+// 	clientIt = retrieveClient(fd);
+// 	result = readData(fd, clientIt->raw_data, clientIt->totbytes);
+// 	if (result == 0 || result == 1)
+// 		return 1;
+// 	else
+// 	{
+// 		if (clientIt->raw_data.find("GET") != std::string::npos)
+// 		{
+// 			clientIt = retrieveClient(fd);
+// 			if (clientIt != this->clientsList.end())
+// 				clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
+// 			else
+// 			{
+// 				Logger::error("Client " + Utils::toString(clientIt->fd) + " not found");
+// 				Logger::error("Fd " + Utils::toString(fd));
+// 				return 0;
+// 			}
+// 			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
+// 				return 3;
+// 			else
+// 			{
+// 					clientIt->response = prepareResponse(clientIt->request);
+// 					clientIt->totbytes = 0;
+// 					clientIt->raw_data.clear();
+// 					Logger::info("Response created successfully and store in clientQueu");
+// 					return 2;
+// 			}
+// 		}
+// 		else if (clientIt->raw_data.find("Content-Length") != std::string::npos)
+// 		{
+// 			if (clientIt->totbytes >= 2873)
+// 			{
+// 				clientIt = retrieveClient(fd);
+// 				if (clientIt != this->clientsList.end())
+// 					clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
+// 				else
+// 				{
+// 					Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
+// 					return 0;
+// 				}
+// 				Logger::debug("Done parsing");
+// 				if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
+// 					printf("send to CGI\n");
+// 				else
+// 				{
 					
-					clientIt->response = prepareResponse(clientIt->request);
-					clientIt->totbytes = 0;
-					clientIt->raw_data.clear();
-					Logger::info("Response created successfully and store in clientQueu");
-					return 2;
-				}
-			}
-		}
-	}
-	return 0;
-}
+// 					clientIt->response = prepareResponse(clientIt->request);
+// 					clientIt->totbytes = 0;
+// 					clientIt->raw_data.clear();
+// 					Logger::info("Response created successfully and store in clientQueu");
+// 					return 2;
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return 0;
+// }
 
 HttpRequest Webserver::ParsingRequest(std::string str, int size)
 {
@@ -311,26 +364,26 @@ std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
 	return endClient;
 }
 
-int Webserver::readData(int fd, std::string &str, int &bytes)
-{
-	int res = 0;
-	char buffer[BUFFER];
+// int Webserver::readData(int fd, std::string &str, int &bytes)
+// {
+// 	int res = 0;
+// 	char buffer[BUFFER];
 
-	while (1)
-	{
-		ft_memset(buffer, 0, sizeof(buffer));
-		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
-		if (res <= 0)
-			break;
-		str.append(buffer, res);
-		bytes += res;
-	}
-	if (res == 0)
-		return 0;
-	else if (res == -1 && bytes == 0)
-		return 1;
-	return 2;
-}
+// 	while (1)
+// 	{
+// 		ft_memset(buffer, 0, sizeof(buffer));
+// 		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
+// 		if (res <= 0)
+// 			break;
+// 		str.append(buffer, res);
+// 		bytes += res;
+// 	}
+// 	if (res == 0)
+// 		return 0;
+// 	else if (res == -1 && bytes == 0)
+// 		return 1;
+// 	return 2;
+// }
 
 
 int	Webserver::searchPage(std::string path)
