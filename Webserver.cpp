@@ -61,7 +61,8 @@ void Webserver::dispatchEvents()
 				createNewClient(it->fd);
 			else
 			{
-				result = handleReadEvents(it->fd, it);
+				Logger::info("Event should be POLLIN: " + Utils::toString(it->events));
+				result = handleReadEvents(it->fd);
 				if (result == 1)
 				{
 					Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
@@ -70,16 +71,20 @@ void Webserver::dispatchEvents()
 					it = this->poll_sets.erase(it);
                     return ;
 				}
+				if (result == 2)
+					it->events = POLLOUT;
 			}
         }
 		else if (it->revents & POLLOUT)
-			handleWritingEvents(it->fd, it);
-		if (result == 0)
-			it++;
+		{
+			handleWritingEvents(it->fd);
+			it->events = POLLIN;
+		}
+		it++;
 	}
 }
 
-void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator it)
+void Webserver::handleWritingEvents(int fd)
 {
 	std::vector<ClientHandler>::iterator iterClient;
 	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
@@ -96,14 +101,13 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 	if (bytes == -1)
 		Logger::error("Failed send - Sveva check this out");
 	Logger::info("these bytes were sent " + Utils::toString(bytes));
-	it->events = POLLIN;
 	iterClient->response.clear();
 	iterClient->raw_data.clear();
 	iterClient->totbytes = 0;
 	iterClient->request.cleanProperties();
 }
 
-int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
+int Webserver::handleReadEvents(int fd)
 {
 	int result;
 
@@ -132,10 +136,10 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 			else
 			{
 					clientIt->response = prepareResponse(clientIt->request);
-					it->events = POLLOUT;
 					clientIt->totbytes = 0;
 					clientIt->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
 			}
 		}
 		else if (clientIt->raw_data.find("Content-Length") != std::string::npos)
@@ -157,10 +161,10 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 				{
 					
 					clientIt->response = prepareResponse(clientIt->request);
-					it->events = POLLOUT;
 					clientIt->totbytes = 0;
 					clientIt->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
 				}
 			}
 		}
