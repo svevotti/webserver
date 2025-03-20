@@ -66,7 +66,7 @@ void Webserver::dispatchEvents()
 				{
 					Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 					close(it->fd);
-					this->clientsQueue.erase(retrieveClient(it->fd));
+					this->clientsList.erase(retrieveClient(it->fd));
 					it = this->poll_sets.erase(it);
                     return ;
 				}
@@ -81,8 +81,8 @@ void Webserver::dispatchEvents()
 
 void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
-	std::vector<struct client>::iterator iterClient;
-	std::vector<struct client>::iterator endClient = this->clientsQueue.end();
+	std::vector<ClientHandler>::iterator iterClient;
+	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
 
 	iterClient = retrieveClient(fd);
 	if (iterClient == endClient)
@@ -98,16 +98,19 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 	Logger::info("these bytes were sent " + Utils::toString(bytes));
 	it->events = POLLIN;
 	iterClient->response.clear();
+	iterClient->raw_data.clear();
+	iterClient->totbytes = 0;
 	iterClient->request.cleanProperties();
 }
 
 int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
-	std::string response;
 	int result;
 
-	std::vector<struct client>::iterator clientIt;
+	std::vector<ClientHandler>::iterator clientIt;
 	clientIt = retrieveClient(fd);
+	Logger::error("Client " + Utils::toString(clientIt->fd));
+	Logger::error("Fd " + Utils::toString(fd));
 	result = readData(fd, clientIt->raw_data, clientIt->totbytes);
 	if (result == 0 || result == 1)
 		return 1;
@@ -116,25 +119,19 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 		if (clientIt->raw_data.find("GET") != std::string::npos)
 		{
 			clientIt = retrieveClient(fd);
-			if (clientIt != this->clientsQueue.end())
+			if (clientIt != this->clientsList.end())
 				clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
 			else
 			{
-				Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
+				Logger::error("Client " + Utils::toString(clientIt->fd) + " not found");
+				Logger::error("Fd " + Utils::toString(fd));
 				return 0;
 			}
 			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
 				printf("send to CGI\n");
 			else
 			{
-					struct client client;
-					response = prepareResponse(clientIt->request);
-					client.fd = clientIt->fd;
-					client.request = clientIt->request;
-					client.response = response;
-					response.clear();
-					this->clientsQueue.erase(clientIt);
-					this->clientsQueue.push_back(client);
+					clientIt->response = prepareResponse(clientIt->request);
 					it->events = POLLOUT;
 					clientIt->totbytes = 0;
 					clientIt->raw_data.clear();
@@ -146,7 +143,7 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 			if (clientIt->totbytes >= 2873)
 			{
 				clientIt = retrieveClient(fd);
-				if (clientIt != this->clientsQueue.end())
+				if (clientIt != this->clientsList.end())
 					clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
 				else
 				{
@@ -158,14 +155,8 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 					printf("send to CGI\n");
 				else
 				{
-					struct client client;
-					response = prepareResponse(clientIt->request);
-					client.fd = clientIt->fd;
-					client.request = clientIt->request;
-					client.response = response;
-					response.clear();
-					this->clientsQueue.erase(clientIt);
-					this->clientsQueue.push_back(client);
+					
+					clientIt->response = prepareResponse(clientIt->request);
 					it->events = POLLOUT;
 					clientIt->totbytes = 0;
 					clientIt->raw_data.clear();
@@ -275,20 +266,31 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	struct client newClient;
-	newClient.fd = clientFd;
-	newClient.raw_data.clear();
-	newClient.totbytes = 0;
-	this->clientsQueue.push_back(newClient);
-	Logger::info("New client " + Utils::toString(clientFd) + " created and added to poll sets");
+
+	ClientHandler newClient(clientFd);
+	this->clientsList.push_back(newClient);
+	Logger::info("New client " + Utils::toString(newClient.fd) + " created and added to poll sets");
 }
 
-std::vector<struct client>::iterator Webserver::retrieveClient(int fd)
-{
-	std::vector<struct client>::iterator iterClient;
-	std::vector<struct client>::iterator endClient = this->clientsQueue.end();
+// std::vector<struct client>::iterator Webserver::retrieveClient(int fd)
+// {
+// 	std::vector<struct client>::iterator iterClient;
+// 	std::vector<struct client>::iterator endClient = this->clientsQueue.end();
 
-	for (iterClient = this->clientsQueue.begin(); iterClient != endClient; iterClient++)
+// 	for (iterClient = this->clientsQueue.begin(); iterClient != endClient; iterClient++)
+// 	{
+// 		if (iterClient->fd == fd)
+// 			return iterClient;
+// 	}
+// 	return endClient;
+// }
+
+std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
+{
+	std::vector<ClientHandler>::iterator iterClient;
+	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
+
+	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
 	{
 		if (iterClient->fd == fd)
 			return iterClient;
