@@ -31,6 +31,8 @@ typedef struct client {
     int             fd;
     HttpRequest   request;
     std::string     response;
+    std::string     raw_data;
+    int             totbytes;
 }              client;
 
 typedef struct response {

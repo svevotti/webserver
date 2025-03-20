@@ -66,50 +66,15 @@ void HttpRequest::parseRequestHttp(void)
 	std::istringstream request(inputString);
 	std::string line;
     std::map<std::string, std::string>::iterator it;
-	std::map<std::string, std::string>::iterator it1;
 
 	parseRequestLine(inputString);
 	getline(request, line);
 	parseHeaders(request);
     it = headers.find("Content-Length");
-	it1 = headers.find("Transfer-Encoding");
-	if (it != headers.end() || it1 != headers.end())
+	if (it != headers.end())
 		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
 	else
 		typeBody = EMPTY;	
-}
-
-std::string HttpRequest::unchunkRequest(std::string chunked) 
-{
-	std::string::size_type bodyStart = chunked.find("\r\n\r\n");
-	std::string newStr;
-    std::string line;
-    long chunk_size;
-	std::string unchunked;
-
-	if (bodyStart != std::string::npos)
-	{
-		bodyStart += 4;
-		newStr = chunked.substr(bodyStart, chunked.length() - bodyStart - 2);
-	}
-	std::istringstream iss(newStr);
-	while (std::getline(iss, line)) 
-    {
-        if (line == "\r")
-			continue;
-        char* end_ptr;
-        chunk_size = strtol(line.c_str(), &end_ptr, 16);
-		if (chunk_size == 0)
-			break;
-        if (*end_ptr != '\r' || chunk_size < 0)
-			Logger::error("Invalid chunk size");
-        std::vector<char> buffer(chunk_size);
-        iss.read(&buffer[0], chunk_size);
-        if (iss.gcount() != static_cast<std::streamsize>(chunk_size))
-			Logger::error("Failed to read chunk data");
-        unchunked.append(&buffer[0], chunk_size);
-    }
-    return unchunked;
 }
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
@@ -120,34 +85,25 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 
 	if (method == "POST")
 	{
-		it = headers.find("Transfer-Encoding");
-		if (it != headers.end())
+		if (contentType.find("boundary") != std::string::npos) //multi format data
 		{
-			this->typeBody = CHUNKED;
-			data.indexBinary = 0;
-			data.body = unchunkRequest(buffer);
-			sectionsVec.push_back(data);
+			this->typeBody = MULTIPART;
+			Logger::error("buffer\n" + buffer);
+			Logger::warn("size\n" + Utils::toString(size));
+			parseMultiPartBody(buffer, size);
 		}
 		else
 		{
-			if (contentType.find("boundary") != std::string::npos) //multi format data
+			struct section data;
+			typeBody = TEXT;
+			data.indexBinary = 0;
+			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
+			if (bodyStart != std::string::npos)
 			{
-				this->typeBody = MULTIPART;
-				parseMultiPartBody(buffer, size);
+				bodyStart += 4;
+				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
 			}
-			else
-			{
-				struct section data;
-				typeBody = TEXT;
-				data.indexBinary = 0;
-				std::string::size_type bodyStart = buffer.find("\r\n\r\n");
-				if (bodyStart != std::string::npos)
-				{
-					bodyStart += 4;
-					data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
-				}
-				sectionsVec.push_back(data);	
-			}
+			sectionsVec.push_back(data);	
 		}
 	}
 	else
@@ -214,12 +170,19 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	int blen = strlen(b);
 	for (int i = 0; i < size; i++)
 	{
+		if (i >= size)
+			std::cout << buffer.c_str() + i << std::endl;
 		int diff = ft_memcmp(buffer.c_str() + i, b, blen);
 		if (diff == 0)
+		{
 			boundariesIndexes.push_back(i-2); //correct?
+			std::cout << i - 2 << std::endl;
+		}
 	}
 	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
+	{
 		extractSections(buffer, boundariesIndexes, i, b);
+	}
 	delete b;
 }
 
@@ -252,6 +215,7 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	}
 	data.indexBinary = indexBinary+2;
 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
+	std::cout << data.body << std::endl;
 	sectionsVec.push_back(data);
 }
 
@@ -333,8 +297,8 @@ void HttpRequest::exractQuery(std::string str)
 char *HttpRequest::getBoundary(const char *buffer)
 {
 	char *b;
-	const char *result = strstr(buffer, "=");
-	result++;
+	const char *result = strstr(buffer, "boundary");
+	result += 9;
 	int index_start = result - buffer;
 	int count = 0;
 	while (1)
@@ -354,4 +318,21 @@ char *HttpRequest::getBoundary(const char *buffer)
 	}
 	b[i] = '\0';
 	return (b);
+}
+
+void	HttpRequest::cleanProperties(void)
+{
+	str.clear();
+	size = 0;
+	requestLine.clear();
+	query.clear();
+	headers.clear();
+	std::vector<struct section>::iterator it;
+	for (it = sectionsVec.begin(); it != sectionsVec.end(); it++)
+	{
+		it->body.clear();
+		it->indexBinary = 0;
+		it->myMap.clear();
+	}
+	typeBody = EMPTY;
 }
