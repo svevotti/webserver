@@ -38,7 +38,7 @@ class HttpException : public std::exception {
 		std::string message;
 		std::string extractFile()
 		{
-			std::ifstream fileStream(this->file);
+			std::ifstream fileStream(this->file.c_str());
 			std::string line;
 			std::string html;
 

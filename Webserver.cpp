@@ -401,7 +401,7 @@ void	Webserver::closeSockets()
 // }
 std::string extractContent(std::string path)
 {
-	std::ifstream inputFile(path, std::ios::binary); // Open the file in binary mode
+	std::ifstream inputFile(path.c_str(), std::ios::binary); // Open the file in binary mode
 
 		if (!inputFile) { // Check if the file opened successfully
 			std::cerr << "Error opening file." << std::endl;
