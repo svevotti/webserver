@@ -30,12 +30,6 @@
 
 class ClientHandler {
 	public:
-		// std::string raw_data;
-		// int totbytes;
-		// int fd;
-		// HttpRequest request;
-		// std::string response;
-		// InfoServer info;
 		ClientHandler(int fd, InfoServer info);
 		int getFd(void) const;
 		HttpRequest getRequest() const;
