@@ -47,8 +47,6 @@ class Webserver {
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
         int processClient(int fd);
-        int                                     readData(int fd, std::string& buffer, int& bytes);
-        int                                     handleReadEvents(int fd);
         void                                    handleWritingEvents(int fd);
         HttpRequest                             ParsingRequest(std::string buffer, int size);
         void                                    closeSockets(void);
