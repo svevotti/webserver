@@ -36,13 +36,22 @@ class ClientHandler {
 	int fd;
 	HttpRequest request;
 	std::string response;
-	ClientHandler(int fd)
+	InfoServer info;
+	ClientHandler(int fd, InfoServer info)
 	{
 		this->fd = fd;
 		this->totbytes = 0;
+		this->info = info;
 	}
 
 	int readData(int fd, std::string &str, int &bytes);
+	int clientStatus(void);
+	int isCgi(std::string str);
+	std::string prepareResponse(HttpRequest request);
+	std::string                                    retrievePage(HttpRequest request);
+	std::string                                       uploadFile(HttpRequest request);
+	std::string                                          deleteFile(HttpRequest request);
+
 	// void setRequest(HttpRequest request)
 	// {
 	// 	this->request = request;
