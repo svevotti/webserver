@@ -21,6 +21,18 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 	return 2;
 }
 
+int ClientHandler::retrieveResponse(void)
+{
+	int bytes = send(fd, this->response.c_str(), this->response.size(), 0);
+	if (bytes == -1)
+		return -1;
+	this->response.clear();
+	this->raw_data.clear();
+	this->totbytes = 0;
+	this->request.cleanProperties();
+	return 0;
+}
+
 int	searchPage(std::string path)
 {
 	FILE *folder;
