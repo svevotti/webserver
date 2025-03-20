@@ -19,7 +19,7 @@ Webserver::~Webserver()
 	closeSockets();
 }
 
-// Setters and getters
+// Setters and Getters
 
 // Main functions
 int	Webserver::startServer()
@@ -42,66 +42,6 @@ int	Webserver::startServer()
 			dispatchEvents();
 	}
 	return 0;
-}
-
-
-bool Webserver::fdIsCGI(int fd)
-{
-	return false;
-}
-
-int Webserver::processClient(int fd)
-{
-	int result;
-	std::vector<ClientHandler>::iterator clientIt;
-
-	clientIt = retrieveClient(fd);
-	if (clientIt == this->clientsList.end())
-	{
-		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
-		return 0;
-	}
-	result = clientIt->clientStatus();
-	return result;
-	// result = clientIt->readData(clientIt->fd, clientIt->raw_data, clientIt->totbytes);
-	// if (result == 0 || result == 1)
-	// 	return 1;
-	// else
-	// {
-	// 	if (clientIt->raw_data.find("GET") != std::string::npos)
-	// 	{
-	// 		clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
-	// 		if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
-	// 			return 3;
-	// 		else
-	// 		{
-	// 				clientIt->response = prepareResponse(clientIt->request);
-	// 				clientIt->totbytes = 0;
-	// 				clientIt->raw_data.clear();
-	// 				Logger::info("Response created successfully and store in clientQueu");
-	// 				return 2;
-	// 		}
-	// 	}
-	// 	else if (clientIt->raw_data.find("Content-Length") != std::string::npos)
-	// 	{
-	// 		if (clientIt->totbytes >= 2873) //don't forget to extract the actual size from conentent length
-	// 		{
-	// 			clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
-	// 			Logger::debug("Done parsing");
-	// 			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
-	// 				return 3;
-	// 			else
-	// 			{
-	// 				clientIt->response = prepareResponse(clientIt->request);
-	// 				clientIt->totbytes = 0;
-	// 				clientIt->raw_data.clear();
-	// 				Logger::info("Response created successfully and store in clientQueu");
-	// 				return 2;
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// return 0;
 }
 
 void Webserver::dispatchEvents()
@@ -142,88 +82,73 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
-			handleWritingEvents(it->fd);
+
+			if (processResponse(it->fd) == -1)
+			{
+				Logger::error("Something went wrong with send - don't know the meaning of it yet");
+			}
+			// handleWritingEvents(it->fd);
 			it->events = POLLIN;
 		}
 		it++;
 	}
 }
 
-void Webserver::handleWritingEvents(int fd)
+int Webserver::fdIsCGI(int fd)
 {
-	std::vector<ClientHandler>::iterator iterClient;
-	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
-
-	iterClient = retrieveClient(fd);
-	if (iterClient == endClient)
-	{
-		Logger::error("Failed to find client " + Utils::toString(fd));
-		return;
-	}
-	//TODO:does it behave as recv?
-	Logger::debug("bytes to send " + Utils::toString(iterClient->response.size()));
-	int bytes = send(fd, iterClient->response.c_str(), iterClient->response.size(), 0);
-	if (bytes == -1)
-		Logger::error("Failed send - Sveva check this out");
-	Logger::info("these bytes were sent " + Utils::toString(bytes));
-	iterClient->response.clear();
-	iterClient->raw_data.clear();
-	iterClient->totbytes = 0;
-	iterClient->request.cleanProperties();
+	return false;
 }
 
-// HttpRequest Webserver::ParsingRequest(std::string str, int size)
-// {
-// 	HttpRequest request;
-// 	request.HttpParse(str, size);
-// 	return request;
-// }
+int Webserver::processClient(int fd)
+{
+	int status;
+	std::vector<ClientHandler>::iterator clientIt;
 
-// std::string Webserver::prepareResponse(HttpRequest request)
-// {
-// 	std::string body;
-// 	std::string response;
-// 	// Try out try/catch logic
-// 	struct response data;
-// 	int code;
+	clientIt = retrieveClient(fd);
+	if (clientIt == this->clientsList.end())
+	{
+		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
+		return 0;
+	}
+	status = clientIt->clientStatus();
+	return status;
+}
 
-// 	std::map<std::string, std::string> httpRequestLine;
-// 	httpRequestLine = request.getHttpRequestLine();
-// 	if (httpRequestLine.find("Method") != httpRequestLine.end())
+int Webserver::processResponse(int fd)
+{
+	std::vector<ClientHandler>::iterator clientIt;
+
+	clientIt = retrieveClient(fd);
+	if (clientIt == this->clientsList.end())
+	{
+		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
+		return -1;
+	}
+	int status = clientIt->retrieveResponse();
+	return status;
+}
+
+// void Webserver::handleWritingEvents(int fd)
+// {
+// 	std::vector<ClientHandler>::iterator iterClient;
+// 	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
+
+// 	iterClient = retrieveClient(fd);
+// 	if (iterClient == endClient)
 // 	{
-// 		try
-// 		{
-// 			if (httpRequestLine["Method"] == "GET")
-// 			{
-// 				body = retrievePage(request);
-// 				Logger::debug("body " + body);
-// 				code = 200;
-// 			}
-// 			else if (httpRequestLine["Method"] == "POST")
-// 			{
-// 				body = uploadFile(request);
-// 				code = 201;
-// 			}
-// 			else if (httpRequestLine["Method"] == "DELETE")
-// 			{
-// 				body = deleteFile(request);
-// 				code = 200;
-// 			}
-// 			else
-// 				throw MethodNotAllowedException("./server_root/public_html/405.html");
-// 		}
-// 		catch(const NotFoundException& e)
-// 		{
-// 			Logger::error(e.what());
-// 			code = e.getCode();
-// 			body = e.getBody();
-// 		}
-// 		HttpResponse http(code, body);
-// 		response = http.composeRespone();
+// 		Logger::error("Failed to find client " + Utils::toString(fd));
+// 		return;
 // 	}
-// 	else
-// 		Logger::error("Method not found, Sveva, use correct status code line");
-// 	return response;
+// 	//TODO:does it behave as recv?
+// 	Logger::debug("bytes to send " + Utils::toString(iterClient->response.size()));
+// 	int bytes = send(fd, iterClient->response.c_str(), iterClient->response.size(), 0);
+// 	if (bytes == -1)
+// 		Logger::error("Failed send - Sveva check this out");
+// 	Logger::info("these bytes were sent " + Utils::toString(bytes));
+// 	iterClient->response.clear();
+// 	iterClient->raw_data.clear();
+// 	iterClient->totbytes = 0;
+// 	iterClient->request.cleanProperties();
 // }
 
 //utilis
@@ -270,7 +195,6 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-
 	ClientHandler newClient(clientFd, this->serverInfo);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.fd) + " created and added to poll sets");
@@ -289,48 +213,6 @@ std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
 	return endClient;
 }
 
-// int Webserver::readData(int fd, std::string &str, int &bytes)
-// {
-// 	int res = 0;
-// 	char buffer[BUFFER];
-
-// 	while (1)
-// 	{
-// 		ft_memset(buffer, 0, sizeof(buffer));
-// 		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
-// 		if (res <= 0)
-// 			break;
-// 		str.append(buffer, res);
-// 		bytes += res;
-// 	}
-// 	if (res == 0)
-// 		return 0;
-// 	else if (res == -1 && bytes == 0)
-// 		return 1;
-// 	return 2;
-// }
-
-
-// int	Webserver::searchPage(std::string path)
-// {
-// 	FILE *folder;
-
-// 	folder = fopen(path.c_str(), "rb");
-// 	if (folder == NULL)
-// 		return false;
-// 	fclose(folder);
-// 	return true;
-// }
-
-// int Webserver::isCgi(std::string str)
-// {
-// 	if (str.find(".py") != std::string::npos)
-// 		return true;
-// 	if (searchPage(this->serverInfo.getServerDocumentRoot() + str) == true)
-// 		return false;
-// 	return true;
-// }
-
 void	Webserver::closeSockets()
 {
 	int size = (int)this->poll_sets.size();
@@ -340,226 +222,6 @@ void	Webserver::closeSockets()
 			close(this->poll_sets[i].fd);
 	}
 }
-
- /*to move these in client handler*/
-// bool fileExists(std::string path)
-// {
-// 	std::ifstream file;
-// 	std::string line;
-// 	std::string htmlFile;
-// 	std::string temp;
-
-// 	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-// 	if (!file)
-// 	{
-// 		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-// 		return (false);
-// 	}
-// 	file.close();
-// 	return true;
-// }
-
-// std::string extractContent(std::string path)
-// {
-// 	std::ifstream file;
-// 	std::string line;
-// 	std::string htmlFile;
-// 	std::string temp;
-
-// 	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-// 	if (!file)
-// 	{
-// 		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-// 		return (htmlFile);
-// 	}
-// 	while (std::getline(file, line))
-// 	{
-// 		if (line.size() == 0)
-// 			continue;
-// 		else
-// 			htmlFile = htmlFile.append(line + "\r\n");
-// 	}
-// 	file.close();
-// 	return (htmlFile);
-// }
-// std::string extractContent(std::string path)
-// {
-// 	std::ifstream inputFile(path.c_str(), std::ios::binary); // Open the file in binary mode
-
-// 		if (!inputFile) { // Check if the file opened successfully
-// 			std::cerr << "Error opening file." << std::endl;
-// 			return ""; // Exit with an error code
-// 		}
-
-// 		// Move the cursor to the end of the file to determine its size
-// 		inputFile.seekg(0, std::ios::end);
-// 		std::streamsize size = inputFile.tellg(); // Get the size of the file
-// 		inputFile.seekg(0, std::ios::beg); // Move the cursor back to the beginning
-
-// 		// Create a string with the size of the file
-// 		std::string buffer; // Initialize a string with the size of the file
-// 		buffer.resize(size);
-// 		// Read the binary data into the string
-// 		if (inputFile.read(&buffer[0], size)) {
-// 			// Successfully read the data
-// 			std::cout << "Read " << size << " bytes from the file." << std::endl;
-// 		} else {
-// 			std::cerr << "Error reading file." << std::endl;
-// 		}
-
-// 		inputFile.close(); // Close the file
-// 		Logger::debug("size body: " + Utils::toString(size));
-// 		Logger::debug("size body with method: " + Utils::toString(buffer.size()));
-// 		return buffer; // Exit successful
-// 	}
-
-// std::string Webserver::retrievePage(HttpRequest request)
-// {
-// 	std::string body;
-// 	std::string htmlPage;
-// 	std::ostringstream intermediatestream;
-// 	std::string strbodyHtmlLen;
-// 	std::string httpHeaders;
-// 	std::string statusCodeLine;
-// 	std::string documentRootPath;
-// 	std::string pathToTarget;
-// 	struct stat pathStat;
-// 	std::map<std::string, std::string> httpRequestLine;
-
-// 	//TODO: need to check curl -O why is not downloading - not working cause i can't do it with getline
-// 	httpRequestLine = request.getHttpRequestLine();
-// 	documentRootPath = this->serverInfo.getServerDocumentRoot();
-// 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
-// 	Logger::debug(pathToTarget);
-// 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
-// 		Logger::error("Failed stat: " + std::string(strerror(errno)));
-// 	if (S_ISDIR(pathStat.st_mode))
-// 	{
-// 		if (pathToTarget[pathToTarget.length()-1] == '/')
-// 			pathToTarget += "index.html";
-// 		else
-// 		pathToTarget += "/index.html";
-// 	}
-// 	//check path exists
-// 	if (fileExists(pathToTarget) == false)
-// 		throw NotFoundException("./server_root/public_html/404.html");
-// 	else
-// 		htmlPage = pathToTarget;
-// 	body = extractContent(htmlPage);
-// 	return body;
-// }
-
-// std::string getFileType(std::map<std::string, std::string> headers)
-// {
-// 	std::map<std::string, std::string>::iterator it;
-// 	std::string type;
-
-// 	for (it = headers.begin(); it != headers.end(); it++)
-// 	{
-// 		if (it->first == "Content-Type")
-// 			type = it->second;
-// 	}
-// 	return type;
-// }
-
-// std::string getFileName(std::map<std::string, std::string> headers)
-// {
-// 	std::map<std::string, std::string>::iterator it;
-// 	std::string name;
-
-// 	for (it = headers.begin(); it != headers.end(); it++)
-// 	{
-// 		if (it->first == "Content-Disposition")
-// 		{
-// 			if (it->second.find("filename") != std::string::npos)
-// 			{
-// 				std::string fileNameField = it->second.substr(it->second.find("filename"));
-// 				if (fileNameField.find('"') != std::string::npos)
-// 				{
-// 					int indexFirstQuote = fileNameField.find('"');
-// 					int indexSecondQuote = 0;
-// 					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-// 					{
-// 						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-// 					}
-// 					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return name;
-// }
-
-// int checkNameFile(std::string str, std::string path)
-// {
-// 	DIR *folder;
-// 	struct dirent *data;
-
-// 	folder = opendir(path.c_str());
-// 	std::string convStr;
-// 	std::cout << path << std::endl;
-// 	if (folder == NULL)
-// 		printf("error opening folder\n");
-// 	while ((data = readdir(folder)))
-// 	{
-// 		convStr = data->d_name;
-// 		if (convStr == str)
-// 			return (1);
-// 	}
-// 	closedir(folder);
-// 	return (0);
-// }
-
-// std::string Webserver::uploadFile(HttpRequest request)
-// {
-// 	std::map<std::string, std::string> httpRequestLine;
-// 	std::string body;
-// 	std::map<std::string, std::string> headersBody;
-// 	std::string binaryBody;
-// 	std::vector<struct section> sectionBodies;
-
-// 	httpRequestLine = request.getHttpRequestLine();
-// 	sectionBodies = request.getHttpSections();
-// 	headersBody = sectionBodies[0].myMap;
-// 	binaryBody = sectionBodies[0].body;
-// 	if (sectionBodies.size() > 1)
-// 		throw ServiceUnavailabledException("./server_root/public_html/503.html");
-// 	std::string requestTarget = httpRequestLine["Request-URI"];
-// 	requestTarget.erase(requestTarget.begin());
-// 	std::string pathFile = this->serverInfo.getServerRootPath() + "/" + requestTarget; //it only works if given this path by the client?
-// 	std::string fileName = getFileName(headersBody);
-// 	std::string fileType = getFileType(headersBody);
-// 	if (checkNameFile(fileName, pathFile) == 1)
-// 		throw ConflictException();
-// 	pathFile += "/" + fileName;
-// 	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-// 	if (file < 0)
-// 	{
-// 		perror("Error opening file");
-// 		throw BadRequestException("./server_root/public_html/400.html");
-// 	}
-// 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
-// 	if (written < 0) {
-// 		perror("Error writing to file");
-// 		close(file);
-// 		throw BadRequestException("./server_root/public_html/400.html");
-// 	}
-// 	close(file);
-// 	body = extractContent("./server_root/public_html/success/index.html");
-// 	return body;
-// }
-
-// std::string      Webserver::deleteFile(HttpRequest request)
-// {
-// 	std::string body;
-// 	std::string pathToResource = "./" + request.getHttpRequestLine()["Request-URI"];
-// 	std::ifstream file(pathToResource.c_str());
-// 	if (!(file.good()))
-// 		throw NotFoundException(pathToResource);
-// 	else
-// 		remove(pathToResource.c_str());
-// 	return body;
-// }
 
 void Webserver::removeClient(int fd)
 {

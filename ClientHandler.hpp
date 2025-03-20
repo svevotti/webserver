@@ -51,6 +51,7 @@ class ClientHandler {
 	std::string                                    retrievePage(HttpRequest request);
 	std::string                                       uploadFile(HttpRequest request);
 	std::string                                          deleteFile(HttpRequest request);
+	int	retrieveResponse(void);
 
 	// void setRequest(HttpRequest request)
 	// {

@@ -32,36 +32,22 @@
 #define STATIC 2
 #define CGI 3
 
-typedef struct response {
-    int             code;
-    std::string     body;
-}              response;
-
 class Webserver {
     public:
         Webserver(InfoServer&);
         ~Webserver();
-        int	                                    startServer();
+        int                                     startServer(void);
         void                                    addServerSocketsToPoll(std::vector<int> vec);
         int                                     fdIsServerSocket(int fd);
+        int                                    fdIsCGI(int fd);
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
-        int processClient(int fd);
+        int                                     processClient(int fd);
+        int                                     processResponse(int fd);
         void                                    handleWritingEvents(int fd);
-        HttpRequest                             ParsingRequest(std::string buffer, int size);
         void                                    closeSockets(void);
-        int                                     isCgi(std::string path);
-        int                                     searchPage(std::string path);
-        std::string                             prepareResponse(HttpRequest request);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
-        void removeClient(int fd);
-
-        bool fdIsCGI(int fd);
-
-        std::string                                    retrievePage(HttpRequest request);
-        std::string                                       uploadFile(HttpRequest request);
-        std::string                                          deleteFile(HttpRequest request);
-
+        void                                    removeClient(int fd);
     private:
 
         InfoServer                  serverInfo;
