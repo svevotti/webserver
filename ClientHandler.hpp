@@ -42,6 +42,7 @@ class ClientHandler {
 		this->totbytes = 0;
 	}
 
+	int readData(int fd, std::string &str, int &bytes);
 	// void setRequest(HttpRequest request)
 	// {
 	// 	this->request = request;
