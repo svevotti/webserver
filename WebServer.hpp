@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 #include "HttpException.hpp"
+#include "ClientHandler.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,13 +28,13 @@
 #include <sstream>
 #include <stdexcept>
 
-typedef struct client {
-    int             fd;
-    HttpRequest   request;
-    std::string     response;
-    std::string     raw_data;
-    int             totbytes;
-}              client;
+// typedef struct client {
+//     int             fd;
+//     HttpRequest   request;
+//     std::string     response;
+//     std::string     raw_data;
+//     int             totbytes;
+// }              client;
 
 typedef struct response {
     int             code;
@@ -57,7 +58,8 @@ class Webserver {
         int                                     isCgi(std::string path);
         int                                     searchPage(std::string path);
         std::string                             prepareResponse(HttpRequest request);
-        std::vector<struct client>::iterator    retrieveClient(int fd);
+        // std::vector<struct client>::iterator    retrieveClient(int fd);
+        std::vector<ClientHandler>::iterator    retrieveClient(int fd);
 
         std::string                                    retrievePage(HttpRequest request);
         std::string                                       uploadFile(HttpRequest request);
@@ -68,7 +70,8 @@ class Webserver {
         InfoServer                  serverInfo;
         std::vector<struct pollfd>  poll_sets;
         std::vector<int>            serverFds;
-        std::vector<struct client>  clientsQueue;
+        // std::vector<struct client>  clientsQueue;
+        std::vector<ClientHandler> clientsList;
 
 };
 #endif
