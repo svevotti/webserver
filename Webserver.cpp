@@ -47,14 +47,12 @@ int	Webserver::startServer()
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
-	std::vector<struct pollfd>::iterator ite;
 	int result;
 
-	ite = this->poll_sets.end();
-    for (it = poll_sets.begin(); it != ite;) 
+    for (it = poll_sets.begin(); it != poll_sets.end();) 
     {
-		result = 0;
 		Logger::debug("Client: " + Utils::toString(it->fd));
+		result = 0;
         if (it->revents & POLLIN)
         {
 			if (fdIsServerSocket(it->fd) == true)
@@ -82,13 +80,23 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
-
 			if (processResponse(it->fd) == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
 			}
-			// handleWritingEvents(it->fd);
 			it->events = POLLIN;
+		}
+		else if (it->revents & POLLERR)
+		{
+			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
+		}
+		else if (it->revents & POLLHUP)
+		{
+			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
+		}
+		else if (it->revents & POLLNVAL)
+		{
+			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
 		}
 		it++;
 	}
@@ -127,29 +135,6 @@ int Webserver::processResponse(int fd)
 	int status = clientIt->retrieveResponse();
 	return status;
 }
-
-// void Webserver::handleWritingEvents(int fd)
-// {
-// 	std::vector<ClientHandler>::iterator iterClient;
-// 	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
-
-// 	iterClient = retrieveClient(fd);
-// 	if (iterClient == endClient)
-// 	{
-// 		Logger::error("Failed to find client " + Utils::toString(fd));
-// 		return;
-// 	}
-// 	//TODO:does it behave as recv?
-// 	Logger::debug("bytes to send " + Utils::toString(iterClient->response.size()));
-// 	int bytes = send(fd, iterClient->response.c_str(), iterClient->response.size(), 0);
-// 	if (bytes == -1)
-// 		Logger::error("Failed send - Sveva check this out");
-// 	Logger::info("these bytes were sent " + Utils::toString(bytes));
-// 	iterClient->response.clear();
-// 	iterClient->raw_data.clear();
-// 	iterClient->totbytes = 0;
-// 	iterClient->request.cleanProperties();
-// }
 
 //utilis
 int Webserver::fdIsServerSocket(int fd)

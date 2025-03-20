@@ -39,21 +39,21 @@ class Webserver {
         int                                     startServer(void);
         void                                    addServerSocketsToPoll(std::vector<int> vec);
         int                                     fdIsServerSocket(int fd);
-        int                                    fdIsCGI(int fd);
+        int                                     fdIsCGI(int fd);
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
         int                                     processClient(int fd);
         int                                     processResponse(int fd);
-        void                                    handleWritingEvents(int fd);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
         void                                    removeClient(int fd);
+
     private:
 
         InfoServer                  serverInfo;
         std::vector<struct pollfd>  poll_sets;
         std::vector<int>            serverFds;
-        std::vector<ClientHandler> clientsList;
+        std::vector<ClientHandler>  clientsList;
 
 };
 #endif
