@@ -109,8 +109,6 @@ int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 
 	std::vector<ClientHandler>::iterator clientIt;
 	clientIt = retrieveClient(fd);
-	Logger::error("Client " + Utils::toString(clientIt->fd));
-	Logger::error("Fd " + Utils::toString(fd));
 	result = readData(fd, clientIt->raw_data, clientIt->totbytes);
 	if (result == 0 || result == 1)
 		return 1;
