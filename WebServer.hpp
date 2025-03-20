@@ -46,7 +46,7 @@ class Webserver {
         int                                     processResponse(int fd);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
-        void                                    removeClient(int fd);
+        void                                    removeClient(std::vector<struct pollfd>::iterator it);
 
     private:
 

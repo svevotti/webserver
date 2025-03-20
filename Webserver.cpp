@@ -66,8 +66,7 @@ void Webserver::dispatchEvents()
 				result = processClient(it->fd);
 				if (result == DISCONNECTED)
 				{
-					removeClient(it->fd);
-					this->poll_sets.erase(it);
+					removeClient(it);
                     return ;
 				}
 				else if (result == STATIC)
@@ -89,14 +88,20 @@ void Webserver::dispatchEvents()
 		else if (it->revents & POLLERR)
 		{
 			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
+			removeClient(it);
+			return;
 		}
 		else if (it->revents & POLLHUP)
 		{
 			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
+			removeClient(it);
+			return;
 		}
 		else if (it->revents & POLLNVAL)
 		{
 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
+			removeClient(it);
+			return;
 		}
 		it++;
 	}
@@ -208,9 +213,10 @@ void	Webserver::closeSockets()
 	}
 }
 
-void Webserver::removeClient(int fd)
+void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
-	Logger::info("Client " + Utils::toString(fd) + " disconnected");
-	close(fd);
-	this->clientsList.erase(retrieveClient(fd));
+	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
+	close(it->fd);
+	this->clientsList.erase(retrieveClient(it->fd));
+	this->poll_sets.erase(it);
 }
