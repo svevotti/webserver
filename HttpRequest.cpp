@@ -172,7 +172,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	{
 		if (i >= size)
 			std::cout << buffer.c_str() + i << std::endl;
-		int diff = ft_memcmp(buffer.c_str() + i, b, blen);
+		int diff = Utils::ft_memcmp(buffer.c_str() + i, b, blen);
 		if (diff == 0)
 		{
 			boundariesIndexes.push_back(i-2); //correct?

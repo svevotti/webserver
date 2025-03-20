@@ -55,7 +55,7 @@ int ServerSockets::createSocket(const char* portNumber)
 	int error;
 	int opt = 1;
 
-	ft_memset(&hints, 0, sizeof(hints));
+	Utils::ft_memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET6; //flag to set iPV6
 	hints.ai_socktype = SOCK_STREAM; //type of socket, we need TCP, stream socket
 	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
