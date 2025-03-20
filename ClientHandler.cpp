@@ -1,5 +1,30 @@
 #include "ClientHandler.hpp"
 
+//Constructor and Destructor
+ClientHandler::ClientHandler(int fd, InfoServer info)
+{
+	this->fd = fd;
+	this->totbytes = 0;
+	this->info = info;
+}
+
+//Setters and Getters
+int ClientHandler::getFd(void) const
+{
+	return this->fd;
+}
+
+HttpRequest ClientHandler::getRequest() const
+{
+	return this->request;
+}
+
+std::string ClientHandler::getResponse() const
+{
+	return this->response;
+}
+
+//Main functions
 int ClientHandler::readData(int fd, std::string &str, int &bytes)
 {
 	int res = 0;
@@ -77,58 +102,28 @@ bool fileExists(std::string path)
 	return true;
 }
 
-// std::string extractContent(std::string path)
-// {
-// 	std::ifstream file;
-// 	std::string line;
-// 	std::string htmlFile;
-// 	std::string temp;
-
-// 	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-// 	if (!file)
-// 	{
-// 		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-// 		return (htmlFile);
-// 	}
-// 	while (std::getline(file, line))
-// 	{
-// 		if (line.size() == 0)
-// 			continue;
-// 		else
-// 			htmlFile = htmlFile.append(line + "\r\n");
-// 	}
-// 	file.close();
-// 	return (htmlFile);
-// }
 std::string extractContent(std::string path)
 {
-	std::ifstream inputFile(path.c_str(), std::ios::binary); // Open the file in binary mode
+	std::ifstream inputFile(path.c_str(), std::ios::binary);
 
-		if (!inputFile) { // Check if the file opened successfully
+		if (!inputFile)
+		{
 			std::cerr << "Error opening file." << std::endl;
-			return ""; // Exit with an error code
+			return "";
 		}
 
-		// Move the cursor to the end of the file to determine its size
 		inputFile.seekg(0, std::ios::end);
-		std::streamsize size = inputFile.tellg(); // Get the size of the file
-		inputFile.seekg(0, std::ios::beg); // Move the cursor back to the beginning
-
-		// Create a string with the size of the file
-		std::string buffer; // Initialize a string with the size of the file
+		std::streamsize size = inputFile.tellg();
+		inputFile.seekg(0, std::ios::beg);
+		std::string buffer; 
 		buffer.resize(size);
-		// Read the binary data into the string
-		if (inputFile.read(&buffer[0], size)) {
-			// Successfully read the data
+		if (inputFile.read(&buffer[0], size))
 			std::cout << "Read " << size << " bytes from the file." << std::endl;
-		} else {
+		else
 			std::cerr << "Error reading file." << std::endl;
-		}
 
-		inputFile.close(); // Close the file
-		Logger::debug("size body: " + Utils::toString(size));
-		Logger::debug("size body with method: " + Utils::toString(buffer.size()));
-		return buffer; // Exit successful
+		inputFile.close();
+		return buffer;
 	}
 
 std::string ClientHandler::retrievePage(HttpRequest request)
@@ -144,7 +139,6 @@ std::string ClientHandler::retrievePage(HttpRequest request)
 	struct stat pathStat;
 	std::map<std::string, std::string> httpRequestLine;
 
-	//TODO: need to check curl -O why is not downloading - not working cause i can't do it with getline
 	httpRequestLine = request.getHttpRequestLine();
 	documentRootPath = this->info.getServerDocumentRoot();
 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
@@ -158,7 +152,6 @@ std::string ClientHandler::retrievePage(HttpRequest request)
 		else
 		pathToTarget += "/index.html";
 	}
-	//check path exists
 	if (fileExists(pathToTarget) == false)
 		throw NotFoundException("./server_root/public_html/404.html");
 	else
@@ -244,7 +237,7 @@ std::string ClientHandler::uploadFile(HttpRequest request)
 		throw ServiceUnavailabledException("./server_root/public_html/503.html");
 	std::string requestTarget = httpRequestLine["Request-URI"];
 	requestTarget.erase(requestTarget.begin());
-	std::string pathFile = this->info.getServerRootPath() + "/" + requestTarget; //it only works if given this path by the client?
+	std::string pathFile = this->info.getServerRootPath() + "/" + requestTarget;
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, pathFile) == 1)

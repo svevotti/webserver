@@ -63,7 +63,7 @@ void Webserver::dispatchEvents()
 			}
 			else
 			{
-				result = processClient(it->fd);
+				result = processClient(it->fd, READ);
 				if (result == DISCONNECTED)
 				{
 					removeClient(it);
@@ -79,7 +79,7 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
-			if (processResponse(it->fd) == -1)
+			if (processClient(it->fd, WRITE) == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
 			}
@@ -107,12 +107,7 @@ void Webserver::dispatchEvents()
 	}
 }
 
-int Webserver::fdIsCGI(int fd)
-{
-	return false;
-}
-
-int Webserver::processClient(int fd)
+int Webserver::processClient(int fd, int event)
 {
 	int status;
 	std::vector<ClientHandler>::iterator clientIt;
@@ -123,25 +118,14 @@ int Webserver::processClient(int fd)
 		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
 		return 0;
 	}
-	status = clientIt->clientStatus();
+	if (event == READ)
+		status = clientIt->clientStatus();
+	else
+		status = clientIt->retrieveResponse();
 	return status;
 }
 
-int Webserver::processResponse(int fd)
-{
-	std::vector<ClientHandler>::iterator clientIt;
-
-	clientIt = retrieveClient(fd);
-	if (clientIt == this->clientsList.end())
-	{
-		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
-		return -1;
-	}
-	int status = clientIt->retrieveResponse();
-	return status;
-}
-
-//utilis
+//Utils
 int Webserver::fdIsServerSocket(int fd)
 {
 	int size = this->serverFds.size();
@@ -150,6 +134,11 @@ int Webserver::fdIsServerSocket(int fd)
 		if (fd == this->serverFds[i])
 			return true;
 	}
+	return false;
+}
+
+int Webserver::fdIsCGI(int fd)
+{
 	return false;
 }
 
@@ -187,7 +176,7 @@ void Webserver::createNewClient(int fd)
 	this->poll_sets.push_back(clientPoll);
 	ClientHandler newClient(clientFd, this->serverInfo);
 	this->clientsList.push_back(newClient);
-	Logger::info("New client " + Utils::toString(newClient.fd) + " created and added to poll sets");
+	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }
 
 std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
@@ -197,13 +186,13 @@ std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
 
 	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
 	{
-		if (iterClient->fd == fd)
+		if (iterClient->getFd() == fd)
 			return iterClient;
 	}
 	return endClient;
 }
 
-void	Webserver::closeSockets()
+void Webserver::closeSockets()
 {
 	int size = (int)this->poll_sets.size();
 	for (int i = 0; i < size; i++)
