@@ -12,7 +12,6 @@
 
 #include "HttpResponse.hpp"
 #include "InfoServer.hpp"
-#include "StringManipulations.hpp"
 #include "HttpRequest.hpp"
 
 
