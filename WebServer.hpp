@@ -28,13 +28,9 @@
 #include <sstream>
 #include <stdexcept>
 
-// typedef struct client {
-//     int             fd;
-//     HttpRequest   request;
-//     std::string     response;
-//     std::string     raw_data;
-//     int             totbytes;
-// }              client;
+#define DISCONNECTED 1
+#define STATIC 2
+#define CGI 3
 
 typedef struct response {
     int             code;
@@ -59,6 +55,9 @@ class Webserver {
         int                                     searchPage(std::string path);
         std::string                             prepareResponse(HttpRequest request);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
+        void removeClient(int fd);
+
+        bool fdIsCGI(int fd);
 
         std::string                                    retrievePage(HttpRequest request);
         std::string                                       uploadFile(HttpRequest request);

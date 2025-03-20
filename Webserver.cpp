@@ -44,6 +44,12 @@ int	Webserver::startServer()
 	return 0;
 }
 
+
+bool Webserver::fdIsCGI(int fd)
+{
+	return false;
+}
+
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
@@ -59,20 +65,25 @@ void Webserver::dispatchEvents()
         {
 			if (fdIsServerSocket(it->fd) == true)
 				createNewClient(it->fd);
+			else if (fdIsCGI(it->fd) == true)
+			{
+				Logger::info("Start CGI logic here");
+			}
 			else
 			{
-				Logger::info("Event should be POLLIN: " + Utils::toString(it->events));
 				result = handleReadEvents(it->fd);
-				if (result == 1)
+				if (result == DISCONNECTED)
 				{
-					Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
-					close(it->fd);
-					this->clientsList.erase(retrieveClient(it->fd));
-					it = this->poll_sets.erase(it);
+					removeClient(it->fd);
+					this->poll_sets.erase(it);
                     return ;
 				}
-				if (result == 2)
+				else if (result == STATIC)
 					it->events = POLLOUT;
+				else if (result == CGI)
+				{
+					Logger::info("Set up CGI here");
+				}
 			}
         }
 		else if (it->revents & POLLOUT)
@@ -130,7 +141,7 @@ int Webserver::handleReadEvents(int fd)
 				return 0;
 			}
 			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
-				printf("send to CGI\n");
+				return 3;
 			else
 			{
 					clientIt->response = prepareResponse(clientIt->request);
@@ -570,4 +581,11 @@ std::string      Webserver::deleteFile(HttpRequest request)
 	else
 		remove(pathToResource.c_str());
 	return body;
+}
+
+void Webserver::removeClient(int fd)
+{
+	Logger::info("Client " + Utils::toString(fd) + " disconnected");
+	close(fd);
+	this->clientsList.erase(retrieveClient(fd));
 }
