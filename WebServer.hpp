@@ -30,6 +30,8 @@
 #define DISCONNECTED 1
 #define STATIC 2
 #define CGI 3
+#define READ 4
+#define WRITE 5
 
 class Webserver {
     public:
@@ -41,8 +43,7 @@ class Webserver {
         int                                     fdIsCGI(int fd);
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
-        int                                     processClient(int fd);
-        int                                     processResponse(int fd);
+        int                                     processClient(int fd, int event);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
         void                                    removeClient(std::vector<struct pollfd>::iterator it);

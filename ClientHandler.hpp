@@ -30,53 +30,32 @@
 
 class ClientHandler {
 	public:
+		// std::string raw_data;
+		// int totbytes;
+		// int fd;
+		// HttpRequest request;
+		// std::string response;
+		// InfoServer info;
+		ClientHandler(int fd, InfoServer info);
+		int getFd(void) const;
+		HttpRequest getRequest() const;
+		std::string getResponse() const;
+		int readData(int fd, std::string &str, int &bytes);
+		int clientStatus(void);
+		int isCgi(std::string str);
+		std::string prepareResponse(HttpRequest request);
+		std::string                                    retrievePage(HttpRequest request);
+		std::string                                       uploadFile(HttpRequest request);
+		std::string                                          deleteFile(HttpRequest request);
+		int	retrieveResponse(void);
+
+	private:
 	std::string raw_data;
 	int totbytes;
 	int fd;
 	HttpRequest request;
 	std::string response;
 	InfoServer info;
-	ClientHandler(int fd, InfoServer info)
-	{
-		this->fd = fd;
-		this->totbytes = 0;
-		this->info = info;
-	}
-
-	int readData(int fd, std::string &str, int &bytes);
-	int clientStatus(void);
-	int isCgi(std::string str);
-	std::string prepareResponse(HttpRequest request);
-	std::string                                    retrievePage(HttpRequest request);
-	std::string                                       uploadFile(HttpRequest request);
-	std::string                                          deleteFile(HttpRequest request);
-	int	retrieveResponse(void);
-
-	// void setRequest(HttpRequest request)
-	// {
-	// 	this->request = request;
-	// }
-	// void setResponse(std::string response)
-	// {
-	// 	this->response = response;
-	// }
-	// int getFd(void) const
-	// {
-	// 	return this->fd;
-	// }
-	// HttpRequest getRequest(void) const
-	// {
-	// 	return this->request;
-	// }
-	// std::string getResponse(void) const
-	// {
-	// 	return this->response;
-	// }
-	
-	private:
-	// int fd;
-	// HttpRequest request;
-	// std::string response;
 };
 
 #endif
