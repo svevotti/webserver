@@ -98,52 +98,94 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 	Logger::info("these bytes were sent " + Utils::toString(bytes));
 	it->events = POLLIN;
 	iterClient->response.clear();
+	iterClient->request.cleanProperties();
 }
 
 int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
 	std::string response;
-	int contentLen = 0;
-	int flag = 1;
 	int bytesRecv;
-	std::string full_buffer;
-	int totBytes = 0;
-	bytesRecv = readData(fd, full_buffer, totBytes);
-	Logger::debug("Bytes " + Utils::toString(totBytes));
+	// std::string full_buffer;
+	// int totBytes = 0;
+
+	Logger::debug("Client fd: " + Utils::toString(fd));
+	std::vector<struct client>::iterator clientIt;
+	clientIt = retrieveClient(fd);
+	Logger::debug("before Bytes " + Utils::toString(clientIt->totbytes));
+	Logger::debug("full buffer:\n" + clientIt->raw_data);
+	bytesRecv = readData(fd, clientIt->raw_data, clientIt->totbytes);
+	Logger::debug("Bytes " + Utils::toString(clientIt->totbytes));
+	Logger::debug("full buffer:\n" + clientIt->raw_data);
+	//clientIt->raw_data += full_buffer;
 	if (bytesRecv == 0)
 		return 1;
-	else if (bytesRecv == -1 && totBytes == 0)
+	else if (bytesRecv == -1 && clientIt->totbytes == 0)
 	{
 		Logger::debug("recv return -1");
 		return 1;
 	}
 	else
 	{
-		std::vector<struct client>::iterator clientIt;
-		clientIt = retrieveClient(fd);
-		if (clientIt != this->clientsQueue.end())
-			clientIt->request = ParsingRequest(full_buffer, totBytes);
-		else
+		if (clientIt->raw_data.find("GET") != std::string::npos)
 		{
-			Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
-			return 0;
+			// std::vector<struct client>::iterator clientIt;
+			clientIt = retrieveClient(fd);
+			if (clientIt != this->clientsQueue.end())
+				clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
+			else
+			{
+				Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
+				return 0;
+			}
+			if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
+				printf("send to CGI\n");
+			else
+			{
+					struct client client;
+					response = prepareResponse(clientIt->request);
+					client.fd = clientIt->fd;
+					client.request = clientIt->request;
+					client.response = response;
+					response.clear();
+					this->clientsQueue.erase(clientIt);
+					this->clientsQueue.push_back(client);
+					it->events = POLLOUT;
+					clientIt->totbytes = 0;
+					clientIt->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+			}
 		}
-		if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
-			printf("send to CGI\n");
-		else
+		else if (clientIt->raw_data.find("Content-Length") != std::string::npos)
 		{
-			struct client client;
-			response = prepareResponse(clientIt->request);
-			client.fd = clientIt->fd;
-			client.request = clientIt->request;
-			client.response = response;
-			response.clear();
-			this->clientsQueue.erase(clientIt);
-			this->clientsQueue.push_back(client);
-			it->events = POLLOUT;
-			full_buffer.clear();
-			totBytes = 0;
-			Logger::info("Response created successfully and store in clientQueu");
+			if (clientIt->totbytes >= 2873)
+			{
+				clientIt = retrieveClient(fd);
+				if (clientIt != this->clientsQueue.end())
+					clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
+				else
+				{
+					Logger::debug("Client " + Utils::toString(clientIt->fd) + " not found");
+					return 0;
+				}
+				Logger::debug("Done parsing");
+				if (isCgi(clientIt->request.getHttpHeaders()["Request-URI"]) == true)
+					printf("send to CGI\n");
+				else
+				{
+					struct client client;
+					response = prepareResponse(clientIt->request);
+					client.fd = clientIt->fd;
+					client.request = clientIt->request;
+					client.response = response;
+					response.clear();
+					this->clientsQueue.erase(clientIt);
+					this->clientsQueue.push_back(client);
+					it->events = POLLOUT;
+					clientIt->totbytes = 0;
+					clientIt->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+				}
+			}
 		}
 	}
 	return 0;
@@ -249,6 +291,8 @@ void Webserver::createNewClient(int fd)
 	this->poll_sets.push_back(clientPoll);
 	struct client newClient;
 	newClient.fd = clientFd;
+	newClient.raw_data.clear();
+	newClient.totbytes = 0;
 	this->clientsQueue.push_back(newClient);
 	Logger::info("New client " + Utils::toString(clientFd) + " created and added to poll sets");
 }
@@ -390,7 +434,6 @@ std::string Webserver::retrievePage(HttpRequest request)
 {
 	std::string body;
 	std::string htmlPage;
-	int bodyHtmlLen;
 	std::ostringstream intermediatestream;
 	std::string strbodyHtmlLen;
 	std::string httpHeaders;
@@ -471,6 +514,7 @@ int checkNameFile(std::string str, std::string path)
 
 	folder = opendir(path.c_str());
 	std::string convStr;
+	std::cout << path << std::endl;
 	if (folder == NULL)
 		printf("error opening folder\n");
 	while ((data = readdir(folder)))
@@ -499,7 +543,7 @@ std::string Webserver::uploadFile(HttpRequest request)
 		throw ServiceUnavailabledException("./server_root/public_html/503.html");
 	std::string requestTarget = httpRequestLine["Request-URI"];
 	requestTarget.erase(requestTarget.begin());
-	std::string pathFile = this->serverInfo.getServerRootPath() + requestTarget; //it only works if given this path by the client?
+	std::string pathFile = this->serverInfo.getServerRootPath() + "/" + requestTarget; //it only works if given this path by the client?
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, pathFile) == 1)
@@ -518,6 +562,7 @@ std::string Webserver::uploadFile(HttpRequest request)
 		throw BadRequestException("./server_root/public_html/400.html");
 	}
 	close(file);
+	body = extractContent("./server_root/public_html/success/index.html");
 	return body;
 }
 

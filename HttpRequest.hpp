@@ -15,6 +15,7 @@
 #include <vector>
 #include "StringManipulations.hpp"
 #include "Logger.hpp"
+#include "Utils.hpp"
 
 #define EMPTY 0
 #define TEXT 1
@@ -52,6 +53,7 @@ class HttpRequest {
 		char								*getBoundary(const char *);
 		std::string							unchunkRequest(std::string chunked);
 		std::string							decodeQuery(std::string str);
+		void								cleanProperties(void);
 
 	private:
 		std::string							str;
