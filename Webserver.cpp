@@ -3,7 +3,7 @@
 #define MAX 100
 
 // Constructor and Destructor
-//TODO: if there are no sockets. webserver should not start
+
 Webserver::Webserver(InfoServer& info)
 {
 	this->serverInfo = InfoServer(info);
@@ -104,31 +104,17 @@ void Webserver::handleWritingEvents(int fd, std::vector<struct pollfd>::iterator
 int Webserver::handleReadEvents(int fd, std::vector<struct pollfd>::iterator it)
 {
 	std::string response;
-	int bytesRecv;
-	// std::string full_buffer;
-	// int totBytes = 0;
+	int result;
 
-	Logger::debug("Client fd: " + Utils::toString(fd));
 	std::vector<struct client>::iterator clientIt;
 	clientIt = retrieveClient(fd);
-	Logger::debug("before Bytes " + Utils::toString(clientIt->totbytes));
-	Logger::debug("full buffer:\n" + clientIt->raw_data);
-	bytesRecv = readData(fd, clientIt->raw_data, clientIt->totbytes);
-	Logger::debug("Bytes " + Utils::toString(clientIt->totbytes));
-	Logger::debug("full buffer:\n" + clientIt->raw_data);
-	//clientIt->raw_data += full_buffer;
-	if (bytesRecv == 0)
+	result = readData(fd, clientIt->raw_data, clientIt->totbytes);
+	if (result == 0 || result == 1)
 		return 1;
-	else if (bytesRecv == -1 && clientIt->totbytes == 0)
-	{
-		Logger::debug("recv return -1");
-		return 1;
-	}
 	else
 	{
 		if (clientIt->raw_data.find("GET") != std::string::npos)
 		{
-			// std::vector<struct client>::iterator clientIt;
 			clientIt = retrieveClient(fd);
 			if (clientIt != this->clientsQueue.end())
 				clientIt->request = ParsingRequest(clientIt->raw_data, clientIt->totbytes);
@@ -324,7 +310,11 @@ int Webserver::readData(int fd, std::string &str, int &bytes)
 		str.append(buffer, res);
 		bytes += res;
 	}
-	return res;
+	if (res == 0)
+		return 0;
+	else if (res == -1 && bytes == 0)
+		return 1;
+	return 2;
 }
 
 
