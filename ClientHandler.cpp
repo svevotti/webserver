@@ -7,7 +7,7 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 
 	while (1)
 	{
-		ft_memset(buffer, 0, sizeof(buffer));
+		Utils::ft_memset(buffer, 0, sizeof(buffer));
 		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
 		if (res <= 0)
 			break;

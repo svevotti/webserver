@@ -5,7 +5,6 @@
 #include "HttpResponse.hpp"
 #include "Utils.hpp"
 #include "Logger.hpp"
-#include "StringManipulations.hpp"
 #include "HttpException.hpp"
 #include "InfoServer.hpp"
 
