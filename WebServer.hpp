@@ -51,14 +51,13 @@ class Webserver {
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
         int                                     readData(int fd, std::string& buffer, int& bytes);
-        int                                     handleReadEvents(int fd, std::vector<struct pollfd>::iterator it);
-        void                                    handleWritingEvents(int fd, std::vector<struct pollfd>::iterator it);
+        int                                     handleReadEvents(int fd);
+        void                                    handleWritingEvents(int fd);
         HttpRequest                             ParsingRequest(std::string buffer, int size);
         void                                    closeSockets(void);
         int                                     isCgi(std::string path);
         int                                     searchPage(std::string path);
         std::string                             prepareResponse(HttpRequest request);
-        // std::vector<struct client>::iterator    retrieveClient(int fd);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
 
         std::string                                    retrievePage(HttpRequest request);
@@ -70,7 +69,6 @@ class Webserver {
         InfoServer                  serverInfo;
         std::vector<struct pollfd>  poll_sets;
         std::vector<int>            serverFds;
-        // std::vector<struct client>  clientsQueue;
         std::vector<ClientHandler> clientsList;
 
 };
