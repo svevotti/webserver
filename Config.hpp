@@ -14,20 +14,20 @@
 class Config {
 	private:
 		std::vector<InfoServer*>	_servlist;
+		bool parseConfigFile(const std::string &configFile);
+		bool	parseServer(std::istream &conf);
+		bool	parseLocation(std::istream &conf, InfoServer *server, const std::string location);
+		bool	trimLine(std::string& line);
 
 	public:
 		Config( const std::string& configFile);
 		Config( const Config& copy);
 		Config& operator=(const Config& copy);
 		~Config();
-		bool	parseServer(std::istream &conf);
-		bool	parseLocation(std::istream &conf, InfoServer *server, const std::string location);
 		std::set<std::string>	parseMethods(std::string method_list);
-		bool parseConfigFile(const std::string &configFile);
-		bool	trimLine(std::string& line);
 
 		void	setServerList( const std::vector<InfoServer*> servlist );
-		std::vector<InfoServer*>	getServList( void );
+		std::vector<InfoServer*>	getServList( void ) const;
 };
 
 struct mylocations {

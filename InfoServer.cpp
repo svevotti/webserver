@@ -54,31 +54,31 @@ void	InfoServer::setSetting( const std::string key, const std::string &value) {
 	this->_settings[key] = value;
 }
 
-std::string	InfoServer::getPort( void ) {
+std::string	InfoServer::getPort( void ) const {
 	return (_port);
 }
 
-std::string	InfoServer::getIP ( void ) {
+std::string	InfoServer::getIP ( void ) const {
 	return (_ip);
 }
 
-std::string	InfoServer::getRoot ( void ) {
+std::string	InfoServer::getRoot ( void ) const {
 	return (_root);
 }
 
-std::string	InfoServer::getIndex ( void ) {
+std::string	InfoServer::getIndex ( void ) const {
 	return (_index);
 }
 
-std::map<std::string, std::string>	InfoServer::getSetting ( void ) {
+std::map<std::string, std::string>	InfoServer::getSetting ( void ) const {
 	return (_settings);
 }
 
-std::map<std::string, Route>	InfoServer::getRoute ( void ) {
+std::map<std::string, Route>	InfoServer::getRoute ( void ) const {
 	return (_routes);
 }
 
-Route	InfoServer::getCGI ( void ) {
+Route	InfoServer::getCGI ( void ) const {
 	return (_cgi);
 }
 

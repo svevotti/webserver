@@ -46,13 +46,13 @@ class InfoServer {
 		void	setRoutes( const std::string &uri, const Route &route);
 		void	setCGI( const Route &route );
 
-		std::string							getPort( void );
-		std::string							getIP ( void );
-		std::string							getRoot ( void );
-		std::string							getIndex ( void );
-		std::map<std::string, std::string>	getSetting ( void );
-		std::map<std::string, Route>		getRoute ( void );
-		Route								getCGI( void );
+		std::string							getPort( void ) const;
+		std::string							getIP ( void ) const;
+		std::string							getRoot ( void ) const;
+		std::string							getIndex ( void ) const;
+		std::map<std::string, std::string>	getSetting ( void ) const;
+		std::map<std::string, Route>		getRoute ( void ) const;
+		Route								getCGI( void ) const;
 
 		bool	isIPValid( std::string ip );
 };

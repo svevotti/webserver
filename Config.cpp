@@ -27,14 +27,14 @@ Config::~Config() {
 //Constructor that takes a configFile as argument
 Config::Config( const std::string& configFile) {
 	parseConfigFile(configFile);
-
+	//Handle return from parseConfigFile
 }
 
 void	Config::setServerList( const std::vector<InfoServer*> servlist ) {
 	_servlist = servlist;
 }
 
-std::vector<InfoServer*>	Config::getServList( void ) {
+std::vector<InfoServer*>	Config::getServList( void ) const {
 	return (_servlist);
 }
 
@@ -84,9 +84,9 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				server->setRoutes(route.uri, route);
 				return true;
 			}
-			else if (route.uri == "/old-page/")
+			else if (route.uri == "/old-page/") //This probably will be removed
 			{
-				server->setRoutes(route.uri, route);
+				server->setRoutes(route.path, route);
 				return true;
 			}
 			std::cout << "Error is in " << location << std::endl;
@@ -103,7 +103,7 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
 				value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
 				if (key == "root")
-					route.path =(value + route.uri);
+					route.path =("." + value + route.uri);
 				else if (key == "allow")
 					route.methods = parseMethods(value);
 				else
@@ -137,7 +137,7 @@ bool	Config::parseServer(std::istream &conf)
 				_servlist.push_back(server);
 				return true;
 			}
-			return false;
+			return false; //Check if memory is lost and I need to add a delete here
 		}
 		else if (line.find("location ") != std::string::npos) //If we find a location block, we need to parse it
 		{
@@ -267,5 +267,6 @@ bool	Config::parseConfigFile(const std::string &configFile)
 	// _valid = true;
 	}
 	std::cout << "All good!" <<std::endl;
+	//What if server is empty for some reason? Add check to exit
 	return true;
 }
