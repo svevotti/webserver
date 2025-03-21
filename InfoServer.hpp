@@ -16,10 +16,15 @@ class InfoServer
         std::vector<std::string> getArrayPorts() const;
         std::string getServerRootPath() const;
         std::string getServerDocumentRoot() const;
+        std::string getServerUploadRoot() const;
+        std::string getServerErrorRoot() const;
+
     private:
         std::vector<std::string> arrayPorts;
         std::string serverRootPath;
         std::string serverDocumentRoot;
+        std::string serverUploadRoot;
+        std::string serverErrorPath;
 };
 
 
