@@ -1,0 +1,29 @@
+#ifndef SERVER_SOCKETS_H
+#define SERVER_SOCKETS_H
+
+#include <sys/socket.h>
+#include <iostream>
+#include <sys/types.h> 
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <cstring>
+#include <vector>
+
+#include "HttpResponse.hpp"
+#include "InfoServer.hpp"
+#include "HttpRequest.hpp"
+
+
+class ServerSockets {
+	public:
+		ServerSockets(InfoServer);
+		std::vector<int>	getServerSockets() const;
+		void				initSockets(InfoServer);
+		int					createSocket(const char*);
+
+	private:
+		std::vector<int>	_serverFds;
+};
+
+#endif

@@ -90,11 +90,11 @@ int	main(int argc, char** argv){
 		std::cout << "Error! Please include only a path to a config file" << std::endl;
 		return 1;
 	}
-		Config	configuration(argv[1]);
+	Config	configuration(argv[1]);
 	std::cout << "Finished configuration!" << std::endl;
 	if (test(configuration))
 		std::cout << "All worked well!" << std::endl;
 	else
 		std::cout << "Error!" << std::endl;
-	return 0;
+	return (0);
 }

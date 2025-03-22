@@ -1,9 +1,17 @@
 GNU = c++
-FLAGS = -Wall -Wextra -Werror
+FLAGS = -Wall -Wextra #-Werror
 C_98 = -std=c++98
-CPP_FILES =  main.cpp Config.cpp InfoServer.cpp
-CPP_OBJ = $(CPP_FILES:.cpp=.o)
-NAME = server
+OBJ_DIR = obj
+CPP_FILES = ServerSockets.cpp main.cpp HttpResponse.cpp InfoServer.cpp \
+			Webserver.cpp HttpRequest.cpp Logger.cpp \
+			ClientHandler.cpp
+CPP_OBJ = $(OBJ_DIR)/ServerSockets.o $(OBJ_DIR)/main.o \
+          $(OBJ_DIR)/HttpResponse.o $(OBJ_DIR)/InfoServer.o \
+          $(OBJ_DIR)/Logger.o \
+		  $(OBJ_DIR)/Webserver.o $(OBJ_DIR)/HttpRequest.o \
+		   $(OBJ_DIR)/ClientHandler.o
+
+NAME = webserver
 
 all: $(NAME)
 
