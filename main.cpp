@@ -1,4 +1,5 @@
 #include "Config.hpp"
+#include "WebServer.hpp"
 
 bool	test(Config &conf)
 {
@@ -12,6 +13,7 @@ bool	test(Config &conf)
 	i = 0;
 	std::vector<InfoServer*> server;
 	server = conf.getServList();
+	Logger::debug("size server list " + Utils::toString(server.size()));
 	for(servIt = server.begin(); servIt != server.end(); servIt++)
 	{
 		i++;
@@ -85,16 +87,20 @@ bool	test(Config &conf)
 }
 
 int	main(int argc, char** argv){
-	if (argc != 2)
-	{
-		std::cout << "Error! Please include only a path to a config file" << std::endl;
-		return 1;
-	}
-	Config	configuration(argv[1]);
-	std::cout << "Finished configuration!" << std::endl;
-	if (test(configuration))
-		std::cout << "All worked well!" << std::endl;
-	else
-		std::cout << "Error!" << std::endl;
+	// if (argc != 2)
+	// {
+	// 	std::cout << "Error! Please include only a path to a config file" << std::endl;
+	// 	return 1;
+	// }
+	Config	configuration("default.conf");
+	Webserver server(configuration);
+
+	if (server.startServer() == -1)
+		Logger::error("Not able to start server");
+	// std::cout << "Finished configuration!" << std::endl;
+	// if (test(configuration))
+	// 	std::cout << "All worked well!" << std::endl;
+	// else
+	// 	std::cout << "Error!" << std::endl;
 	return (0);
 }

@@ -17,13 +17,20 @@
 
 class ServerSockets {
 	public:
-		ServerSockets(InfoServer);
-		std::vector<int>	getServerSockets() const;
-		void				initSockets(InfoServer);
-		int					createSocket(const char*);
+		// ServerSockets(InfoServer);
+		ServerSockets(std::string ip, std::string port);
+		// std::vector<int>	getServerSockets() const;
+		int	getServerFd(void) const;
+		// void				initSockets(InfoServer);
+		void				initSockets(void);
+		int					createSocket(void);
+		// int					createSocket(const char*);
 
 	private:
-		std::vector<int>	_serverFds;
+		// std::vector<int>	_serverFds;
+		int fd;
+		std::string ip;
+		std::string port;
 };
 
 #endif

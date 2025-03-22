@@ -4,14 +4,27 @@
 
 // Constructor and Destructor
 
-Webserver::Webserver(InfoServer& info)
-{
-	this->serverInfo = InfoServer(info);
-	ServerSockets serverFds(this->serverInfo);
+// Webserver::Webserver(InfoServer& info)
+// {
+// 	this->serverInfo = InfoServer(info);
+// 	ServerSockets serverFds(this->serverInfo);
 
-	this->serverFds = serverFds.getServerSockets();
+// 	this->serverFds = serverFds.getServerSockets();
+// 	this->poll_sets.reserve(MAX);
+// 	addServerSocketsToPoll(this->serverFds);
+// }
+
+Webserver::Webserver(Config &file)
+{
+	this->infoServers = file.getServList();
+	this->ipAddress = this->infoServers[0]->getIP();
+	this->port = this->infoServers[0]->getPort();
+	
+	ServerSockets server(this->ipAddress, this->port);
+	this->serverFd = server.getServerFd();
 	this->poll_sets.reserve(MAX);
-	addServerSocketsToPoll(this->serverFds);
+	if (this->serverFd > 0)
+		addServerSocketsToPoll(this->serverFd);
 }
 
 Webserver::~Webserver()
@@ -26,8 +39,11 @@ int	Webserver::startServer()
 {
 	int returnPoll;
 
-	if (this->serverFds.size() == 0)
+	// if (this->serverFds.size() == 0)
+	// 	return -1;
+	if (this->serverFd < 0)
 		return -1;
+	Logger::info("Start server: " + this->ipAddress + ", port: " + this->port);
 	while (1)
 	{
 		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 2 * 1000);
@@ -44,6 +60,69 @@ int	Webserver::startServer()
 	return 0;
 }
 
+// void Webserver::dispatchEvents()
+// {
+// 	std::vector<struct pollfd>::iterator it;
+// 	int result;
+
+//     for (it = poll_sets.begin(); it != poll_sets.end();) 
+//     {
+// 		Logger::debug("Client: " + Utils::toString(it->fd));
+// 		result = 0;
+//         if (it->revents & POLLIN)
+//         {
+// 			if (fdIsServerSocket(it->fd) == true)
+// 				createNewClient(it->fd);
+// 			else if (fdIsCGI(it->fd) == true)
+// 			{
+// 				Logger::info("Start CGI logic here");
+// 			}
+// 			else
+// 			{
+// 				result = processClient(it->fd, READ);
+// 				if (result == DISCONNECTED)
+// 				{
+// 					removeClient(it);
+//                     return ;
+// 				}
+// 				else if (result == STATIC)
+// 					it->events = POLLOUT;
+// 				else if (result == CGI)
+// 				{
+// 					Logger::info("Set up CGI here");
+// 				}
+// 			}
+//         }
+// 		else if (it->revents & POLLOUT)
+// 		{
+// 			if (processClient(it->fd, WRITE) == -1)
+// 			{
+// 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
+// 			}
+// 			it->events = POLLIN;
+// 		}
+// 		else if (it->revents & POLLERR)
+// 		{
+// 			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
+// 			removeClient(it);
+// 			return;
+// 		}
+// 		else if (it->revents & POLLHUP)
+// 		{
+// 			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
+// 			removeClient(it);
+// 			return;
+// 		}
+// 		else if (it->revents & POLLNVAL)
+// 		{
+// 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
+// 			removeClient(it);
+// 			return;
+// 		}
+// 		it++;
+// 	}
+// }
+
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
@@ -55,7 +134,7 @@ void Webserver::dispatchEvents()
 		result = 0;
         if (it->revents & POLLIN)
         {
-			if (fdIsServerSocket(it->fd) == true)
+			if (it->fd == this->serverFd)
 				createNewClient(it->fd);
 			else if (fdIsCGI(it->fd) == true)
 			{
@@ -126,34 +205,43 @@ int Webserver::processClient(int fd, int event)
 }
 
 //Utils
-int Webserver::fdIsServerSocket(int fd)
-{
-	int size = this->serverFds.size();
-	for (int i = 0; i < size; i++)
-	{
-		if (fd == this->serverFds[i])
-			return true;
-	}
-	return false;
-}
+// int Webserver::fdIsServerSocket(int fd)
+// {
+// 	int size = this->serverFds.size();
+// 	for (int i = 0; i < size; i++)
+// 	{
+// 		if (fd == this->serverFds[i])
+// 			return true;
+// 	}
+// 	return false;
+// }
 
 int Webserver::fdIsCGI(int fd)
 {
 	return false;
 }
 
-void Webserver::addServerSocketsToPoll(std::vector<int> fds)
+// void Webserver::addServerSocketsToPoll(std::vector<int> fds)
+// {
+//     struct pollfd serverPoll[MAX];
+// 	int clientsNumber = (int)fds.size();
+// 	if (clientsNumber == 0)
+// 		return;
+// 	for (int i = 0; i < clientsNumber; i++)
+// 	{
+// 		serverPoll[i].fd = fds[i];
+// 		serverPoll[i].events = POLLIN;
+// 		this->poll_sets.push_back(serverPoll[i]);
+// 	}
+// 	Logger::info("Add server sockets to poll sets");
+// }
+
+void Webserver::addServerSocketsToPoll(int fd)
 {
     struct pollfd serverPoll[MAX];
-	int clientsNumber = (int)fds.size();
-	if (clientsNumber == 0)
-		return;
-	for (int i = 0; i < clientsNumber; i++)
-	{
-		serverPoll[i].fd = fds[i];
-		serverPoll[i].events = POLLIN;
-		this->poll_sets.push_back(serverPoll[i]);
-	}
+	serverPoll[0].fd = fd;
+	serverPoll[0].events = POLLIN;
+	this->poll_sets.push_back(serverPoll[0]);
 	Logger::info("Add server sockets to poll sets");
 }
 

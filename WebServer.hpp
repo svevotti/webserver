@@ -1,8 +1,9 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
+#include "Config.hpp"
 #include "HttpResponse.hpp"
-#include "InfoServer.hpp"
+// #include "InfoServer.hpp"
 #include "ServerSockets.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
@@ -35,10 +36,12 @@
 
 class Webserver {
     public:
-        Webserver(InfoServer&);
+        // Webserver(InfoServer&);
+        Webserver(Config &file);
         ~Webserver();
         int                                     startServer(void);
-        void                                    addServerSocketsToPoll(std::vector<int> vec);
+        // void                                    addServerSocketsToPoll(std::vector<int> vec);
+        void    addServerSocketsToPoll(int fd);
         int                                     fdIsServerSocket(int fd);
         int                                     fdIsCGI(int fd);
         void                                    dispatchEvents(void);
@@ -51,8 +54,12 @@ class Webserver {
     private:
 
         InfoServer                  serverInfo;
+        std::vector<InfoServer*>    infoServers;
+        std::string ipAddress;
+        std::string port;
+        int           serverFd;
         std::vector<struct pollfd>  poll_sets;
-        std::vector<int>            serverFds;
+        // std::vector<int>            serverFds;
         std::vector<ClientHandler>  clientsList;
 
 };

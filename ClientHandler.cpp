@@ -127,8 +127,8 @@ int ClientHandler::isCgi(std::string str)
 {
 	if (str.find(".py") != std::string::npos)
 		return true;
-	if (searchPage(this->info.getServerDocumentRoot() + str) == true)
-		return false;
+	// if (searchPage(this->info.getServerDocumentRoot() + str) == true)
+	// 	return false;
 	return true;
 }
 
@@ -187,7 +187,7 @@ std::string ClientHandler::retrievePage(HttpRequest request)
 	std::map<std::string, std::string> httpRequestLine;
 
 	httpRequestLine = request.getHttpRequestLine();
-	documentRootPath = this->info.getServerDocumentRoot();
+	// documentRootPath = this->info.getServerDocumentRoot();
 	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
 	Logger::debug(pathToTarget);
 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
@@ -284,7 +284,7 @@ std::string ClientHandler::uploadFile(HttpRequest request)
 		throw ServiceUnavailabledException("./server_root/public_html/503.html");
 	std::string requestTarget = httpRequestLine["Request-URI"];
 	requestTarget.erase(requestTarget.begin());
-	std::string pathFile = this->info.getServerRootPath() + "/" + requestTarget;
+	std::string pathFile = "temp/"+ requestTarget;
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, pathFile) == 1)
