@@ -25,6 +25,60 @@ std::string ClientHandler::getResponse() const
 }
 
 //Main functions
+
+int ClientHandler::clientStatus(void)
+{
+	int result;
+	HttpRequest request;
+
+	result = readData(this->fd, this->raw_data, this->totbytes);
+	if (result == 0 || result == 1)
+		return 1;
+	else
+	{
+		if (this->raw_data.find("GET") != std::string::npos)
+		{
+			request.HttpParse(this->raw_data, this->totbytes);
+			this->request = request;
+			Logger::debug("Done parsing");
+			if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
+				return 3;
+			else
+			{
+				this->response = prepareResponse(this->request);
+				this->totbytes = 0;
+				this->raw_data.clear();
+				Logger::info("Response created successfully and store in clientQueu");
+				return 2;
+			}
+		}
+		else if (this->raw_data.find("Content-Length") != std::string::npos)
+		{
+			int start = this->raw_data.find("Content-Length") + 16;
+			int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
+			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+			if (this->totbytes >= bytes_expected)
+			{
+				request.HttpParse(this->raw_data, this->totbytes);
+				this->request = request;
+				Logger::debug("Done parsing");
+				Logger::warn("here there will be check for errors in the request");
+				if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
+					return 3;
+				else
+				{
+					this->response = prepareResponse(this->request);
+					this->totbytes = 0;
+					this->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 int ClientHandler::readData(int fd, std::string &str, int &bytes)
 {
 	int res = 0;
@@ -76,13 +130,6 @@ int ClientHandler::isCgi(std::string str)
 	if (searchPage(this->info.getServerDocumentRoot() + str) == true)
 		return false;
 	return true;
-}
-
-HttpRequest ParsingRequest(std::string str, int size)
-{
-	HttpRequest request;
-	request.HttpParse(str, size);
-	return request;
 }
 
 bool fileExists(std::string path)
@@ -315,49 +362,4 @@ std::string ClientHandler::prepareResponse(HttpRequest request)
 	else
 		Logger::error("Method not found, Sveva, use correct status code line");
 	return response;
-}
-
-int ClientHandler::clientStatus(void)
-{
-	int result;
-
-	result = readData(this->fd, this->raw_data, this->totbytes);
-	if (result == 0 || result == 1)
-		return 1;
-	else
-	{
-		if (this->raw_data.find("GET") != std::string::npos)
-		{
-			this->request = ParsingRequest(this->raw_data, this->totbytes);
-			if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-				return 3;
-			else
-			{
-				this->response = prepareResponse(this->request);
-				this->totbytes = 0;
-				this->raw_data.clear();
-				Logger::info("Response created successfully and store in clientQueu");
-				return 2;
-			}
-		}
-		else if (this->raw_data.find("Content-Length") != std::string::npos)
-		{
-			if (this->totbytes >= 2873) //don't forget to extract the actual size from conentent length
-			{
-				this->request = ParsingRequest(this->raw_data, this->totbytes);
-				Logger::debug("Done parsing");
-				if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-					return 3;
-				else
-				{
-					this->response = prepareResponse(this->request);
-					this->totbytes = 0;
-					this->raw_data.clear();
-					Logger::info("Response created successfully and store in clientQueu");
-					return 2;
-				}
-			}
-		}
-	}
-	return 0;
 }
