@@ -34,8 +34,8 @@ class InfoServer {
 	public:
 		InfoServer( void );
 		InfoServer(std::string port, std::string ip, std::string root, std::string index);
-		InfoServer( const InfoServer& copy);
-		InfoServer& operator=(const InfoServer& copy);
+		// InfoServer( const InfoServer& copy);
+		// InfoServer& operator=(const InfoServer& copy);
 		~InfoServer();
 
 		void	setPort( std::string port );
@@ -53,6 +53,8 @@ class InfoServer {
 		std::map<std::string, std::string>	getSetting ( void ) const;
 		std::map<std::string, Route>		getRoute ( void ) const;
 		Route								getCGI( void ) const;
+		//Route getRoute(std::string uri);
+		//suggest to create a class for exception like http (need to know which one so i only catch the one)
 
 		bool	isIPValid( std::string ip );
 };

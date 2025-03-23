@@ -5,19 +5,19 @@ InfoServer::InfoServer( void ) {
 }
 
 //Copy constructor
-InfoServer::InfoServer( const InfoServer& copy) {
-	*this = copy;
-}
+// InfoServer::InfoServer( const InfoServer& copy) {
+// 	*this = copy;
+// }
 
-//Equal operator
-InfoServer&	InfoServer::operator=( const InfoServer& copy) {
-	if (this != &copy)
-	{
-		return (*this);
-	}
+// //Equal operator
+// InfoServer&	InfoServer::operator=( const InfoServer& copy) {
+// 	if (this != &copy)
+// 	{
+// 		return (*this);
+// 	}
 
-	return (*this);
-}
+// 	return (*this);
+// }
 
 //Deconstructor
 InfoServer::~InfoServer() {

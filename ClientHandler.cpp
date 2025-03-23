@@ -1,7 +1,14 @@
 #include "ClientHandler.hpp"
 
 //Constructor and Destructor
-ClientHandler::ClientHandler(int fd, InfoServer info)
+// ClientHandler::ClientHandler(int fd, InfoServer info)
+// {
+// 	this->fd = fd;
+// 	this->totbytes = 0;
+// 	//this->info = info;
+// }
+
+ClientHandler::ClientHandler(int fd, InfoServer const &info)
 {
 	this->fd = fd;
 	this->totbytes = 0;
@@ -38,14 +45,29 @@ int ClientHandler::clientStatus(void)
 	{
 		if (this->raw_data.find("GET") != std::string::npos)
 		{
+			//Logger::debug("raw data: " + raw_data);
 			request.HttpParse(this->raw_data, this->totbytes);
 			this->request = request;
 			Logger::debug("Done parsing");
-			if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-				return 3;
+			//create getRoute(uri)
+			//handle if doesn't find path - maybe create exceptions
+			struct Route route;
+			std::string uri = this->request.getHttpRequestLine()["Request-URI"];
+			Logger::debug("uri: " + uri);
+			route = this->info.getRoute()[uri];
+			std::string localPath = route.path;
+			Logger::debug("localpath: " + localPath);
+			if (isCgi(uri) == true)
+			{
+				Logger::info("Set up CGI here");
+			}
 			else
 			{
-				this->response = prepareResponse(this->request);
+				std::set<std::string> methods = route.methods;
+				std::string method = this->request.getHttpRequestLine()["Method"];
+				if (methods.count(method) < 0)
+					method = "OTHER";
+				this->response = prepareResponse(localPath, uri, method);
 				this->totbytes = 0;
 				this->raw_data.clear();
 				Logger::info("Response created successfully and store in clientQueu");
@@ -59,15 +81,26 @@ int ClientHandler::clientStatus(void)
 			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
 			if (this->totbytes >= bytes_expected)
 			{
+				Logger::debug("in post section");
 				request.HttpParse(this->raw_data, this->totbytes);
 				this->request = request;
 				Logger::debug("Done parsing");
-				Logger::warn("here there will be check for errors in the request");
+				//call retrieve route
+				struct Route route;
+				std::string uri = this->request.getHttpRequestLine()["Request-URI"];
+				route = this->info.getRoute()[uri];
+				std::string localPath = route.path;
 				if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-					return 3;
+				{
+					Logger::info("Set up CGI here");
+				}
 				else
 				{
-					this->response = prepareResponse(this->request);
+					std::set<std::string> methods = route.methods;
+					std::string method = this->request.getHttpHeaders()["Method"];
+					if (methods.count(method) < 0)
+						method = "OTHER";
+					this->response = prepareResponse(localPath, uri, method);
 					this->totbytes = 0;
 					this->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
@@ -116,6 +149,7 @@ int	searchPage(std::string path)
 {
 	FILE *folder;
 
+	Logger::debug("search path: " + path);
 	folder = fopen(path.c_str(), "rb");
 	if (folder == NULL)
 		return false;
@@ -127,8 +161,8 @@ int ClientHandler::isCgi(std::string str)
 {
 	if (str.find(".py") != std::string::npos)
 		return true;
-	// if (searchPage(this->info.getServerDocumentRoot() + str) == true)
-	// 	return false;
+	if (searchPage("./www/static" + str) == true)
+		return false;
 	return true;
 }
 
@@ -173,22 +207,15 @@ std::string extractContent(std::string path)
 		return buffer;
 	}
 
-std::string ClientHandler::retrievePage(HttpRequest request)
+std::string ClientHandler::retrievePage(std::string localPath, std::string uri)
 {
 	std::string body;
 	std::string htmlPage;
-	std::ostringstream intermediatestream;
-	std::string strbodyHtmlLen;
-	std::string httpHeaders;
-	std::string statusCodeLine;
-	std::string documentRootPath;
 	std::string pathToTarget;
 	struct stat pathStat;
-	std::map<std::string, std::string> httpRequestLine;
 
-	httpRequestLine = request.getHttpRequestLine();
-	// documentRootPath = this->info.getServerDocumentRoot();
-	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
+	localPath.erase(localPath.size() - 1); //need to get this correct
+	pathToTarget = localPath + uri;
 	Logger::debug(pathToTarget);
 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
@@ -200,7 +227,13 @@ std::string ClientHandler::retrievePage(HttpRequest request)
 		pathToTarget += "/index.html";
 	}
 	if (fileExists(pathToTarget) == false)
-		throw NotFoundException("./server_root/public_html/404.html");
+	{
+		struct Route route;
+		std::string errorHtml = "./www/errors/404.html";
+		route = this->info.getRoute()[errorHtml];
+		std::string errorPagePath = route.path + errorHtml;
+		throw NotFoundException(errorPagePath);
+	}
 	else
 		htmlPage = pathToTarget;
 	body = extractContent(htmlPage);
@@ -268,7 +301,7 @@ int checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-std::string ClientHandler::uploadFile(HttpRequest request)
+std::string ClientHandler::uploadFile(std::string localPath, std::string uri)
 {
 	std::map<std::string, std::string> httpRequestLine;
 	std::string body;
@@ -282,15 +315,15 @@ std::string ClientHandler::uploadFile(HttpRequest request)
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)
 		throw ServiceUnavailabledException("./server_root/public_html/503.html");
-	std::string requestTarget = httpRequestLine["Request-URI"];
-	requestTarget.erase(requestTarget.begin());
-	std::string pathFile = "temp/"+ requestTarget;
+	// requestTarget.erase(requestTarget.begin());
+	// std::string pathFile = "temp/"+ uri; //what is going on here?
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
-	if (checkNameFile(fileName, pathFile) == 1)
+	if (checkNameFile(fileName, localPath) == 1)
 		throw ConflictException();
-	pathFile += "/" + fileName;
-	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	localPath += fileName;
+	Logger::debug("path to file " + localPath);
+	int file = open(localPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 	{
 		perror("Error opening file");
@@ -307,7 +340,7 @@ std::string ClientHandler::uploadFile(HttpRequest request)
 	return body;
 }
 
-std::string      ClientHandler::deleteFile(HttpRequest request)
+std::string      ClientHandler::deleteFile(std::string localPath, std::string uri)
 {
 	std::string body;
 	std::string pathToResource = "./" + request.getHttpRequestLine()["Request-URI"];
@@ -319,47 +352,49 @@ std::string      ClientHandler::deleteFile(HttpRequest request)
 	return body;
 }
 
-std::string ClientHandler::prepareResponse(HttpRequest request)
+std::string ClientHandler::prepareResponse(std::string localPath, std::string uri, std::string method)
 {
 	std::string body;
 	std::string response;
 	int code;
-
-	std::map<std::string, std::string> httpRequestLine;
-	httpRequestLine = request.getHttpRequestLine();
-	if (httpRequestLine.find("Method") != httpRequestLine.end())
+	try
 	{
-		try
+		if (method == "GET")
 		{
-			if (httpRequestLine["Method"] == "GET")
-			{
-				body = retrievePage(request);
-				Logger::debug("body " + body);
-				code = 200;
-			}
-			else if (httpRequestLine["Method"] == "POST")
-			{
-				body = uploadFile(request);
-				code = 201;
-			}
-			else if (httpRequestLine["Method"] == "DELETE")
-			{
-				body = deleteFile(request);
-				code = 200;
-			}
-			else
-				throw MethodNotAllowedException("./server_root/public_html/405.html");
+			body = retrievePage(localPath, uri);
+			Logger::debug("body " + body);
+			code = 200;
 		}
-		catch(const NotFoundException& e)
+		else if (method == "POST")
 		{
-			Logger::error(e.what());
-			code = e.getCode();
-			body = e.getBody();
+			body = uploadFile(localPath, uri);
+			code = 201;
 		}
-		HttpResponse http(code, body);
-		response = http.composeRespone();
+		else if (method == "DELETE")
+		{
+			body = deleteFile(localPath, uri);
+			code = 200;
+		}
+		else
+		{
+			// struct Route route = getRoute("/405.html");
+			// throw MethodNotAllowedException(route.path);
+			throw MethodNotAllowedException("./server_root/public_html/405.html");
+		}
 	}
-	else
-		Logger::error("Method not found, Sveva, use correct status code line");
+	catch(const NotFoundException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	catch(const MethodNotAllowedException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	HttpResponse http(code, body);
+	response = http.composeRespone();
 	return response;
 }

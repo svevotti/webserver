@@ -23,11 +23,6 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(202, "202 Accepted"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(204, "204 No Content"));
 
-	//3xx is for redirection
-	this->mapStatusCode.insert(std::pair<int, std::string>(301, "301 Moved Permanently"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(302, "302 Found"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(304, "304 Not Modified"));
-
 	//4xxis for client error
 	this->mapStatusCode.insert(std::pair<int, std::string>(400, "400 Bad Request"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(401, "401 Unauthorized"));

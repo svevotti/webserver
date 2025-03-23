@@ -6,7 +6,7 @@
 #include "Utils.hpp"
 #include "Logger.hpp"
 #include "HttpException.hpp"
-#include "InfoServer.hpp"
+#include "Config.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,26 +30,36 @@
 
 class ClientHandler {
 	public:
-		ClientHandler(int fd, InfoServer info);
+		// ClientHandler(int fd, InfoServer info);
+		ClientHandler(int fd, InfoServer const &info);
+		void storeInfoServer(void);
 		int getFd(void) const;
 		HttpRequest getRequest() const;
 		std::string getResponse() const;
 		int readData(int fd, std::string &str, int &bytes);
 		int clientStatus(void);
 		int isCgi(std::string str);
-		std::string prepareResponse(HttpRequest request);
-		std::string                                    retrievePage(HttpRequest request);
-		std::string                                       uploadFile(HttpRequest request);
-		std::string                                          deleteFile(HttpRequest request);
+		// std::string prepareResponse(HttpRequest request);
+		std::string prepareResponse(std::string localPath, std::string uri, std::string method);
+		std::string                                    retrievePage(std::string localPath, std::string uri);
+		std::string                                       uploadFile(std::string localPath, std::string uri);
+		std::string                                          deleteFile(std::string localPath, std::string uri);
 		int	retrieveResponse(void);
 
 	private:
-	std::string raw_data;
-	int totbytes;
-	int fd;
-	HttpRequest request;
-	std::string response;
-	InfoServer info;
+		std::string raw_data;
+		int totbytes;
+		int fd;
+		HttpRequest request;
+		std::string response;
+		InfoServer info;
+
+		std::string rootPath;
+		std::string staticPath;
+		std::string uploadPath;
+		std::string errorPath;
+
+	//InfoServer info;
 };
 
 #endif

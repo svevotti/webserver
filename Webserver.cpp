@@ -4,16 +4,6 @@
 
 // Constructor and Destructor
 
-// Webserver::Webserver(InfoServer& info)
-// {
-// 	this->serverInfo = InfoServer(info);
-// 	ServerSockets serverFds(this->serverInfo);
-
-// 	this->serverFds = serverFds.getServerSockets();
-// 	this->poll_sets.reserve(MAX);
-// 	addServerSocketsToPoll(this->serverFds);
-// }
-
 Webserver::Webserver(Config &file)
 {
 	this->infoServers = file.getServList();
@@ -39,8 +29,6 @@ int	Webserver::startServer()
 {
 	int returnPoll;
 
-	// if (this->serverFds.size() == 0)
-	// 	return -1;
 	if (this->serverFd < 0)
 		return -1;
 	Logger::info("Start server: " + this->ipAddress + ", port: " + this->port);
@@ -60,69 +48,6 @@ int	Webserver::startServer()
 	return 0;
 }
 
-// void Webserver::dispatchEvents()
-// {
-// 	std::vector<struct pollfd>::iterator it;
-// 	int result;
-
-//     for (it = poll_sets.begin(); it != poll_sets.end();) 
-//     {
-// 		Logger::debug("Client: " + Utils::toString(it->fd));
-// 		result = 0;
-//         if (it->revents & POLLIN)
-//         {
-// 			if (fdIsServerSocket(it->fd) == true)
-// 				createNewClient(it->fd);
-// 			else if (fdIsCGI(it->fd) == true)
-// 			{
-// 				Logger::info("Start CGI logic here");
-// 			}
-// 			else
-// 			{
-// 				result = processClient(it->fd, READ);
-// 				if (result == DISCONNECTED)
-// 				{
-// 					removeClient(it);
-//                     return ;
-// 				}
-// 				else if (result == STATIC)
-// 					it->events = POLLOUT;
-// 				else if (result == CGI)
-// 				{
-// 					Logger::info("Set up CGI here");
-// 				}
-// 			}
-//         }
-// 		else if (it->revents & POLLOUT)
-// 		{
-// 			if (processClient(it->fd, WRITE) == -1)
-// 			{
-// 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
-// 			}
-// 			it->events = POLLIN;
-// 		}
-// 		else if (it->revents & POLLERR)
-// 		{
-// 			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
-// 			removeClient(it);
-// 			return;
-// 		}
-// 		else if (it->revents & POLLHUP)
-// 		{
-// 			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
-// 			removeClient(it);
-// 			return;
-// 		}
-// 		else if (it->revents & POLLNVAL)
-// 		{
-// 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
-// 			removeClient(it);
-// 			return;
-// 		}
-// 		it++;
-// 	}
-// }
-
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
@@ -130,10 +55,11 @@ void Webserver::dispatchEvents()
 
     for (it = poll_sets.begin(); it != poll_sets.end();) 
     {
-		Logger::debug("Client: " + Utils::toString(it->fd));
+		Logger::debug("FD: " + Utils::toString(it->fd));
 		result = 0;
         if (it->revents & POLLIN)
         {
+
 			if (it->fd == this->serverFd)
 				createNewClient(it->fd);
 			else if (fdIsCGI(it->fd) == true)
@@ -148,12 +74,8 @@ void Webserver::dispatchEvents()
 					removeClient(it);
                     return ;
 				}
-				else if (result == STATIC)
+				else if (result == 2)
 					it->events = POLLOUT;
-				else if (result == CGI)
-				{
-					Logger::info("Set up CGI here");
-				}
 			}
         }
 		else if (it->revents & POLLOUT)
@@ -262,7 +184,7 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	ClientHandler newClient(clientFd, this->serverInfo);
+	ClientHandler newClient(clientFd, *this->infoServers[0]);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }
