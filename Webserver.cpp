@@ -4,14 +4,17 @@
 
 // Constructor and Destructor
 
-Webserver::Webserver(InfoServer& info)
+Webserver::Webserver(Config& file, InfoServer serverInfo)
 {
-	this->serverInfo = InfoServer(info);
-	ServerSockets serverFds(this->serverInfo);
+	this->serverInfo = serverInfo;
+	this->info = file.getServList();
+	std::string port = info[0]->getPort();
+	std::string ip = info[0]->getIP();
+	ServerSockets server(ip, port);
 
-	this->serverFds = serverFds.getServerSockets();
+	this->serverFd = server.getServerSocket();
 	this->poll_sets.reserve(MAX);
-	addServerSocketsToPoll(this->serverFds);
+	addServerSocketsToPoll(this->serverFd);
 }
 
 Webserver::~Webserver()
@@ -26,7 +29,7 @@ int	Webserver::startServer()
 {
 	int returnPoll;
 
-	if (this->serverFds.size() == 0)
+	if (this->serverFd < 0)
 		return -1;
 	while (1)
 	{
@@ -128,12 +131,8 @@ int Webserver::processClient(int fd, int event)
 //Utils
 int Webserver::fdIsServerSocket(int fd)
 {
-	int size = this->serverFds.size();
-	for (int i = 0; i < size; i++)
-	{
-		if (fd == this->serverFds[i])
-			return true;
-	}
+	if (fd == this->serverFd)
+		return true;
 	return false;
 }
 
@@ -142,18 +141,12 @@ int Webserver::fdIsCGI(int fd)
 	return false;
 }
 
-void Webserver::addServerSocketsToPoll(std::vector<int> fds)
+void Webserver::addServerSocketsToPoll(int fd)
 {
     struct pollfd serverPoll[MAX];
-	int clientsNumber = (int)fds.size();
-	if (clientsNumber == 0)
-		return;
-	for (int i = 0; i < clientsNumber; i++)
-	{
-		serverPoll[i].fd = fds[i];
-		serverPoll[i].events = POLLIN;
-		this->poll_sets.push_back(serverPoll[i]);
-	}
+	serverPoll[0].fd = fd;
+	serverPoll[0].events = POLLIN;
+	this->poll_sets.push_back(serverPoll[0]);
 	Logger::info("Add server sockets to poll sets");
 }
 

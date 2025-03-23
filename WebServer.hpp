@@ -8,6 +8,7 @@
 #include "Utils.hpp"
 #include "HttpException.hpp"
 #include "ClientHandler.hpp"
+#include "Config.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,10 +36,10 @@
 
 class Webserver {
     public:
-        Webserver(InfoServer&);
+        Webserver(Config &file, InfoServer serverInfo);
         ~Webserver();
         int                                     startServer(void);
-        void                                    addServerSocketsToPoll(std::vector<int> vec);
+        void                                    addServerSocketsToPoll(int fd);
         int                                     fdIsServerSocket(int fd);
         int                                     fdIsCGI(int fd);
         void                                    dispatchEvents(void);
@@ -50,9 +51,10 @@ class Webserver {
 
     private:
 
-        InfoServer                  serverInfo;
+        InfoServer serverInfo;
+        std::vector<Server*> info;
         std::vector<struct pollfd>  poll_sets;
-        std::vector<int>            serverFds;
+        int            serverFd;
         std::vector<ClientHandler>  clientsList;
 
 };
