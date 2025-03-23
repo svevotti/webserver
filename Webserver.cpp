@@ -4,9 +4,8 @@
 
 // Constructor and Destructor
 
-Webserver::Webserver(Config& file, InfoServer serverInfo)
+Webserver::Webserver(Config& file)
 {
-	this->serverInfo = serverInfo;
 	this->configInfo = file.getServList();
 	std::string port = configInfo[0]->getPort();
 	std::string ip = configInfo[0]->getIP();
@@ -168,7 +167,7 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	ClientHandler newClient(clientFd, this->serverInfo, *this->configInfo[0]);
+	ClientHandler newClient(clientFd, *this->configInfo[0]);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }

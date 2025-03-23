@@ -6,7 +6,6 @@
 #include "Utils.hpp"
 #include "Logger.hpp"
 #include "HttpException.hpp"
-#include "InfoServer.hpp"
 #include "Config.hpp"
 
 #include <stdio.h>
@@ -31,7 +30,7 @@
 
 class ClientHandler {
 	public:
-		ClientHandler(int fd, InfoServer info, Server &configInfo);
+		ClientHandler(int fd, Server &configInfo);
 		int getFd(void) const;
 		HttpRequest getRequest() const;
 		std::string getResponse() const;
@@ -39,8 +38,8 @@ class ClientHandler {
 		int clientStatus(void);
 		int isCgi(std::string str);
 		std::string prepareResponse(HttpRequest request, struct Route route);
-		std::string                                    retrievePage(HttpRequest request, struct Route route);
-		std::string                                       uploadFile(HttpRequest request);
+		std::string                                    retrievePage(std::string uri, std::string path);
+		std::string                                       uploadFile(HttpRequest request, std::string path);
 		std::string                                          deleteFile(HttpRequest request);
 		int	retrieveResponse(void);
 
@@ -50,7 +49,6 @@ class ClientHandler {
 	int fd;
 	HttpRequest request;
 	std::string response;
-	InfoServer info;
 	Server configInfo;
 };
 

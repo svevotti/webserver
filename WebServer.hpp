@@ -2,7 +2,6 @@
 #define WEBSERVER_H
 
 #include "HttpResponse.hpp"
-#include "InfoServer.hpp"
 #include "ServerSockets.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
@@ -36,7 +35,7 @@
 
 class Webserver {
     public:
-        Webserver(Config &file, InfoServer serverInfo);
+        Webserver(Config &file);
         ~Webserver();
         int                                     startServer(void);
         void                                    addServerSocketsToPoll(int fd);
@@ -50,8 +49,6 @@ class Webserver {
         void                                    removeClient(std::vector<struct pollfd>::iterator it);
 
     private:
-
-        InfoServer serverInfo;
         std::vector<Server*> configInfo;
         Server configServer;
         std::vector<struct pollfd>  poll_sets;

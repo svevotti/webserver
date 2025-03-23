@@ -88,8 +88,6 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 		if (contentType.find("boundary") != std::string::npos) //multi format data
 		{
 			this->typeBody = MULTIPART;
-			Logger::error("buffer\n" + buffer);
-			Logger::warn("size\n" + Utils::toString(size));
 			parseMultiPartBody(buffer, size);
 		}
 		else
@@ -170,13 +168,10 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	int blen = strlen(b);
 	for (int i = 0; i < size; i++)
 	{
-		if (i >= size)
-			std::cout << buffer.c_str() + i << std::endl;
 		int diff = Utils::ft_memcmp(buffer.c_str() + i, b, blen);
 		if (diff == 0)
 		{
 			boundariesIndexes.push_back(i-2); //correct?
-			std::cout << i - 2 << std::endl;
 		}
 	}
 	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
@@ -215,7 +210,7 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	}
 	data.indexBinary = indexBinary+2;
 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
-	std::cout << data.body << std::endl;
+	//std::cout << data.body << std::endl;
 	sectionsVec.push_back(data);
 }
 
