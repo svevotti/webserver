@@ -1,8 +1,18 @@
+#include <sys/socket.h>
+#include <iostream>
+#include <sys/types.h> 
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "ServerSockets.hpp"
+#include "Server.hpp"
+#include "WebServer.hpp"
 #include "Config.hpp"
+#include <signal.h>
 
 bool	test(Config &conf)
 {
-	std::vector<InfoServer*>::iterator				servIt;
+	std::vector<Server*>::iterator				servIt;
 	std::map<std::string, std::string>::iterator	mapIt;
 	std::map<std::string, Route>::iterator			locMetIt;
 	std::set<std::string>::iterator					setIt;
@@ -10,7 +20,7 @@ bool	test(Config &conf)
 	int	i;
 
 	i = 0;
-	std::vector<InfoServer*> server;
+	std::vector<Server*> server;
 	server = conf.getServList();
 	for(servIt = server.begin(); servIt != server.end(); servIt++)
 	{

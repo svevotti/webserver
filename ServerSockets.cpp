@@ -18,37 +18,31 @@
 #include "Logger.hpp"
 
 //constructor and destructor
-ServerSockets::ServerSockets(InfoServer info)
+ServerSockets::ServerSockets(std::string ip, std::string port)
 {
-	initSockets(info);
+	this->ip = ip;
+	this->port = port;
+	initSockets();
 }
-
 //setter and getters
-std::vector<int>	ServerSockets::getServerSockets(void) const
+int	ServerSockets::getServerSocket(void) const
 {
-	return this->_serverFds;
+	return this->fd;
 }
 
 //main functions
-void	ServerSockets::initSockets(InfoServer info)
+void	ServerSockets::initSockets(void)
 {
-	int serverNumber = (int)info.getArrayPorts().size();
-	this->_serverFds.resize(serverNumber);
-	for (int i = 0; i < serverNumber; i++)
+	this->fd = createSocket();
+	if (this->fd < 0)
 	{
-		//should be a try and catch?
-		this->_serverFds[i] = createSocket(info.getArrayPorts()[i].c_str());
-		if (this->_serverFds[i] < 0)
-		{
-			Logger::error("Failed to create socket on port " + info.getArrayPorts()[i] + ": " + std::string(strerror(errno)));
-			this->_serverFds.pop_back();
-			continue;
-		}
-		Logger::info("Socker on port " + info.getArrayPorts()[i] + ": successfully created");
+		Logger::error("Failed to create socket on port " + port + ": " + std::string(strerror(errno)));
+		return;
 	}
+	Logger::info("Socker on port " + port + ": successfully created");
 }
 
-int ServerSockets::createSocket(const char* portNumber)
+int ServerSockets::createSocket(void)
 {
 	int fd;
 	struct addrinfo hints, *serverInfo;
@@ -56,15 +50,17 @@ int ServerSockets::createSocket(const char* portNumber)
 	int opt = 1;
 
 	Utils::ft_memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET6; //flag to set iPV6
-	hints.ai_socktype = SOCK_STREAM; //type of socket, we need TCP, stream socket
-	hints.ai_flags = AI_PASSIVE; //flag to set localhost as server address
-	error = getaddrinfo(NULL, portNumber, &hints, &serverInfo);
-	if (error == -1)
-		Logger::error("Failed getaddrinfo: " + std::string(strerror(errno)));
+	hints.ai_family = AF_INET; //flag to set iPV4 - want to also handle ipv6?
+	hints.ai_socktype = SOCK_STREAM;
+	error = getaddrinfo(this->ip.c_str(), this->port.c_str(), &hints, &serverInfo);
+	if (error < 0)
+		Logger::error("Failed getaddrinfo: " + std::string(gai_strerror(errno)));
 	fd = socket(serverInfo->ai_family, serverInfo->ai_socktype, 0);
 	if (fd == -1)
+	{
 		Logger::error("Failed socket: " + std::string(strerror(errno)));
+		return -1;
+	}
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 	{
 		Logger::error("Failed set socket: " + std::string(strerror(errno)));

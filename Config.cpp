@@ -18,7 +18,7 @@ Config&	Config::operator=( const Config& copy) {
 
 //Deconstructor
 Config::~Config() {
-	std::vector<InfoServer*>::iterator	servIt;
+	std::vector<Server*>::iterator	servIt;
 
 	for(servIt = _servlist.begin(); servIt != _servlist.end(); servIt++)
 		delete (*servIt);
@@ -30,11 +30,11 @@ Config::Config( const std::string& configFile) {
 	//Handle return from parseConfigFile
 }
 
-void	Config::setServerList( const std::vector<InfoServer*> servlist ) {
+void	Config::setServerList( const std::vector<Server*> servlist ) {
 	_servlist = servlist;
 }
 
-std::vector<InfoServer*>	Config::getServList( void ) const {
+std::vector<Server*>	Config::getServList( void ) const {
 	return (_servlist);
 }
 
@@ -60,7 +60,7 @@ std::set<std::string>	Config::parseMethods(std::string method_list)
 	return methods;
 }
 
-bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::string location)
+bool	Config::parseLocation(std::istream &conf, Server *server, const std::string location)
 {
 	Route		route;
 	std::string	line;
@@ -123,7 +123,7 @@ bool	Config::parseServer(std::istream &conf)
 	std::string	key;
 	std::string	value;
 	bool		location_ok = false;
-	InfoServer	*server = new InfoServer;
+	Server	*server = new Server;
 
 	while (std::getline(conf, line))
 	{
@@ -202,7 +202,7 @@ bool	Config::trimLine(std::string& line)
 //Parses the config file and populates all the attributes of the Config class
 bool	Config::parseConfigFile(const std::string &configFile)
 {
-	std::vector<InfoServer*>	server_list;
+	std::vector<Server*>	server_list;
 	std::string			line;
 	std::ifstream 		conf(configFile.c_str());
 	bool				started_server = false; //This is the flag for whether there are errors that need solving. Currently if an error is returned, it ignores the server block and moves on
