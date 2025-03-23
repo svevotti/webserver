@@ -3,8 +3,8 @@
 //constructor and destructor
 InfoServer::InfoServer()
 {
-    this->serverRootPath = "/home/smazzari/repos/Github/Circle5/webserver/server_root";
-    this->serverDocumentRoot = "/home/smazzari/repos/Github/Circle5/webserver/server_root/public_html";
+    this->serverRootPath = "./server_root";
+    this->serverDocumentRoot = "./server_root/public_html";
 	// this->serverRootPath = "/Users/sveva/repos/Circle5/webserver/server_root";
 	// this->serverDocumentRoot = "/Users/sveva/repos/Circle5/webserver/server_root/public_html";
     this->arrayPorts.push_back("8080");

@@ -4,20 +4,20 @@
 Server::Server( void ) {
 }
 
-//Copy constructor
-Server::Server( const Server& copy) {
-	*this = copy;
-}
+// //Copy constructor
+// Server::Server( const Server& copy) {
+// 	*this = copy;
+// }
 
 //Equal operator
-Server&	Server::operator=( const Server& copy) {
-	if (this != &copy)
-	{
-		return (*this);
-	}
+// Server&	Server::operator=( const Server& copy) {
+// 	if (this != &copy)
+// 	{
+// 		return (*this);
+// 	}
 
-	return (*this);
-}
+// 	return (*this);
+// }
 
 //Deconstructor
 Server::~Server() {

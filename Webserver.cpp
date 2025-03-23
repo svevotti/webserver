@@ -7,14 +7,15 @@
 Webserver::Webserver(Config& file, InfoServer serverInfo)
 {
 	this->serverInfo = serverInfo;
-	this->info = file.getServList();
-	std::string port = info[0]->getPort();
-	std::string ip = info[0]->getIP();
+	this->configInfo = file.getServList();
+	std::string port = configInfo[0]->getPort();
+	std::string ip = configInfo[0]->getIP();
 	ServerSockets server(ip, port);
 
 	this->serverFd = server.getServerSocket();
 	this->poll_sets.reserve(MAX);
-	addServerSocketsToPoll(this->serverFd);
+	if (this->serverFd > 0)
+		addServerSocketsToPoll(this->serverFd);
 }
 
 Webserver::~Webserver()
@@ -167,7 +168,7 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	ClientHandler newClient(clientFd, this->serverInfo);
+	ClientHandler newClient(clientFd, this->serverInfo, *this->configInfo[0]);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }
