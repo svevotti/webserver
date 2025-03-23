@@ -52,7 +52,8 @@ class Webserver {
     private:
 
         InfoServer serverInfo;
-        std::vector<Server*> info;
+        std::vector<Server*> configInfo;
+        Server configServer;
         std::vector<struct pollfd>  poll_sets;
         int            serverFd;
         std::vector<ClientHandler>  clientsList;

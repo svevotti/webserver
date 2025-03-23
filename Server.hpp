@@ -34,8 +34,8 @@ class Server {
 	public:
 	Server( void );
 	Server(std::string port, std::string ip, std::string root, std::string index);
-	Server( const Server& copy);
-	Server& operator=(const Server& copy);
+	// Server( const Server& copy);
+	// Server& operator=(const Server& copy);
 		~Server();
 
 		void	setPort( std::string port );

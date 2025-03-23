@@ -1,11 +1,12 @@
 #include "ClientHandler.hpp"
 
 //Constructor and Destructor
-ClientHandler::ClientHandler(int fd, InfoServer info)
+ClientHandler::ClientHandler(int fd, InfoServer info, Server &configInfo)
 {
 	this->fd = fd;
 	this->totbytes = 0;
 	this->info = info;
+	this->configInfo = configInfo;
 }
 
 //Setters and Getters
@@ -26,10 +27,36 @@ std::string ClientHandler::getResponse() const
 
 //Main functions
 
+void printRoute(const Route& route)
+{
+    std::cout << "Route Information:" << std::endl;
+    std::cout << "URI: " << route.uri << std::endl;
+    std::cout << "Path: " << route.path << std::endl;
+
+    std::cout << "Methods: ";
+    if (route.methods.empty()) {
+        std::cout << "None";
+    } else {
+        for (const auto& method : route.methods) {
+            std::cout << method << " ";
+        }
+    }
+    std::cout << std::endl;
+
+    std::cout << "Location Settings:" << std::endl;
+    for (const auto& setting : route.locSettings) {
+        std::cout << "  " << setting.first << ": " << setting.second << std::endl;
+    }
+
+    std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
+}
+
 int ClientHandler::clientStatus(void)
 {
 	int result;
 	HttpRequest request;
+	std::string uri;
+	struct Route route;
 
 	result = readData(this->fd, this->raw_data, this->totbytes);
 	if (result == 0 || result == 1)
@@ -41,40 +68,48 @@ int ClientHandler::clientStatus(void)
 			request.HttpParse(this->raw_data, this->totbytes);
 			this->request = request;
 			Logger::debug("Done parsing");
-			if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-				return 3;
+
+			//create function to mathc the uri to route, handle if not found
+			//path should be without ending / since it comes with the uri
+			uri = this->request.getHttpRequestLine()["Request-URI"];
+			route = configInfo.getRoute()[uri];
+			// printRoute(route);
+			if (isCgi(uri) == true)
+			{
+				Logger::info("Set up CGI");
+			}
 			else
 			{
-				this->response = prepareResponse(this->request);
+				this->response = prepareResponse(this->request, route);
 				this->totbytes = 0;
 				this->raw_data.clear();
 				Logger::info("Response created successfully and store in clientQueu");
 				return 2;
 			}
 		}
-		else if (this->raw_data.find("Content-Length") != std::string::npos)
-		{
-			int start = this->raw_data.find("Content-Length") + 16;
-			int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
-			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-			if (this->totbytes >= bytes_expected)
-			{
-				request.HttpParse(this->raw_data, this->totbytes);
-				this->request = request;
-				Logger::debug("Done parsing");
-				Logger::warn("here there will be check for errors in the request");
-				if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-					return 3;
-				else
-				{
-					this->response = prepareResponse(this->request);
-					this->totbytes = 0;
-					this->raw_data.clear();
-					Logger::info("Response created successfully and store in clientQueu");
-					return 2;
-				}
-			}
-		}
+		// else if (this->raw_data.find("Content-Length") != std::string::npos)
+		// {
+		// 	int start = this->raw_data.find("Content-Length") + 16;
+		// 	int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
+		// 	int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+		// 	if (this->totbytes >= bytes_expected)
+		// 	{
+		// 		request.HttpParse(this->raw_data, this->totbytes);
+		// 		this->request = request;
+		// 		Logger::debug("Done parsing");
+		// 		Logger::warn("here there will be check for errors in the request");
+		// 		if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
+		// 			return 3;
+		// 		else
+		// 		{
+		// 			this->response = prepareResponse(this->request);
+		// 			this->totbytes = 0;
+		// 			this->raw_data.clear();
+		// 			Logger::info("Response created successfully and store in clientQueu");
+		// 			return 2;
+		// 		}
+		// 	}
+		// }
 	}
 	return 0;
 }
@@ -125,11 +160,7 @@ int	searchPage(std::string path)
 
 int ClientHandler::isCgi(std::string str)
 {
-	if (str.find(".py") != std::string::npos)
-		return true;
-	if (searchPage(this->info.getServerDocumentRoot() + str) == true)
-		return false;
-	return true;
+	return false;
 }
 
 bool fileExists(std::string path)
@@ -173,23 +204,26 @@ std::string extractContent(std::string path)
 		return buffer;
 	}
 
-std::string ClientHandler::retrievePage(HttpRequest request)
+std::string ClientHandler::retrievePage(HttpRequest request, struct Route route)
 {
 	std::string body;
 	std::string htmlPage;
-	std::ostringstream intermediatestream;
-	std::string strbodyHtmlLen;
-	std::string httpHeaders;
-	std::string statusCodeLine;
-	std::string documentRootPath;
 	std::string pathToTarget;
 	struct stat pathStat;
-	std::map<std::string, std::string> httpRequestLine;
+	std::string uri;
+	struct Route errorPage;
 
-	httpRequestLine = request.getHttpRequestLine();
-	documentRootPath = this->info.getServerDocumentRoot();
-	pathToTarget = documentRootPath + httpRequestLine["Request-URI"];
-	Logger::debug(pathToTarget);
+	uri = request.getHttpRequestLine()["Request-URI"];
+	//function to retrieve route from uri
+	errorPage = this->configInfo.getRoute()["/404.html"];
+	std::string routePath = route.path;
+	if (route.path.empty())
+	{
+		Logger::error("route is empty");
+		throw NotFoundException(errorPage.path);
+	}
+	routePath.erase(routePath.size()-1);
+	pathToTarget = routePath + uri;
 	if (stat(pathToTarget.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
 	if (S_ISDIR(pathStat.st_mode))
@@ -199,10 +233,7 @@ std::string ClientHandler::retrievePage(HttpRequest request)
 		else
 		pathToTarget += "/index.html";
 	}
-	if (fileExists(pathToTarget) == false)
-		throw NotFoundException("./server_root/public_html/404.html");
-	else
-		htmlPage = pathToTarget;
+	htmlPage = pathToTarget;
 	body = extractContent(htmlPage);
 	return body;
 }
@@ -319,7 +350,7 @@ std::string      ClientHandler::deleteFile(HttpRequest request)
 	return body;
 }
 
-std::string ClientHandler::prepareResponse(HttpRequest request)
+std::string ClientHandler::prepareResponse(HttpRequest request, struct Route route)
 {
 	std::string body;
 	std::string response;
@@ -333,8 +364,7 @@ std::string ClientHandler::prepareResponse(HttpRequest request)
 		{
 			if (httpRequestLine["Method"] == "GET")
 			{
-				body = retrievePage(request);
-				Logger::debug("body " + body);
+				body = retrievePage(request, route);
 				code = 200;
 			}
 			else if (httpRequestLine["Method"] == "POST")
@@ -355,9 +385,11 @@ std::string ClientHandler::prepareResponse(HttpRequest request)
 			Logger::error(e.what());
 			code = e.getCode();
 			body = e.getBody();
+			std::cout << "body\n" << body << std::endl;
 		}
 		HttpResponse http(code, body);
 		response = http.composeRespone();
+		std::cout << response << std::endl;
 	}
 	else
 		Logger::error("Method not found, Sveva, use correct status code line");
