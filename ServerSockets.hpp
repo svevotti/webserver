@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "HttpResponse.hpp"
-#include "InfoServer.hpp"
 #include "HttpRequest.hpp"
 
 

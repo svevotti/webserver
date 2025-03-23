@@ -1,11 +1,10 @@
 #include "ClientHandler.hpp"
 
 //Constructor and Destructor
-ClientHandler::ClientHandler(int fd, InfoServer info, Server &configInfo)
+ClientHandler::ClientHandler(int fd, Server &configInfo)
 {
 	this->fd = fd;
 	this->totbytes = 0;
-	this->info = info;
 	this->configInfo = configInfo;
 }
 
@@ -67,49 +66,54 @@ int ClientHandler::clientStatus(void)
 		{
 			request.HttpParse(this->raw_data, this->totbytes);
 			this->request = request;
-			Logger::debug("Done parsing");
+			Logger::debug("Done parsing GET");
 
 			//create function to mathc the uri to route, handle if not found
 			//path should be without ending / since it comes with the uri
 			uri = this->request.getHttpRequestLine()["Request-URI"];
+			if (uri.find("index.html") != std::string::npos) //little tricky, to review
+				uri.erase(uri.size()-11);
 			route = configInfo.getRoute()[uri];
-			// printRoute(route);
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
 			}
 			else
 			{
-				this->response = prepareResponse(this->request, route);
-				this->totbytes = 0;
-				this->raw_data.clear();
-				Logger::info("Response created successfully and store in clientQueu");
-				return 2;
+					this->response = prepareResponse(this->request, route);
+					this->totbytes = 0;
+					this->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
 			}
 		}
-		// else if (this->raw_data.find("Content-Length") != std::string::npos)
-		// {
-		// 	int start = this->raw_data.find("Content-Length") + 16;
-		// 	int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
-		// 	int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-		// 	if (this->totbytes >= bytes_expected)
-		// 	{
-		// 		request.HttpParse(this->raw_data, this->totbytes);
-		// 		this->request = request;
-		// 		Logger::debug("Done parsing");
-		// 		Logger::warn("here there will be check for errors in the request");
-		// 		if (isCgi(this->request.getHttpHeaders()["Request-URI"]) == true)
-		// 			return 3;
-		// 		else
-		// 		{
-		// 			this->response = prepareResponse(this->request);
-		// 			this->totbytes = 0;
-		// 			this->raw_data.clear();
-		// 			Logger::info("Response created successfully and store in clientQueu");
-		// 			return 2;
-		// 		}
-		// 	}
-		// }
+		else if (this->raw_data.find("Content-Length") != std::string::npos)
+		{
+			int start = this->raw_data.find("Content-Length") + 16;
+			int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
+			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+			if (this->totbytes >= bytes_expected)
+			{
+				request.HttpParse(this->raw_data, this->totbytes);
+				this->request = request;
+				Logger::debug("Done parsing");
+
+				uri = this->request.getHttpRequestLine()["Request-URI"];
+				route = configInfo.getRoute()[uri];
+				if (isCgi(uri) == true)
+				{
+					Logger::info("Set up CGI");
+				}
+				else
+				{
+					this->response = prepareResponse(this->request, route);
+					this->totbytes = 0;
+					this->raw_data.clear();
+					Logger::info("Response created successfully and store in clientQueu");
+					return 2;
+				}
+			}
+		}
 	}
 	return 0;
 }
@@ -195,45 +199,38 @@ std::string extractContent(std::string path)
 		inputFile.seekg(0, std::ios::beg);
 		std::string buffer; 
 		buffer.resize(size);
-		if (inputFile.read(&buffer[0], size))
-			std::cout << "Read " << size << " bytes from the file." << std::endl;
-		else
+		if (!(inputFile.read(&buffer[0], size)))
 			std::cerr << "Error reading file." << std::endl;
 
 		inputFile.close();
 		return buffer;
 	}
 
-std::string ClientHandler::retrievePage(HttpRequest request, struct Route route)
+std::string ClientHandler::retrievePage(std::string uri, std::string path)
 {
 	std::string body;
 	std::string htmlPage;
-	std::string pathToTarget;
 	struct stat pathStat;
-	std::string uri;
 	struct Route errorPage;
 
-	uri = request.getHttpRequestLine()["Request-URI"];
 	//function to retrieve route from uri
+	(void)uri; //really i dont need to concatenate
 	errorPage = this->configInfo.getRoute()["/404.html"];
-	std::string routePath = route.path;
-	if (route.path.empty())
+	if (path.empty())
 	{
-		Logger::error("route is empty");
+		// Logger::error("route is empty");
 		throw NotFoundException(errorPage.path);
 	}
-	routePath.erase(routePath.size()-1);
-	pathToTarget = routePath + uri;
-	if (stat(pathToTarget.c_str(), &pathStat) != 0)
+	if (stat(path.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
 	if (S_ISDIR(pathStat.st_mode))
 	{
-		if (pathToTarget[pathToTarget.length()-1] == '/')
-			pathToTarget += "index.html";
+		if (path[path.length()-1] == '/')
+		path += "index.html";
 		else
-		pathToTarget += "/index.html";
+		path += "/index.html";
 	}
-	htmlPage = pathToTarget;
+	htmlPage = path;
 	body = extractContent(htmlPage);
 	return body;
 }
@@ -299,42 +296,43 @@ int checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-std::string ClientHandler::uploadFile(HttpRequest request)
+std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 {
-	std::map<std::string, std::string> httpRequestLine;
 	std::string body;
 	std::map<std::string, std::string> headersBody;
 	std::string binaryBody;
 	std::vector<struct section> sectionBodies;
+	struct Route page;
 
-	httpRequestLine = request.getHttpRequestLine();
 	sectionBodies = request.getHttpSections();
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)
-		throw ServiceUnavailabledException("./server_root/public_html/503.html");
-	std::string requestTarget = httpRequestLine["Request-URI"];
-	requestTarget.erase(requestTarget.begin());
-	std::string pathFile = this->info.getServerRootPath() + "/" + requestTarget;
+	{
+		page = this->configInfo.getRoute()["/503.html"];
+		throw ServiceUnavailabledException(page.path);
+	}
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
-	if (checkNameFile(fileName, pathFile) == 1)
+	if (checkNameFile(fileName, path) == 1)
 		throw ConflictException();
-	pathFile += "/" + fileName;
-	int file = open(pathFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	path += "/" + fileName;
+	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 	{
-		perror("Error opening file");
-		throw BadRequestException("./server_root/public_html/400.html");
+		page = this->configInfo.getRoute()["/400.html"];
+		throw BadRequestException(page.path);
 	}
 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
 	if (written < 0) {
 		perror("Error writing to file");
 		close(file);
-		throw BadRequestException("./server_root/public_html/400.html");
+		page = this->configInfo.getRoute()["/400.html"];
+		throw BadRequestException(page.path);
 	}
 	close(file);
-	body = extractContent("./server_root/public_html/success/index.html");
+	page = this->configInfo.getRoute()["/success"];
+	body = extractContent(page.path + "/index.html"); //to review how to extract wanted page
 	return body;
 }
 
@@ -355,43 +353,65 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 	std::string body;
 	std::string response;
 	int code;
-
-	std::map<std::string, std::string> httpRequestLine;
-	httpRequestLine = request.getHttpRequestLine();
-	if (httpRequestLine.find("Method") != httpRequestLine.end())
+	std::string method;
+	struct Route errorPage;
+	
+	method = this->request.getHttpRequestLine()["Method"];
+	try
 	{
-		try
+		std::string uri = request.getHttpRequestLine()["Request-URI"];
+		if (method == "GET" && route.methods.count(method) > 0)
 		{
-			if (httpRequestLine["Method"] == "GET")
-			{
-				body = retrievePage(request, route);
-				code = 200;
-			}
-			else if (httpRequestLine["Method"] == "POST")
-			{
-				body = uploadFile(request);
-				code = 201;
-			}
-			else if (httpRequestLine["Method"] == "DELETE")
-			{
-				body = deleteFile(request);
-				code = 200;
-			}
-			else
-				throw MethodNotAllowedException("./server_root/public_html/405.html");
+			body = retrievePage(uri, route.path);
+			code = 200;
 		}
-		catch(const NotFoundException& e)
+		else if (method == "POST" && route.methods.count(method) > 0)
 		{
-			Logger::error(e.what());
-			code = e.getCode();
-			body = e.getBody();
-			std::cout << "body\n" << body << std::endl;
+			body = uploadFile(request, route.path);
+			code = 201;
 		}
-		HttpResponse http(code, body);
-		response = http.composeRespone();
-		std::cout << response << std::endl;
+		else if (method == "DELETE" && route.methods.count(method) > 0)
+		{
+			body = deleteFile(request);
+			code = 200;
+		}
+		else
+		{
+			errorPage = this->configInfo.getRoute()["/405.html"];
+			throw MethodNotAllowedException(errorPage.path);
+		}
 	}
-	else
-		Logger::error("Method not found, Sveva, use correct status code line");
+	catch(const NotFoundException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	catch(const MethodNotAllowedException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	catch(const BadRequestException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	catch(const ServiceUnavailabledException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	catch(const ConflictException& e)
+	{
+		Logger::error(e.what());
+		code = e.getCode();
+		body = e.getBody();
+	}
+	HttpResponse http(code, body);
+	response = http.composeRespone();
 	return response;
 }
