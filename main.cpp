@@ -22,6 +22,8 @@ bool	test(Config &conf)
 	i = 0;
 	std::vector<Server*> server;
 	server = conf.getServList();
+	if (server.size() == 0)
+		return false;
 	for(servIt = server.begin(); servIt != server.end(); servIt++)
 	{
 		i++;
@@ -74,37 +76,40 @@ bool	test(Config &conf)
 				std::cout << varIt->first << " = " << varIt->second << std::endl;
 			std::cout << std::endl;
 		}
-		Route cgi_route;
-		cgi_route = (*servIt)->getCGI();
-		std::cout << "Checking CGI route " << std::endl << std::endl;
-			std::cout << "URI: " << cgi_route.uri << std::endl;
-			std::cout << "Path: " << cgi_route.path << std::endl;
-			if (cgi_route.internal)
-				std::cout << "It is internal!" << std::endl;
-			else
-				std::cout << "It is not internal!" << std::endl;
-			std::cout << "Allowed methods: ";
-			for(setIt = cgi_route.methods.begin(); setIt != cgi_route.methods.end(); setIt++)
-				std::cout << (*setIt) << " ";
-			std::cout << std::endl << "Other variables:" << std::endl;
-			for(varIt = cgi_route.locSettings.begin(); varIt != cgi_route.locSettings.end(); varIt++)
-				std::cout << varIt->first << " = " << varIt->second << std::endl;
-			std::cout << std::endl;
+		// Route cgi_route;
+		// cgi_route = (*servIt)->getCGI();
+		// std::cout << "Checking CGI route " << std::endl << std::endl;
+		// 	std::cout << "URI: " << cgi_route.uri << std::endl;
+		// 	std::cout << "Path: " << cgi_route.path << std::endl;
+		// 	if (cgi_route.internal)
+		// 		std::cout << "It is internal!" << std::endl;
+		// 	else
+		// 		std::cout << "It is not internal!" << std::endl;
+		// 	std::cout << "Allowed methods: ";
+		// 	for(setIt = cgi_route.methods.begin(); setIt != cgi_route.methods.end(); setIt++)
+		// 		std::cout << (*setIt) << " ";
+		// 	std::cout << std::endl << "Other variables:" << std::endl;
+		// 	for(varIt = cgi_route.locSettings.begin(); varIt != cgi_route.locSettings.end(); varIt++)
+		// 		std::cout << varIt->first << " = " << varIt->second << std::endl;
+		// 	std::cout << std::endl;
 	}
 	return true;
 }
 
-int	main(int argc, char** argv){
-	if (argc != 2)
-	{
-		std::cout << "Error! Please include only a path to a config file" << std::endl;
-		return 1;
-	}
-		Config	configuration(argv[1]);
-	std::cout << "Finished configuration!" << std::endl;
+int main(void)
+{
+	Config	configuration("default.conf");
+
 	if (test(configuration))
-		std::cout << "All worked well!" << std::endl;
+	{
+		Webserver 	server(configuration);
+		if (server.startServer() == -1)
+		{
+			Logger::error("Could not start the server");
+			return 1;
+		}
+	}
 	else
-		std::cout << "Error!" << std::endl;
-	return 0;
+		Logger::error("Parsing configuration file");
+	return (0);
 }
