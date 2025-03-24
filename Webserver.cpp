@@ -72,12 +72,8 @@ void Webserver::dispatchEvents()
 					removeClient(it);
                     return ;
 				}
-				else if (result == STATIC)
+				else if (result == 2)
 					it->events = POLLOUT;
-				else if (result == CGI)
-				{
-					Logger::info("Set up CGI here");
-				}
 			}
         }
 		else if (it->revents & POLLOUT)

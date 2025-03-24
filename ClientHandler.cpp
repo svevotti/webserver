@@ -83,7 +83,7 @@ int ClientHandler::clientStatus(void)
 			request.HttpParse(this->raw_data, this->totbytes);
 			this->request = request;
 			Logger::debug("Done parsing GET/DELETE");
-
+			//do useful checks for http request being correct: http, no transfer encoding
 			uri = this->request.getHttpRequestLine()["Request-URI"];
 			if (uri.find("index.html") != std::string::npos) //little tricky, to review
 				uri.erase(uri.size()-11);
@@ -257,23 +257,23 @@ std::string ClientHandler::extractContent(std::string path)
 		return buffer;
 	}
 
-std::string ClientHandler::retrievePage(std::string uri, std::string path)
+std::string ClientHandler::retrievePage(std::string uri, struct Route route)
 {
 	std::string body;
 	struct stat pathStat;
 
 	//function to retrieve route from uri
 	(void)uri; //really i dont need to concatenate
-	if (stat(path.c_str(), &pathStat) != 0)
+	if (stat(route.path.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
 	if (S_ISDIR(pathStat.st_mode))
 	{
-		if (path[path.length()-1] == '/')
-			path += "index.html";
+		if (route.path[route.path.length()-1] == '/')
+			route.path += route.locSettings.find("index")->second;
 		else
-			path += "/index.html";
+			route.path += "/index.html"; //add index in other location too
 	}
-	body = extractContent(path);
+	body = extractContent(route.path);
 	return body;
 }
 
@@ -424,7 +424,7 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 		std::string uri = request.getHttpRequestLine()["Request-URI"];
 		if (method == "GET" && route.methods.count(method) > 0)
 		{
-			body = retrievePage(uri, route.path);
+			body = retrievePage(uri, route);
 			code = 200;
 		}
 		else if (method == "POST" && route.methods.count(method) > 0)
