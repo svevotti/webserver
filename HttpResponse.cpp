@@ -30,11 +30,10 @@ HttpResponse::HttpResponse(int code, std::string str)
 
 	//4xxis for client error
 	this->mapStatusCode.insert(std::pair<int, std::string>(400, "400 Bad Request"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(401, "401 Unauthorized"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(403, "403 Forbidden"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(404, "404 Not Found"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(405, "405 Method Not Allowed"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(409, "409 Conflict"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(413, "413 Payload Too Large"));
 
 	//5xx for server error
 	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));

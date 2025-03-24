@@ -50,6 +50,22 @@ void printRoute(const Route& route)
     std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
 }
 
+std::string extractUri(std::string str)
+{
+	int size;
+	std::string newStr;
+	int i = 0;
+
+	size = str.size();
+	for (i = size - 1; i > 0; i--)
+	{
+		if (str[i] == '/')
+			break;
+	}
+	newStr = str.substr(0, i);
+	return newStr;
+}
+
 int ClientHandler::clientStatus(void)
 {
 	int result;
@@ -62,24 +78,45 @@ int ClientHandler::clientStatus(void)
 		return 1;
 	else
 	{
-		if (this->raw_data.find("GET") != std::string::npos)
+		if (this->raw_data.find("GET") != std::string::npos || this->raw_data.find("DELETE") != std::string::npos)
 		{
 			request.HttpParse(this->raw_data, this->totbytes);
 			this->request = request;
-			Logger::debug("Done parsing GET");
+			Logger::debug("Done parsing GET/DELETE");
 
-			//create function to mathc the uri to route, handle if not found
-			//path should be without ending / since it comes with the uri
 			uri = this->request.getHttpRequestLine()["Request-URI"];
 			if (uri.find("index.html") != std::string::npos) //little tricky, to review
 				uri.erase(uri.size()-11);
-			route = configInfo.getRoute()[uri];
+			if (this->raw_data.find("DELETE") != std::string::npos)
+			{
+				Logger::debug("extract file to delete and create new uri");
+				std::string newUri;
+				newUri = extractUri(uri);
+				Logger::debug(newUri);
+				uri.clear();
+				uri = newUri;
+			}
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
 			}
 			else
 			{
+					//create function to mathc the uri to route, handle if not found - not i am checking it
+					//path should be without ending / since it comes with the uri
+					route = configInfo.getRoute()[uri];
+					if (route.path.empty())
+					{
+						struct Route errorPage;
+
+						errorPage = this->configInfo.getRoute()["/404.html"];
+						std::string errorBody = extractContent(errorPage.path);
+						HttpResponse http(404, errorBody);
+						this->response = http.composeRespone();
+						this->totbytes = 0;
+						this->raw_data.clear();
+						return 2;
+					}
 					this->response = prepareResponse(this->request, route);
 					this->totbytes = 0;
 					this->raw_data.clear();
@@ -100,6 +137,19 @@ int ClientHandler::clientStatus(void)
 
 				uri = this->request.getHttpRequestLine()["Request-URI"];
 				route = configInfo.getRoute()[uri];
+				int maxBodySize;
+				maxBodySize = Utils::toInt(route.locSettings.find("limit_client_body_size")->second);
+				if (bytes_expected > maxBodySize * 1000000)
+				{
+					struct Route errorPage;
+					errorPage = this->configInfo.getRoute()["/413.html"];
+					std::string errorBody = extractContent(errorPage.path);
+					HttpResponse http(413, errorBody);
+					this->response = http.composeRespone();
+					this->totbytes = 0;
+					this->raw_data.clear();
+					return 2;
+				}
 				if (isCgi(uri) == true)
 				{
 					Logger::info("Set up CGI");
@@ -184,12 +234,13 @@ bool fileExists(std::string path)
 	return true;
 }
 
-std::string extractContent(std::string path)
+std::string ClientHandler::extractContent(std::string path)
 {
 	std::ifstream inputFile(path.c_str(), std::ios::binary);
 
 		if (!inputFile)
 		{
+			std::cout << path << std::endl;
 			std::cerr << "Error opening file." << std::endl;
 			return "";
 		}
@@ -209,29 +260,20 @@ std::string extractContent(std::string path)
 std::string ClientHandler::retrievePage(std::string uri, std::string path)
 {
 	std::string body;
-	std::string htmlPage;
 	struct stat pathStat;
-	struct Route errorPage;
 
 	//function to retrieve route from uri
 	(void)uri; //really i dont need to concatenate
-	errorPage = this->configInfo.getRoute()["/404.html"];
-	if (path.empty())
-	{
-		// Logger::error("route is empty");
-		throw NotFoundException(errorPage.path);
-	}
 	if (stat(path.c_str(), &pathStat) != 0)
 		Logger::error("Failed stat: " + std::string(strerror(errno)));
 	if (S_ISDIR(pathStat.st_mode))
 	{
 		if (path[path.length()-1] == '/')
-		path += "index.html";
+			path += "index.html";
 		else
-		path += "/index.html";
+			path += "/index.html";
 	}
-	htmlPage = path;
-	body = extractContent(htmlPage);
+	body = extractContent(path);
 	return body;
 }
 
@@ -336,16 +378,36 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	return body;
 }
 
-std::string      ClientHandler::deleteFile(HttpRequest request)
+std::string      ClientHandler::deleteFile(std::string path)
 {
 	std::string body;
-	std::string pathToResource = "./" + request.getHttpRequestLine()["Request-URI"];
-	std::ifstream file(pathToResource.c_str());
+	std::ifstream file(path.c_str());
+
 	if (!(file.good()))
-		throw NotFoundException(pathToResource);
+	{
+		struct Route errorPage;
+		errorPage = this->configInfo.getRoute()["/404.html"];
+		throw NotFoundException(errorPage.path);
+	}
 	else
-		remove(pathToResource.c_str());
+		remove(path.c_str());
 	return body;
+}
+
+std::string extraFileName(std::string str)
+{
+	std::string newStr;
+	int size;
+
+	size = str.size();
+	int i = 0;
+	for (i = size - 1; i > 0; i--)
+	{
+		if (str[i] == '/')
+			break;
+	}
+	newStr = str.substr(i);
+	return newStr;
 }
 
 std::string ClientHandler::prepareResponse(HttpRequest request, struct Route route)
@@ -372,8 +434,12 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 		}
 		else if (method == "DELETE" && route.methods.count(method) > 0)
 		{
-			body = deleteFile(request);
-			code = 200;
+			std::string fileToDelete;
+			std::string fileName;
+			fileName = extraFileName(this->request.getHttpRequestLine()["Request-URI"]);
+			fileToDelete = route.path + fileName;
+			body = deleteFile(fileToDelete);
+			code = 204;
 		}
 		else
 		{
