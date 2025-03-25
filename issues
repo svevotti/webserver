@@ -1,0 +1,16 @@
+- Review operator= in Config and InfoServer. it only works if passing reference
+- Create a function that matches the uri to the route; it would be very helpful. the function should also manage to return an error if such location is not found
+- Create a function to match the subdirectories
+- Review parsing methods in location. it seems it only parses all the methods except the last one (if there are 2, it parses the first one)
+- Review parsing first two lines of the default.config. if there is a typo in port or localhost, we get seg fault.
+- Review parsing location block: if line root is missing in the location file,  all the other fields are missing
+- We will need to implement the location /old-page/ , we need redirection
+- Maybe it would be nice to have a checker if the configuration is good to go: now i am just checking if the size of the vector of InfoServers is bigger than zero,  maybe it is fine
+
+Comments:
+I think I would structure the configuration file having only the root, the upload, the old-page and the error location blocks. We can match all the html files to the root location. example
+http://localhost:8080/home/about/sveva
+if will first try to match /home/about/sveva, no match, then it would look for /home/about. no match, so it looks for /home, again no match and would at the end match with the root.
+Then we will retrieve the path from the root + appending and i do like to have the index in the location, so we can just call it from the route. It would also possible to not find the page when trying to open it, so we will throw an 404 not found
+I would keep only one client_max_body_size for all location or we can specify limit_client_body_size only in upload (it is the only place where we allow POST). I do not know if we need client_body_timeout, client_header_timeout. I would say the keep alive timeout is sufficient. I implemented it for clients, most likely will be used by Simona. 
+One clarification: is the content_type referring what is allowed to be for the response or for the request? I believe is for the response, but not sure
