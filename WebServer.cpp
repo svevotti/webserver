@@ -1,4 +1,5 @@
 #include "WebServer.hpp"
+#include <ctime>
 #define BUFFER 1024
 #define MAX 100
 
@@ -24,6 +25,25 @@ Webserver::~Webserver()
 
 // Setters and Getters
 
+void Webserver::checkTime(void)
+{
+	std::time_t currentTime = std::time(NULL);
+	std::vector<ClientHandler>::iterator clientIt;
+	std::vector<struct pollfd>::iterator it;
+	double keepAliveTimeout = atof(this->configInfo[0]->getSetting()["keepalive_timeout"].c_str());
+	for (it = this->poll_sets.begin(); it < this->poll_sets.end(); it++)
+	{
+		clientIt = retrieveClient(it->fd);
+		if (clientIt != this->clientsList.end())
+		{
+			if (currentTime - clientIt->getTime() > keepAliveTimeout)
+			{
+				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
+				removeClient(it);
+			}
+		}
+	}
+}
 // Main functions
 int	Webserver::startServer()
 {
@@ -43,7 +63,7 @@ int	Webserver::startServer()
 			Logger::debug("Poll timeout: no events");
 		else
 			dispatchEvents();
-		//timecheck
+		checkTime();
 	}
 	return 0;
 }
