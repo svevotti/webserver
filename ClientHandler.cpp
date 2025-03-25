@@ -6,6 +6,7 @@ ClientHandler::ClientHandler(int fd, Server &configInfo)
 	this->fd = fd;
 	this->totbytes = 0;
 	this->configInfo = configInfo;
+	this->startingTime = time(NULL);
 }
 
 //Setters and Getters
@@ -24,6 +25,10 @@ std::string ClientHandler::getResponse() const
 	return this->response;
 }
 
+double ClientHandler::getTime() const
+{
+	return this->startingTime;
+}
 //Main functions
 
 void printRoute(const Route& route)
@@ -72,7 +77,6 @@ int ClientHandler::clientStatus(void)
 	HttpRequest request;
 	std::string uri;
 	struct Route route;
-
 	result = readData(this->fd, this->raw_data, this->totbytes);
 	if (result == 0 || result == 1)
 		return 1;
@@ -103,8 +107,8 @@ int ClientHandler::clientStatus(void)
 			{
 					//create function to mathc the uri to route, handle if not found - not i am checking it
 					//path should be without ending / since it comes with the uri
+					//create logic to retrieve prefix uri
 					route = configInfo.getRoute()[uri];
-					// Logger::warn("uri: " + uri);
 					// printRoute(route);
 					if (route.locSettings.find("redirect") != route.locSettings.end())
 					{

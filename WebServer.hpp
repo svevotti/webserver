@@ -47,6 +47,7 @@ class Webserver {
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
         void                                    removeClient(std::vector<struct pollfd>::iterator it);
+        void checkTime(void);
 
     private:
         std::vector<Server*> configInfo;

@@ -34,6 +34,7 @@ class ClientHandler {
 		int getFd(void) const;
 		HttpRequest getRequest() const;
 		std::string getResponse() const;
+		double getTime() const;
 		int readData(int fd, std::string &str, int &bytes);
 		int clientStatus(void);
 		int isCgi(std::string str);
@@ -51,6 +52,7 @@ class ClientHandler {
 	HttpRequest request;
 	std::string response;
 	Server configInfo;
+	double startingTime;
 };
 
 #endif
