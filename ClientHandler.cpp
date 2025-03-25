@@ -104,7 +104,20 @@ int ClientHandler::clientStatus(void)
 					//create function to mathc the uri to route, handle if not found - not i am checking it
 					//path should be without ending / since it comes with the uri
 					route = configInfo.getRoute()[uri];
-					if (route.path.empty())
+					// Logger::warn("uri: " + uri);
+					// printRoute(route);
+					if (route.locSettings.find("redirect") != route.locSettings.end())
+					{
+						//Logger::warn("should be here");
+						route.path.clear();
+						route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
+						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
+						//Logger::debug(route.path);
+						printRoute(route);
+						this->response = prepareResponse(this->request, route);
+
+					}
+					else if (route.path.empty())
 					{
 						struct Route errorPage;
 
@@ -116,7 +129,8 @@ int ClientHandler::clientStatus(void)
 						this->raw_data.clear();
 						return 2;
 					}
-					this->response = prepareResponse(this->request, route);
+					else
+						this->response = prepareResponse(this->request, route);
 					this->totbytes = 0;
 					this->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
@@ -128,6 +142,17 @@ int ClientHandler::clientStatus(void)
 			int start = this->raw_data.find("Content-Length") + 16;
 			int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
 			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+			if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
+			{
+				struct Route errorPage;
+				errorPage = this->configInfo.getRoute()["/413.html"];
+				std::string errorBody = extractContent(errorPage.path);
+				HttpResponse http(413, errorBody);
+				this->response = http.composeRespone();
+				this->totbytes = 0;
+				this->raw_data.clear();
+				return 2;
+			}
 			if (this->totbytes >= bytes_expected)
 			{
 				this->request.HttpParse(this->raw_data, this->totbytes);
@@ -135,19 +160,6 @@ int ClientHandler::clientStatus(void)
 
 				uri = this->request.getHttpRequestLine()["Request-URI"];
 				route = configInfo.getRoute()[uri];
-				int maxBodySize;
-				maxBodySize = Utils::toInt(route.locSettings.find("limit_client_body_size")->second);
-				if (bytes_expected > maxBodySize * 1000000)
-				{
-					struct Route errorPage;
-					errorPage = this->configInfo.getRoute()["/413.html"];
-					std::string errorBody = extractContent(errorPage.path);
-					HttpResponse http(413, errorBody);
-					this->response = http.composeRespone();
-					this->totbytes = 0;
-					this->raw_data.clear();
-					return 2;
-				}
 				if (isCgi(uri) == true)
 				{
 					Logger::info("Set up CGI");
@@ -423,7 +435,10 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 		if (method == "GET" && route.methods.count(method) > 0)
 		{
 			body = retrievePage(uri, route);
-			code = 200;
+			if (route.locSettings.find("redirect") != route.locSettings.end())
+				code = 301;
+			else
+				code = 200;
 		}
 		else if (method == "POST" && route.methods.count(method) > 0)
 		{
