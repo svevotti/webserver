@@ -99,7 +99,7 @@ int main(void)
 {
 	Config	configuration("default.conf");
 
-	if (test(configuration))
+	if (configuration.getServList().size() > 0)
 	{
 		Webserver 	server(configuration);
 		if (server.startServer() == -1)
