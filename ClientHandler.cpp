@@ -80,8 +80,7 @@ int ClientHandler::clientStatus(void)
 	{
 		if (this->raw_data.find("GET") != std::string::npos || this->raw_data.find("DELETE") != std::string::npos)
 		{
-			request.HttpParse(this->raw_data, this->totbytes);
-			this->request = request;
+			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::debug("Done parsing GET/DELETE");
 			//do useful checks for http request being correct: http, no transfer encoding
 			uri = this->request.getHttpRequestLine()["Request-URI"];
@@ -131,8 +130,7 @@ int ClientHandler::clientStatus(void)
 			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
 			if (this->totbytes >= bytes_expected)
 			{
-				request.HttpParse(this->raw_data, this->totbytes);
-				this->request = request;
+				this->request.HttpParse(this->raw_data, this->totbytes);
 				Logger::debug("Done parsing");
 
 				uri = this->request.getHttpRequestLine()["Request-URI"];
