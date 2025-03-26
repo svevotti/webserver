@@ -1,7 +1,7 @@
 #include "WebServer.hpp"
 #include <ctime>
 #define BUFFER 1024
-#define MAX 100
+#define MAX 1024
 
 // Constructor and Destructor
 

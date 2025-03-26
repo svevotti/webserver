@@ -71,6 +71,36 @@ std::string extractUri(std::string str)
 	return newStr;
 }
 
+int validateHttp(HttpRequest clientRequest)
+{
+	//map first line: protocol http/1.1
+	std::string protocolVersion = clientRequest.getHttpRequestLine()["protocol"];
+	//map headers: transfer encoding, content type
+	std::map<std::string, std::string> headers = clientRequest.getHttpHeaders();
+	std::map<std::string, std::string>::iterator it;
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "content-type")
+		{
+			if (it->second.find("multipart/form-data") != std::string::npos || it->second.find("text/") !=  std::string::npos)
+			{
+				Logger::error("Not Implemented");
+				return 501;
+			}
+		}
+		else if (it->first == "transfer-encoding")
+		{
+			Logger::error("Bad request");
+			return 400;
+		}
+		else if (it->first == "Upgrade")
+		{
+			Logger::error("Http version not supported");
+			return 505;
+		}
+	}
+	return 0;
+}
 int ClientHandler::clientStatus(void)
 {
 	int result;
@@ -86,6 +116,20 @@ int ClientHandler::clientStatus(void)
 		{
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::debug("Done parsing GET/DELETE");
+			int result = validateHttp(this->request);
+			if (result != 0)
+			{
+				struct Route errorPage;
+				std::string path = "/" + Utils::toString(result) + ".html";
+				errorPage = this->configInfo.getRoute()[path];
+				std::string errorBody = extractContent(errorPage.path);
+				HttpResponse http(result, path);
+				this->response = http.composeRespone();
+				this->totbytes = 0;
+				this->raw_data.clear();
+				return 2;
+			}
+
 			//do useful checks for http request being correct: http, no transfer encoding
 			uri = this->request.getHttpRequestLine()["Request-URI"];
 			if (uri.find("index.html") != std::string::npos) //little tricky, to review
