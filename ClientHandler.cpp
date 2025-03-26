@@ -131,7 +131,7 @@ int ClientHandler::clientStatus(void)
 			}
 
 			//do useful checks for http request being correct: http, no transfer encoding
-			uri = this->request.getHttpRequestLine()["Request-URI"];
+			uri = this->request.getHttpRequestLine()["request-uri"];
 			if (uri.find("index.html") != std::string::npos) //little tricky, to review
 				uri.erase(uri.size()-11);
 			if (this->raw_data.find("DELETE") != std::string::npos)
@@ -206,7 +206,7 @@ int ClientHandler::clientStatus(void)
 				this->request.HttpParse(this->raw_data, this->totbytes);
 				Logger::debug("Done parsing");
 
-				uri = this->request.getHttpRequestLine()["Request-URI"];
+				uri = this->request.getHttpRequestLine()["request-uri"];
 				route = configInfo.getRoute()[uri];
 				if (isCgi(uri) == true)
 				{
@@ -476,10 +476,10 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 	std::string method;
 	struct Route errorPage;
 	
-	method = this->request.getHttpRequestLine()["Method"];
+	method = this->request.getHttpRequestLine()["method"];
 	try
 	{
-		std::string uri = request.getHttpRequestLine()["Request-URI"];
+		std::string uri = request.getHttpRequestLine()["request-uri"];
 		if (method == "GET" && route.methods.count(method) > 0)
 		{
 			body = retrievePage(uri, route);
@@ -497,7 +497,7 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 		{
 			std::string fileToDelete;
 			std::string fileName;
-			fileName = extraFileName(this->request.getHttpRequestLine()["Request-URI"]);
+			fileName = extraFileName(this->request.getHttpRequestLine()["request-uri"]);
 			fileToDelete = route.path + fileName;
 			body = deleteFile(fileToDelete);
 			code = 204;
