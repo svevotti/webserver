@@ -1,4 +1,4 @@
-1)split first line by spaces
+1)split first line by spaces - done
 2)lowercase headers
 3)don't need vector for body uploads: we will only be able to accomodate one upload
 4)by what timeout in siege is affected
