@@ -48,9 +48,7 @@ class HttpRequest {
 		void								exractQuery(std::string);
 		void								parseMultiPartBody(std::string, int);
 		void								extractSections(std::string, std::vector<int>, int, std::string);
-		std::string							findMethod(std::string);
 		char								*getBoundary(const char *);
-		std::string							unchunkRequest(std::string chunked);
 		std::string							decodeQuery(std::string str);
 		void								cleanProperties(void);
 

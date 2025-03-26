@@ -72,7 +72,7 @@ void HttpRequest::parseRequestHttp(void)
 	parseHeaders(request);
     it = headers.find("Content-Length");
 	if (it != headers.end())
-		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
+		parseBody(getHttpRequestLine()["method"], this->str, this->size);
 	else
 		typeBody = EMPTY;
 }
@@ -124,23 +124,28 @@ void HttpRequest::parseRequestLine(std::string str)
 		}
 		if (item == 0)
 		{
-			this->requestLine["Method"] = subStr;
+			this->requestLine["method"] = subStr;
 			item++;
 		}
 		else if (item == 1)
 		{
-			this->requestLine["Request-URI"] = subStr;
+			this->requestLine["request-uri"] = subStr;
 			item++;
 		}
 		else if (item == 2)
 		{
-			this->requestLine["Protocol"] = subStr;
+			this->requestLine["protocol"] = subStr;
 			item++;
 		}
 		i++;
 	}
-	if (this->requestLine["Request-URI"].find("?") != std::string::npos) //query
+	if (this->requestLine["request-uri"].find("?") != std::string::npos) //query
 			exractQuery(subStr);
+}
+
+char toLowerChar(char c)
+{
+    return std::tolower(static_cast<unsigned char>(c));
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -148,14 +153,24 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 	std::string line;
 	std::string key;
 	std::string value;
+	int skipSpaces = 0;
+
 	while (getline(str, line))
 	{
+		key.clear();
+		value.clear();
+		skipSpaces = 0;
 		if (line.find_first_not_of("\r\n") == std::string::npos)
 			break ;
 		if (line.find(":") != std::string::npos)
+		{
 			key = line.substr(0, line.find(":"));
-		if (line.find(" ") != std::string::npos)
-			value = line.substr(line.find(" ") + 1);
+			while (isspace(line[line.find(":") + 1 + skipSpaces]) != 0)
+				skipSpaces++;
+			value = line.substr(line.find(":") + 1 + skipSpaces);
+		}
+		else
+			key = line;
 		headers[key] = value;
 	}
 }
@@ -219,16 +234,6 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 }
 
 // Utils
-std::string HttpRequest::findMethod(std::string inputStr)
-{
-	if (inputStr.find("GET") != std::string::npos)
-		return ("GET");
-	else if (inputStr.find("POST") != std::string::npos)
-		return ("POST");
-	else if (inputStr.find("DELETE") != std::string::npos)
-		return ("DELETE");
-	return ("ERROR");
-}
 
 std::string HttpRequest::decodeQuery(std::string str)
 {
@@ -262,9 +267,9 @@ void HttpRequest::exractQuery(std::string str)
 	size_t i = 0;
 
 	url = str.substr(0, str.find("?"));
-	requestLine["Url"] = url; //url : only url
+	requestLine["url"] = url; //url : only url
 	queryString = str.substr(str.find("?") + 1, str.length() - str.find("?"));
-	requestLine["Query-string"] = queryString; //query-string only query
+	requestLine["query-string"] = queryString; //query-string only query
 	while (i < queryString.length())
 	{
 		while (queryString[i] != '=')
