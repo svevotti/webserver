@@ -110,33 +110,37 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 
 void HttpRequest::parseRequestLine(std::string str)
 {
-	std::string method;
 	std::string subStr;
-	std::string requestTarget;
-	std::string protocol;
-	std::string queryString;
-	std::string url;
 
-	//TODO:maybe split by spaces the first line
-	method = findMethod(str);
-	requestLine["Method"] = method;
-	if (str.find("/") != std::string::npos)
+	int i = 0;
+	int item = 0;
+	while (i < str.size())
 	{
-		subStr = str.substr(str.find("/"), (str.find(" ", str.find("/"))) - (str.find("/")));
-		requestLine["Request-URI"] = subStr; //Request-URI: full url+query
-		if (subStr.find("?") != std::string::npos) //query
+		subStr.clear();
+		while (isspace(str[i]) == 0)
+		{
+			subStr.append(1, str[i]);
+			i++;
+		}
+		if (item == 0)
+		{
+			this->requestLine["Method"] = subStr;
+			item++;
+		}
+		else if (item == 1)
+		{
+			this->requestLine["Request-URI"] = subStr;
+			item++;
+		}
+		else if (item == 2)
+		{
+			this->requestLine["Protocol"] = subStr;
+			item++;
+		}
+		i++;
+	}
+	if (this->requestLine["Request-URI"].find("?") != std::string::npos) //query
 			exractQuery(subStr);
-	}
-	else
-		requestLine["Request-URI"] = "ERROR"; //error
-	if (str.find("HTTP") != std::string::npos)
-	{
-		std::size_t protocol_index_start = str.find("HTTP");
-		protocol = str.substr(protocol_index_start, (str.find("\n", protocol_index_start) - 1) - protocol_index_start);
-		requestLine["Protocol"] = protocol;
-	}
-	else
-		requestLine["Protocol"] = "ERROR";
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
