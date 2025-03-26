@@ -74,7 +74,7 @@ void HttpRequest::parseRequestHttp(void)
 	if (it != headers.end())
 		parseBody(getHttpRequestLine()["Method"], this->str, this->size);
 	else
-		typeBody = EMPTY;	
+		typeBody = EMPTY;
 }
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)

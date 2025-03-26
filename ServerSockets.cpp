@@ -73,7 +73,7 @@ int ServerSockets::createSocket(void)
 		return (-1);
 	}
 	freeaddrinfo(serverInfo);
-	if (listen(fd, 5) == -1)
+	if (listen(fd, 128) == -1) //this could be the reason why sockets go in timeout in siege
 	{
 		Logger::error("Failed listen socket: " + std::string(strerror(errno)));
 		return (-1);

@@ -38,6 +38,8 @@ HttpResponse::HttpResponse(int code, std::string str)
 	//5xx for server error
 	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
+	
 }
 
 // Main functions
