@@ -54,6 +54,10 @@ void	InfoServer::setSetting( const std::string key, const std::string &value) {
 	this->_settings[key] = value;
 }
 
+void	InfoServer::setFD( int fd ) {
+	this->_fd = fd;
+}
+
 std::string	InfoServer::getPort( void ) const {
 	return (_port);
 }
@@ -80,6 +84,10 @@ std::map<std::string, Route>	InfoServer::getRoute ( void ) const {
 
 Route	InfoServer::getCGI ( void ) const {
 	return (_cgi);
+}
+
+int	InfoServer::getFD ( void ) const {
+	return (_fd);
 }
 
 bool	InfoServer::isIPValid( std::string ip ) {
@@ -115,4 +123,10 @@ bool	InfoServer::isIPValid( std::string ip ) {
 	if (ndots != 3)
 		return false;
 	return true;
+}
+
+bool	InfoServer::matchFD( int fd ) {
+	if (fd == _fd)
+		return (true);
+	return (false);
 }

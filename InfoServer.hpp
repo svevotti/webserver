@@ -30,6 +30,7 @@ class InfoServer {
 		std::map<std::string, std::string>	_settings;
 		std::map<std::string, Route>		_routes;
 		Route								_cgi;
+		int									_fd;
 
 	public:
 		InfoServer( void );
@@ -45,6 +46,7 @@ class InfoServer {
 		void	setSetting( const std::string key, const std::string &value);
 		void	setRoutes( const std::string &uri, const Route &route);
 		void	setCGI( const Route &route );
+		void	setFD( int fd );
 
 		std::string							getPort( void ) const;
 		std::string							getIP ( void ) const;
@@ -53,7 +55,9 @@ class InfoServer {
 		std::map<std::string, std::string>	getSetting ( void ) const;
 		std::map<std::string, Route>		getRoute ( void ) const;
 		Route								getCGI( void ) const;
+		int									getFD( void ) const;
 
+		bool	matchFD( int fd );
 		bool	isIPValid( std::string ip );
 };
 
