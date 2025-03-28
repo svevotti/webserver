@@ -436,10 +436,7 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)
-	{
-		page = this->configInfo.getRoute()["/503.html"];
-		throw ServiceUnavailabledException(page.path);
-	}
+		throw ServiceUnavailabledException();
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, path) == 1)
@@ -447,16 +444,12 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	path += "/" + fileName;
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
-	{
-		page = this->configInfo.getRoute()["/400.html"];
-		throw BadRequestException(page.path);
-	}
+		throw BadRequestException();
 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
 	if (written < 0) {
 		perror("Error writing to file");
 		close(file);
-		page = this->configInfo.getRoute()["/400.html"];
-		throw BadRequestException(page.path);
+		throw BadRequestException();
 	}
 	close(file);
 	page = this->configInfo.getRoute()["/success"];
@@ -470,11 +463,7 @@ std::string      ClientHandler::deleteFile(std::string path)
 	std::ifstream file(path.c_str());
 
 	if (!(file.good()))
-	{
-		struct Route errorPage;
-		errorPage = this->configInfo.getRoute()["/404.html"];
-		throw NotFoundException(errorPage.path);
-	}
+		throw NotFoundException();
 	else
 		remove(path.c_str());
 	return body;
@@ -531,10 +520,7 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 			code = 204;
 		}
 		else
-		{
-			errorPage = this->configInfo.getRoute()["/405.html"];
-			throw MethodNotAllowedException(errorPage.path);
-		}
+			throw MethodNotAllowedException();
 	}
 	catch(const NotFoundException& e)
 	{

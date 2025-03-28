@@ -107,8 +107,8 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	}
 	else
 	{
-		//throw BadRequestException();
 		typeBody = EMPTY;
+		throw BadRequestException();
 	}
 }
 
@@ -127,11 +127,7 @@ void HttpRequest::parseRequestLine(std::string str)
 		this->requestLine["method"] = method;
 	}
 	else
-	{
-		//throw BadRequestException()
-		this->requestLine["method"] = str;
-		return;
-	}
+		throw BadRequestException();
 	str.erase(0, method.length()+1);
 	index = str.find(" ");
 	if (index != std::string::npos)
@@ -148,11 +144,7 @@ void HttpRequest::parseRequestLine(std::string str)
 		this->requestLine["request-uri"] = uri;
 	}
 	else
-	{
-		//throw BadRequestException()
-		this->requestLine["request-uri"] = str;
-		return;
-	}
+		throw BadRequestException();
 	str.erase(0, uri.length()+1);
 	index = str.find("\r\n");
 	if (index != std::string::npos)
@@ -161,14 +153,7 @@ void HttpRequest::parseRequestLine(std::string str)
 		requestLine["protocol"] = protocol;
 	}
 	else
-	{
-		//throw BadRequestException()
-		this->requestLine["protocol"] = str; //it should be no possible if not manually making the request
-		return;
-	}
-	// std::cout << "method: " << requestLine["method"] << std::endl;
-	// std::cout << "request-uri: " << requestLine["request-uri"] << std::endl;
-	// std::cout << "protocol: " << requestLine["protocol"] << std::endl;
+		throw BadRequestException();
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -190,17 +175,11 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 		{
 			key = line.substr(0, index);
 			if (line[line.find(":") + 1] != ' ')
-			{
-				//throw BadRequestException()
-				return;
-			}
+				throw BadRequestException();
 			value = line.substr(index + 2);
 		}
 		else
-		{
-			//throw BadRequestException()
-			return;
-		}
+			throw BadRequestException();
 		std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
 		// std::cout << "key: " << key << std::endl;
 		std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
@@ -260,17 +239,11 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 			{
 				key = line.substr(0, index);
 				if (line[line.find(":") + 1] != ' ')
-				{
-					//throw BadRequestException()
-					return;
-				}
+					throw BadRequestException();
 				value = line.substr(index + 2);
 			}
 			else
-			{
-				//throw BadRequestException()
-				return;
-			}
+				throw BadRequestException();
 			std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
 			std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
 			data.myMap[key] = value;

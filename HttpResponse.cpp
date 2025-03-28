@@ -81,6 +81,9 @@ std::string HttpResponse::generateHttpHeaders(void)
 		type = verifyType(this->body); //now only html or jpeg
 		headers += "Content-Type: " + type + "\r\n";
 	}
+	std::cout << this->statusCode << std::endl;
+	if (this->statusCode == 301)
+		headers += "Location: http://localhost:8080/\r\n"; 
 	length = Utils::toString(this->body.size());
 	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";
