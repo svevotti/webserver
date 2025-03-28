@@ -342,7 +342,7 @@ std::string getFileType(std::map<std::string, std::string> headers)
 
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
-		if (it->first == "Content-Type")
+		if (it->first == "content-type")
 			type = it->second;
 	}
 	return type;
@@ -355,7 +355,7 @@ std::string getFileName(std::map<std::string, std::string> headers)
 
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
-		if (it->first == "Content-Disposition")
+		if (it->first == "content-disposition")
 		{
 			if (it->second.find("filename") != std::string::npos)
 			{

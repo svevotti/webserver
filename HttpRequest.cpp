@@ -66,11 +66,11 @@ void HttpRequest::parseRequestHttp(void)
 	std::istringstream request(inputString);
 	std::string line;
     std::map<std::string, std::string>::iterator it;
-
+	
 	parseRequestLine(inputString);
 	getline(request, line);
 	parseHeaders(request);
-    it = headers.find("Content-Length");
+    it = headers.find("content-length");
 	if (it != headers.end())
 		parseBody(getHttpRequestLine()["method"], this->str, this->size);
 	else
@@ -79,7 +79,7 @@ void HttpRequest::parseRequestHttp(void)
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 {
-	std::string contentType = headers["Content-Type"];
+	std::string contentType = headers["content-type"];
 	struct section data;
 	std::map<std::string, std::string>::iterator it;
 
@@ -171,6 +171,10 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 		}
 		else
 			key = line;
+		std::transform(key.begin(), key.end(), key.begin(), toLowerChar);
+		// std::cout << key << std::endl;
+		std::transform(value.begin(), value.end(), value.begin(), toLowerChar);
+		// std::cout << value << std::endl;
 		headers[key] = value;
 	}
 }
@@ -224,6 +228,8 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 				key = line.substr(0, line.find(":"));
 			if (line.find(" ") != std::string::npos)
 				value = line.substr(line.find(" ") + 1);
+			std::transform(key.begin(), key.end(), key.begin(), toLowerChar);
+			std::transform(value.begin(), value.end(), value.begin(), toLowerChar);
 			data.myMap[key] = value;
 		}
 	}
