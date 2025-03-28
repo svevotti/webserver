@@ -190,7 +190,8 @@ int ClientHandler::clientStatus(void)
 						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
 						//Logger::debug(route.path);
 						printRoute(route);
-						this->response = prepareResponse(this->request, route);
+						HttpResponse http(301, "");
+						this->response = http.composeRespone();
 
 					}
 					else if (route.path.empty())
