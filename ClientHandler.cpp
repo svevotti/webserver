@@ -1,7 +1,7 @@
 #include "ClientHandler.hpp"
 
 //Constructor and Destructor
-ClientHandler::ClientHandler(int fd, Server &configInfo)
+ClientHandler::ClientHandler(int fd, InfoServer &configInfo)
 {
 	this->fd = fd;
 	this->totbytes = 0;

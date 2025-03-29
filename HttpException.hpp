@@ -1,7 +1,7 @@
 #ifndef HTTP_EXCEPTION_H
 #define HTTP_EXCEPTION_H
 
-#include "Server.hpp"
+#include "InfoServer.hpp"
 #include "Utils.hpp"
 #include <unistd.h>
 
@@ -61,7 +61,7 @@ class PayLoadTooLargeException : public HttpException {
 
 class InternalServerErrorException : public HttpException {
 	public:
-		InternalServerErrorException() : HttpException(500, "Internal Server Error") {}
+		InternalServerErrorException() : HttpException(500, "Internal InfoServer Error") {}
 };
 
 class ServiceUnavailabledException : public HttpException {
