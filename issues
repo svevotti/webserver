@@ -1,6 +1,8 @@
-1)split first line by spaces - done
+1)by what timeout in siege is affected - done need to merge
 2)lowercase headers
-3)don't need vector for body uploads: we will only be able to accomodate one upload
-4)by what timeout in siege is affected
-5)should also do checks for curl? cause it annoyes me that returns a html page if using curl
-6)create function to separete uri and file ~ maybe HeathCliff can implement this
+3)validation
+4)check redirection: implement logic for location header with status code 301
+5)take care of content_type
+6)don't need vector for body uploads: we will only be able to accomodate one upload
+7)implement handling multiple servers
+8)create function to separete uri and file
