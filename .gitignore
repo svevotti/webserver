@@ -1,3 +1,5 @@
+### Cpp specific ###
+
 # Prerequisites
 *.d
 
@@ -31,8 +33,13 @@
 *.out
 *.app
 
+### Project specific ###
+
 # Binaries
 webserver
+
+# Resources
+/server_root/upload/*
 
 # Mac files
 .DS_Store
