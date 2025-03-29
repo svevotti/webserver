@@ -1,16 +1,16 @@
-#include "Server.hpp"
+#include "InfoServer.hpp"
 
 //default constructor (only for orthodox form)
-Server::Server( void ) {
+InfoServer::InfoServer( void ) {
 }
 
 // //Copy constructor
-// Server::Server( const Server& copy) {
+// InfoServer::InfoServer( const InfoServer& copy) {
 // 	*this = copy;
 // }
 
 //Equal operator
-// Server&	Server::operator=( const Server& copy) {
+// InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 // 	if (this != &copy)
 // 	{
 // 		return (*this);
@@ -20,69 +20,69 @@ Server::Server( void ) {
 // }
 
 //Deconstructor
-Server::~Server() {
+InfoServer::~InfoServer() {
 }
 
-Server::Server(std::string port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index) {}
+InfoServer::InfoServer(std::string port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index) {}
 
-void	Server::setPort( std::string port ) {
+void	InfoServer::setPort( std::string port ) {
 	this->_port = port;
 }
 
-void	Server::setIP( std::string ip ) {
+void	InfoServer::setIP( std::string ip ) {
 	if (ip == "localhost")
 		this->_ip = "127.0.0.1";
 	else
 		this->_ip = ip;
 }
-void	Server::setRoot( std::string root ) {
+void	InfoServer::setRoot( std::string root ) {
 	this->_root = root;
 }
-void	Server::setIndex( std::string index ) {
+void	InfoServer::setIndex( std::string index ) {
 	this->_index = index;
 }
 
-void	Server::setRoutes( const std::string &uri, const Route &route){
+void	InfoServer::setRoutes( const std::string &uri, const Route &route){
 	this->_routes[uri] = route;
 }
 
-void	Server::setCGI( const Route &route){
+void	InfoServer::setCGI( const Route &route){
 	this->_cgi = route;
 }
 
-void	Server::setSetting( const std::string key, const std::string &value) {
+void	InfoServer::setSetting( const std::string key, const std::string &value) {
 	this->_settings[key] = value;
 }
 
-std::string	Server::getPort( void ) const {
+std::string	InfoServer::getPort( void ) const {
 	return (_port);
 }
 
-std::string	Server::getIP ( void ) const {
+std::string	InfoServer::getIP ( void ) const {
 	return (_ip);
 }
 
-std::string	Server::getRoot ( void ) const {
+std::string	InfoServer::getRoot ( void ) const {
 	return (_root);
 }
 
-std::string	Server::getIndex ( void ) const {
+std::string	InfoServer::getIndex ( void ) const {
 	return (_index);
 }
 
-std::map<std::string, std::string>	Server::getSetting ( void ) const {
+std::map<std::string, std::string>	InfoServer::getSetting ( void ) const {
 	return (_settings);
 }
 
-std::map<std::string, Route>	Server::getRoute ( void ) const {
+std::map<std::string, Route>	InfoServer::getRoute ( void ) const {
 	return (_routes);
 }
 
-Route	Server::getCGI ( void ) const {
+Route	InfoServer::getCGI ( void ) const {
 	return (_cgi);
 }
 
-bool	Server::isIPValid( std::string ip ) {
+bool	InfoServer::isIPValid( std::string ip ) {
 	int	ndots = 0;
 	if (ip == "localhost")
 		return true;

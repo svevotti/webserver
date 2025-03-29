@@ -13,6 +13,7 @@
 #include <poll.h>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include "Logger.hpp"
 #include "Utils.hpp"
 #include "HttpException.hpp"

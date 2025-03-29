@@ -21,7 +21,7 @@ struct Route
 };
 
 
-class Server {
+class InfoServer {
 	private:
 		std::string							_port;
 		std::string							_ip;
@@ -32,11 +32,11 @@ class Server {
 		Route								_cgi;
 
 	public:
-	Server( void );
-	Server(std::string port, std::string ip, std::string root, std::string index);
-	// Server( const Server& copy);
-	// Server& operator=(const Server& copy);
-		~Server();
+	InfoServer( void );
+	InfoServer(std::string port, std::string ip, std::string root, std::string index);
+	// InfoServer( const InfoServer& copy);
+	// InfoServer& operator=(const InfoServer& copy);
+		~InfoServer();
 
 		void	setPort( std::string port );
 		void	setIP( std::string ip );
