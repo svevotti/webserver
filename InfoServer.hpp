@@ -32,10 +32,10 @@ class InfoServer {
 		Route								_cgi;
 
 	public:
-		InfoServer( void );
-		InfoServer(std::string port, std::string ip, std::string root, std::string index);
-		InfoServer( const InfoServer& copy);
-		InfoServer& operator=(const InfoServer& copy);
+	InfoServer( void );
+	InfoServer(std::string port, std::string ip, std::string root, std::string index);
+	// InfoServer( const InfoServer& copy);
+	// InfoServer& operator=(const InfoServer& copy);
 		~InfoServer();
 
 		void	setPort( std::string port );
