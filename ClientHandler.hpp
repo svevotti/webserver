@@ -44,7 +44,7 @@ class ClientHandler {
 		std::string                                          deleteFile(std::string path);
 		std::string extractContent(std::string path);
 		int	retrieveResponse(void);
-
+		void validateHttpHeaders(void);
 	private:
 	std::string raw_data;
 	int totbytes;

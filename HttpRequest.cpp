@@ -352,11 +352,8 @@ void	HttpRequest::cleanProperties(void)
 	query.clear();
 	headers.clear();
 	std::vector<struct section>::iterator it;
-	for (it = sectionsVec.begin(); it != sectionsVec.end(); it++)
-	{
-		it->body.clear();
-		it->indexBinary = 0;
-		it->myMap.clear();
-	}
+	sectionsVec.clear();
+	if (!(sectionsVec.empty()))
+		sectionsVec.pop_back();
 	typeBody = EMPTY;
 }

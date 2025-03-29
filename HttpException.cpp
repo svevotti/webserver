@@ -5,7 +5,7 @@ std::string HttpException::htmlRootPath;
 HttpException::HttpException(int code, std::string message)
 {
 	this->code = code;
-	this->file = htmlRootPath + "/" + Utils::toString(code) + "./html";
+	this->file = "." + htmlRootPath + "/" + Utils::toString(code) + ".html";
 	this->message = message;
 	this->body = extractFile();
 }
@@ -31,12 +31,23 @@ const char *HttpException::what () const throw ()
 }
 
 std::string HttpException::extractFile(void)
-		{
-			std::ifstream fileStream(this->file.c_str());
-			std::string line;
-			std::string html;
+{
+	std::ifstream inputFile(this->file.c_str(), std::ios::binary);
 
-			while (std::getline(fileStream, line))
-				html += line;
-			return html;
-		}
+	if (!inputFile)
+	{
+		std::cout << this->file << std::endl;
+		std::cerr << "Error opening file httpexception" << std::endl;
+		return "";
+	}
+
+	inputFile.seekg(0, std::ios::end);
+	std::streamsize size = inputFile.tellg();
+	inputFile.seekg(0, std::ios::beg);
+	std::string html; 
+	html.resize(size);
+	if (!(inputFile.read(&html[0], size)))
+		std::cerr << "Error reading file." << std::endl;
+	inputFile.close();
+	return html;
+}

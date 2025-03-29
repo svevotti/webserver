@@ -53,6 +53,7 @@ class HttpRequest {
 		char								*getBoundary(const char *);
 		std::string							decodeQuery(std::string str);
 		void								cleanProperties(void);
+		void								validateParsedRequest(void);
 
 	private:
 		std::string							str;

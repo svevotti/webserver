@@ -20,13 +20,13 @@ HttpResponse::HttpResponse(int code, std::string str)
 	//2xx is for success
 	this->mapStatusCode.insert(std::pair<int, std::string>(200, "200 OK"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(201, "201 Created"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(202, "202 Accepted"));
+	// this->mapStatusCode.insert(std::pair<int, std::string>(202, "202 Accepted"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(204, "204 No Content"));
 
 	//3xx is for redirection
 	this->mapStatusCode.insert(std::pair<int, std::string>(301, "301 Moved Permanently"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(302, "302 Found"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(304, "304 Not Modified"));
+	// this->mapStatusCode.insert(std::pair<int, std::string>(302, "302 Found"));
+	// this->mapStatusCode.insert(std::pair<int, std::string>(304, "304 Not Modified"));
 
 	//4xxis for client error
 	this->mapStatusCode.insert(std::pair<int, std::string>(400, "400 Bad Request"));
@@ -34,9 +34,11 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(405, "405 Method Not Allowed"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(409, "409 Conflict"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(413, "413 Payload Too Large"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(415, "415 Unsupported Media Type"));
 
 	//5xx for server error
-	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal InfoServer Error"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(501, "501 Not Implemented"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
 	
@@ -66,7 +68,7 @@ std::string HttpResponse::generateStatusLine(int code)
 	it = this->mapStatusCode.find(code);
 	if (it != this->mapStatusCode.end())
 		return "HTTP/1.1 " + it->second + "\r\n";
-	return "HTTP/1.1 500 Internal InfoServer Error\r\n";
+	return "HTTP/1.1 500 Internal Server Error\r\n";
 }
 
 std::string HttpResponse::generateHttpHeaders(void)
