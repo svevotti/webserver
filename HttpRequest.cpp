@@ -66,11 +66,11 @@ void HttpRequest::parseRequestHttp(void)
 	std::istringstream request(inputString);
 	std::string line;
     std::map<std::string, std::string>::iterator it;
-
+	
 	parseRequestLine(inputString);
 	getline(request, line);
 	parseHeaders(request);
-    it = headers.find("Content-Length");
+    it = headers.find("content-length");
 	if (it != headers.end())
 		parseBody(getHttpRequestLine()["method"], this->str, this->size);
 	else
@@ -79,7 +79,7 @@ void HttpRequest::parseRequestHttp(void)
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 {
-	std::string contentType = headers["Content-Type"];
+	std::string contentType = headers["content-type"];
 	struct section data;
 	std::map<std::string, std::string>::iterator it;
 
@@ -105,47 +105,54 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 		}
 	}
 	else
+	{
 		typeBody = EMPTY;
+		throw BadRequestException();
+	}
 }
 
 void HttpRequest::parseRequestLine(std::string str)
 {
 	std::string subStr;
+	std::string method;
+	std::string uri;
+	std::string protocol;
+	size_t index;
 
-	int i = 0;
-	int item = 0;
-	while (i < str.size())
+	index = str.find(" ");
+	if (index != std::string::npos)
 	{
-		subStr.clear();
-		while (isspace(str[i]) == 0)
-		{
-			subStr.append(1, str[i]);
-			i++;
-		}
-		if (item == 0)
-		{
-			this->requestLine["method"] = subStr;
-			item++;
-		}
-		else if (item == 1)
-		{
-			this->requestLine["request-uri"] = subStr;
-			item++;
-		}
-		else if (item == 2)
-		{
-			this->requestLine["protocol"] = subStr;
-			item++;
-		}
-		i++;
+		method = str.substr(0, index);
+		this->requestLine["method"] = method;
 	}
-	if (this->requestLine["request-uri"].find("?") != std::string::npos) //query
-			exractQuery(subStr);
-}
-
-char toLowerChar(char c)
-{
-    return std::tolower(static_cast<unsigned char>(c));
+	else
+		throw BadRequestException();
+	str.erase(0, method.length()+1);
+	index = str.find(" ");
+	if (index != std::string::npos)
+	{
+		uri = str.substr(0, index);
+		if (uri.find("?") != std::string::npos)
+		{
+			std::string newUri = uri;
+			newUri = uri.substr(0, uri.find("?"));
+			uri.clear();
+			exractQuery(uri);
+			uri = newUri;
+		}
+		this->requestLine["request-uri"] = uri;
+	}
+	else
+		throw BadRequestException();
+	str.erase(0, uri.length()+1);
+	index = str.find("\r\n");
+	if (index != std::string::npos)
+	{
+		protocol = str.substr(0, index);
+		requestLine["protocol"] = protocol;
+	}
+	else
+		throw BadRequestException();
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -153,25 +160,30 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 	std::string line;
 	std::string key;
 	std::string value;
-	int skipSpaces = 0;
+	size_t index;
 
 	while (getline(str, line))
 	{
+		// std::cout << "line: " << line << std::endl;
 		key.clear();
 		value.clear();
-		skipSpaces = 0;
 		if (line.find_first_not_of("\r\n") == std::string::npos)
 			break ;
-		if (line.find(":") != std::string::npos)
+		index = line.find(":");
+		if (index != std::string::npos)
 		{
-			key = line.substr(0, line.find(":"));
-			while (isspace(line[line.find(":") + 1 + skipSpaces]) != 0)
-				skipSpaces++;
-			value = line.substr(line.find(":") + 1 + skipSpaces);
+			key = line.substr(0, index);
+			if (line[line.find(":") + 1] != ' ')
+				throw BadRequestException();
+			value = line.substr(index + 2);
 		}
 		else
-			key = line;
-		headers[key] = value;
+			throw BadRequestException();
+		std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
+		// std::cout << "key: " << key << std::endl;
+		std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
+		// std::cout << "value: " << value << std::endl;
+		this->headers[key] = value;
 	}
 }
 
@@ -207,6 +219,7 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	std::string key;
 	std::string value;
 	struct section data;
+	size_t index;
 
 	std::istringstream streamHeaders(buffer.c_str() + indeces[i]);
 
@@ -220,10 +233,18 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 			continue;
 		else
 		{
-			if (line.find(":") != std::string::npos)
-				key = line.substr(0, line.find(":"));
-			if (line.find(" ") != std::string::npos)
-				value = line.substr(line.find(" ") + 1);
+			index = line.find(":");
+			if (index != std::string::npos)
+			{
+				key = line.substr(0, index);
+				if (line[line.find(":") + 1] != ' ')
+					throw BadRequestException();
+				value = line.substr(index + 2);
+			}
+			else
+				throw BadRequestException();
+			std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
+			std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
 			data.myMap[key] = value;
 		}
 	}
@@ -234,7 +255,6 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 }
 
 // Utils
-
 std::string HttpRequest::decodeQuery(std::string str)
 {
 	std::string newStr;

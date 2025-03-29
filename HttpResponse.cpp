@@ -36,7 +36,7 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(413, "413 Payload Too Large"));
 
 	//5xx for server error
-	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal InfoServer Error"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
 	
@@ -66,7 +66,7 @@ std::string HttpResponse::generateStatusLine(int code)
 	it = this->mapStatusCode.find(code);
 	if (it != this->mapStatusCode.end())
 		return "HTTP/1.1 " + it->second + "\r\n";
-	return "HTTP/1.1 500 Internal Server Error\r\n";
+	return "HTTP/1.1 500 Internal InfoServer Error\r\n";
 }
 
 std::string HttpResponse::generateHttpHeaders(void)
@@ -81,6 +81,9 @@ std::string HttpResponse::generateHttpHeaders(void)
 		type = verifyType(this->body); //now only html or jpeg
 		headers += "Content-Type: " + type + "\r\n";
 	}
+	std::cout << this->statusCode << std::endl;
+	if (this->statusCode == 301)
+		headers += "Location: http://localhost:8080/\r\n"; 
 	length = Utils::toString(this->body.size());
 	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";

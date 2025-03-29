@@ -55,6 +55,10 @@ class Utils {
 			return (temp);
 		}
 
+		static char toLowerChar(char c)
+		{
+			return std::tolower(static_cast<unsigned char>(c));
+		}
 	private:
 		Utils();		
 };

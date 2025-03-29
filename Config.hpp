@@ -9,14 +9,14 @@
 # include <sstream>
 # include <map>
 # include <string>
-# include "Server.hpp"
+# include "InfoServer.hpp"
 
 class Config {
 	private:
-		std::vector<Server*>	_servlist;
+		std::vector<InfoServer*>	_servlist;
 		bool parseConfigFile(const std::string &configFile);
 		bool	parseServer(std::istream &conf);
-		bool	parseLocation(std::istream &conf, Server *server, const std::string location);
+		bool	parseLocation(std::istream &conf, InfoServer *server, const std::string location);
 		bool	trimLine(std::string& line);
 
 	public:
@@ -26,8 +26,8 @@ class Config {
 		~Config();
 		std::set<std::string>	parseMethods(std::string method_list);
 
-		void	setServerList( const std::vector<Server*> servlist );
-		std::vector<Server*>	getServList( void ) const;
+		void	setServerList( const std::vector<InfoServer*> servlist );
+		std::vector<InfoServer*>	getServList( void ) const;
 };
 
 struct mylocations {

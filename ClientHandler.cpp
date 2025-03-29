@@ -1,7 +1,7 @@
 #include "ClientHandler.hpp"
 
 //Constructor and Destructor
-ClientHandler::ClientHandler(int fd, Server &configInfo)
+ClientHandler::ClientHandler(int fd, InfoServer &configInfo)
 {
 	this->fd = fd;
 	this->totbytes = 0;
@@ -104,7 +104,7 @@ int validateHttp(HttpRequest clientRequest)
 int ClientHandler::clientStatus(void)
 {
 	int result;
-	HttpRequest request;
+	// HttpRequest request;
 	std::string uri;
 	struct Route route;
 	result = readData(this->fd, this->raw_data, this->totbytes);
@@ -112,9 +112,25 @@ int ClientHandler::clientStatus(void)
 		return 1;
 	else
 	{
-		if (this->raw_data.find("GET") != std::string::npos || this->raw_data.find("DELETE") != std::string::npos)
+		std::string stringLowerCases = this->raw_data;
+		std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
+		if (stringLowerCases.find("get") != std::string::npos || stringLowerCases.find("delete") != std::string::npos)
 		{
-			this->request.HttpParse(this->raw_data, this->totbytes);
+			try
+			{
+				this->request.HttpParse(this->raw_data, this->totbytes);
+			}
+			catch(const BadRequestException& e)
+			{
+				Logger::error(e.what());
+				struct Route errorPage;
+
+				HttpResponse http(e.getCode(), e.getBody());
+				this->response = http.composeRespone();
+				this->totbytes = 0;
+				this->raw_data.clear();
+				return 2;
+			}
 			Logger::debug("Done parsing GET/DELETE");
 			int result = validateHttp(this->request);
 			if (result != 0)
@@ -152,6 +168,18 @@ int ClientHandler::clientStatus(void)
 					//create function to mathc the uri to route, handle if not found - not i am checking it
 					//path should be without ending / since it comes with the uri
 					//create logic to retrieve prefix uri
+					// if (this->request.getHttpRequestLine().count("query-string") > 0)
+					// {
+					// 	struct Route errorPage;
+
+					// 	errorPage = this->configInfo.getRoute()["/404.html"];
+					// 	std::string errorBody = extractContent(errorPage.path);
+					// 	HttpResponse http(404, errorBody);
+					// 	this->response = http.composeRespone();
+					// 	this->totbytes = 0;
+					// 	this->raw_data.clear();
+					// 	return 2;
+					// }
 					route = configInfo.getRoute()[uri];
 					// printRoute(route);
 					if (route.locSettings.find("redirect") != route.locSettings.end())
@@ -162,7 +190,8 @@ int ClientHandler::clientStatus(void)
 						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
 						//Logger::debug(route.path);
 						printRoute(route);
-						this->response = prepareResponse(this->request, route);
+						HttpResponse http(301, "");
+						this->response = http.composeRespone();
 
 					}
 					else if (route.path.empty())
@@ -185,10 +214,10 @@ int ClientHandler::clientStatus(void)
 					return 2;
 			}
 		}
-		else if (this->raw_data.find("Content-Length") != std::string::npos)
+		else if (stringLowerCases.find("content-length") != std::string::npos)
 		{
-			int start = this->raw_data.find("Content-Length") + 16;
-			int end = this->raw_data.find("\r\n", this->raw_data.find("Content-Length"));
+			int start = stringLowerCases.find("content-length") + 16;
+			int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
 			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
 			if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
 			{
@@ -342,7 +371,7 @@ std::string getFileType(std::map<std::string, std::string> headers)
 
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
-		if (it->first == "Content-Type")
+		if (it->first == "content-type")
 			type = it->second;
 	}
 	return type;
@@ -355,7 +384,7 @@ std::string getFileName(std::map<std::string, std::string> headers)
 
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
-		if (it->first == "Content-Disposition")
+		if (it->first == "content-disposition")
 		{
 			if (it->second.find("filename") != std::string::npos)
 			{
@@ -408,10 +437,7 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)
-	{
-		page = this->configInfo.getRoute()["/503.html"];
-		throw ServiceUnavailabledException(page.path);
-	}
+		throw ServiceUnavailabledException();
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, path) == 1)
@@ -419,16 +445,12 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	path += "/" + fileName;
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
-	{
-		page = this->configInfo.getRoute()["/400.html"];
-		throw BadRequestException(page.path);
-	}
+		throw BadRequestException();
 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
 	if (written < 0) {
 		perror("Error writing to file");
 		close(file);
-		page = this->configInfo.getRoute()["/400.html"];
-		throw BadRequestException(page.path);
+		throw BadRequestException();
 	}
 	close(file);
 	page = this->configInfo.getRoute()["/success"];
@@ -442,11 +464,7 @@ std::string      ClientHandler::deleteFile(std::string path)
 	std::ifstream file(path.c_str());
 
 	if (!(file.good()))
-	{
-		struct Route errorPage;
-		errorPage = this->configInfo.getRoute()["/404.html"];
-		throw NotFoundException(errorPage.path);
-	}
+		throw NotFoundException();
 	else
 		remove(path.c_str());
 	return body;
@@ -503,10 +521,7 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 			code = 204;
 		}
 		else
-		{
-			errorPage = this->configInfo.getRoute()["/405.html"];
-			throw MethodNotAllowedException(errorPage.path);
-		}
+			throw MethodNotAllowedException();
 	}
 	catch(const NotFoundException& e)
 	{

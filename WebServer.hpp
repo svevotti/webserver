@@ -50,8 +50,8 @@ class Webserver {
         void checkTime(void);
 
     private:
-        std::vector<Server*> configInfo;
-        Server configServer;
+        std::vector<InfoServer*> configInfo;
+        InfoServer configServer;
         std::vector<struct pollfd>  poll_sets;
         int            serverFd;
         std::vector<ClientHandler>  clientsList;

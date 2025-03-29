@@ -15,6 +15,7 @@
 #include <vector>
 #include "Logger.hpp"
 #include "Utils.hpp"
+#include "HttpException.hpp"
 
 #define EMPTY 0
 #define TEXT 1

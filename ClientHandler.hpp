@@ -30,7 +30,7 @@
 
 class ClientHandler {
 	public:
-		ClientHandler(int fd, Server &configInfo);
+		ClientHandler(int fd, InfoServer &configInfo);
 		int getFd(void) const;
 		HttpRequest getRequest() const;
 		std::string getResponse() const;
@@ -51,7 +51,7 @@ class ClientHandler {
 	int fd;
 	HttpRequest request;
 	std::string response;
-	Server configInfo;
+	InfoServer configInfo;
 	double startingTime;
 };
 

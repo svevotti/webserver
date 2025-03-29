@@ -11,7 +11,7 @@
 
 bool	test(Config &conf)
 {
-	std::vector<Server*>::iterator				servIt;
+	std::vector<InfoServer*>::iterator				servIt;
 	std::map<std::string, std::string>::iterator	mapIt;
 	std::map<std::string, Route>::iterator			locMetIt;
 	std::set<std::string>::iterator					setIt;
@@ -19,7 +19,7 @@ bool	test(Config &conf)
 	int	i;
 
 	i = 0;
-	std::vector<Server*> server;
+	std::vector<InfoServer*> server;
 	server = conf.getServList();
 	if (server.size() == 0)
 		return false;
