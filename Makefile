@@ -17,11 +17,14 @@ NAME = webserver
 
 all: $(NAME)
 
-$(NAME): $(CPP_OBJ)
+$(NAME): $(OBJ_DIR) $(CPP_OBJ)
 	$(GNU) $(CPP_OBJ) -o $(NAME)
 
-%.o: %.cpp
-	$(GNU) $(FLAGS) $(C_98) -c $^
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
+
+$(OBJ_DIR)/%.o: %.cpp
+	$(GNU) $(FLAGS) $(C_98) -c $^ -o $@
 
 clean:
 	rm -f $(CPP_OBJ)

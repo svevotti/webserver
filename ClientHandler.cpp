@@ -168,18 +168,18 @@ int ClientHandler::clientStatus(void)
 					//create function to mathc the uri to route, handle if not found - not i am checking it
 					//path should be without ending / since it comes with the uri
 					//create logic to retrieve prefix uri
-					if (this->request.getHttpRequestLine().count("query-string") > 0)
-					{
-						struct Route errorPage;
+					// if (this->request.getHttpRequestLine().count("query-string") > 0)
+					// {
+					// 	struct Route errorPage;
 
-						errorPage = this->configInfo.getRoute()["/404.html"];
-						std::string errorBody = extractContent(errorPage.path);
-						HttpResponse http(404, errorBody);
-						this->response = http.composeRespone();
-						this->totbytes = 0;
-						this->raw_data.clear();
-						return 2;
-					}
+					// 	errorPage = this->configInfo.getRoute()["/404.html"];
+					// 	std::string errorBody = extractContent(errorPage.path);
+					// 	HttpResponse http(404, errorBody);
+					// 	this->response = http.composeRespone();
+					// 	this->totbytes = 0;
+					// 	this->raw_data.clear();
+					// 	return 2;
+					// }
 					route = configInfo.getRoute()[uri];
 					// printRoute(route);
 					if (route.locSettings.find("redirect") != route.locSettings.end())
