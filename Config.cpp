@@ -62,7 +62,7 @@ bool	Config::ft_validServer( void )
 	}
 	if ((int) s_port.size() != _servcount)
 	{
-		std::cout << "Error in parsing a server!" << std::endl;
+		std::cout << "Error, not all servers were parsed!" << std::endl;
 		return false;
 	}
 	return true;
@@ -86,6 +86,7 @@ std::set<std::string>	Config::parseMethods(std::string method_list)
 		methods.insert(new_method);
 		pos = leftover.find(" ");
 	}
+	methods.insert(leftover);
 	return methods;
 }
 
@@ -254,10 +255,7 @@ bool	Config::parseConfigFile(const std::string &configFile)
 			_servcount++;
 			started_server = parseServer(conf);
 			if (started_server == false)
-			{
-				std::cout << "Something went wrong in parseServer" <<std::endl;
-				return false;
-			}
+				std::cout << "Something went wrong in parseServer, skipped one server" <<std::endl;
 		}
 	// 	//Look for info, locations have space separators, while parameters have \t
 	// 	size_t pos = line.find('\t');
