@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webserv - Red 3D Stack</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #cc0000, #ff3333, #990000, #ff6666);
+            background-size: 400% 400%;
+            animation: fadeBackground 10s ease-in-out infinite;
+            color: #ffcc00;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+        }
+        h1 {
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-align: center;
+            animation: glow3D 2s infinite ease-in-out;
+            text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666;
+            margin-top: 60px;
+            margin-bottom: 10px;
+            transform: translateZ(30px);
+            position: relative;
+            z-index: 2;
+        }
+        .zone {
+            background: rgba(255, 51, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ffcc00;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            transform: rotateY(10deg);
+            transition: transform 0.5s;
+        }
+        .zone:hover {
+            transform: rotateY(0deg) translateZ(50px);
+            box-shadow: 0 0 30px #ff3333;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #ff3333;
+        }
+        a, button, input[type="submit"], .file-input-wrapper {
+            color: #ffcc00;
+            background: transparent;
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-block;
+            text-align: center;
+            margin: 5px;
+            font-size: 16px;
+        }
+        a:hover, button:hover, input[type="submit"]:hover, .file-input-wrapper:hover {
+            background: #ffcc00;
+            color: #cc0000;
+            transform: scale(1.1) rotateX(10deg);
+            box-shadow: 0 0 20px #ffcc00;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 160px;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 0;
+            padding: 0;
+            font-size: 20px;
+            cursor: pointer;
+            opacity: 0;
+            height: 100%;
+            width: 100%;
+        }
+        .file-input-wrapper span {
+            display: block;
+            line-height: 20px;
+        }
+        .bg-anim {
+            position: absolute;
+            background: rgba(255, 51, 0, 0.8);
+            border-radius: 50%;
+            animation: float3D 6s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-anim:nth-child(1) { width: 100px; height: 100px; top: 5%; left: 10%; animation-delay: 0s; }
+        .bg-anim:nth-child(2) { width: 80px; height: 80px; top: 20%; right: 15%; animation-delay: 1s; }
+        .bg-anim:nth-child(3) { width: 120px; height: 120px; bottom: 30%; left: 25%; animation-delay: 2s; }
+        .bg-anim:nth-child(4) { width: 60px; height: 60px; bottom: 10%; right: 20%; animation-delay: 3s; }
+        .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
+        .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
+        .bg-anim:nth-child(7) { width: 70px; height: 70px; top: 15%; left: 60%; animation-delay: 0.5s; }
+        .bg-anim:nth-child(8) { width: 130px; height: 130px; bottom: 40%; right: 10%; animation-delay: 1.5s; }
+        .bg-anim:nth-child(9) { width: 85px; height: 85px; top: 50%; left: 20%; animation-delay: 2.5s; }
+        .bg-anim:nth-child(10) { width: 95px; height: 95px; bottom: 25%; right: 50%; animation-delay: 3.5s; }
+        @keyframes fadeBackground {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+        @keyframes glow3D {
+            0% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+            50% { transform: translateZ(50px) scale(1.05); text-shadow: 0 0 30px #ff3333, 0 0 60px #ff6666; }
+            100% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+        }
+        @keyframes float3D {
+            0% { transform: translateZ(0) translate(0, 0); }
+            50% { transform: translateZ(100px) translate(50px, 50px); }
+            100% { transform: translateZ(0) translate(0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <h1>Webserv</h1>
+    <div class="container">
+            Here to serve. Sorta.</div>            
+        <div class="zone">
+            <h2>Static Upload</h2>
+            <form action="/upload" method="POST" enctype="multipart/form-data">
+                <div class="file-input-wrapper">
+                    <span>Choose File</span>
+                    <input type="file" name="file" required>
+                </div>
+                <input type="submit" value="Upload without CGI">
+            </form>
+        </div>
+        <div class="zone">
+            <h2>Dynamic Upload</h2>
+            <form action="/cgi-bin/upload.py" method="POST" enctype="multipart/form-data">
+                <div class="file-input-wrapper">
+                    <span>Choose File</span>
+                    <input type="file" name="file" required>
+                </div>
+                <input type="submit" value="Upload via CGI">
+            </form>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/download">Download Something</a>
+        </div> 
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <form action="/delete" method="DELETE">
+                <button type="submit">Delete Something</button>
+            </form>
+        </div>   
+        <div class="zone">
+            <h2>Fortune Cookie</h2>
+            <a href="/cgi-bin/fortune.php">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Boring Cookies</h2>
+            <a href="/cookies.html">Get Some Boring Cookies</a>
+        </div>
+        <div class="zone">
+            <h2>About Us</h2>
+            <a href="/about.html">About Us</a>
+        </div>
+    </div>
+</body>
+</html>
