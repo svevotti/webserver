@@ -18,11 +18,6 @@
 #include "Utils.hpp"
 #include "HttpException.hpp"
 
-#define EMPTY 0
-#define TEXT 1
-#define MULTIPART 2
-#define CHUNKED 3
-
 typedef struct section {
 	std::map<std::string, std::string>	myMap;
 	std::string 						body;
@@ -36,9 +31,8 @@ class HttpRequest {
 		std::map<std::string, std::string>	getHttpHeaders() const;
 		std::map<std::string, std::string>	getHttpRequestLine() const;
 		std::map<std::string, std::string>	getHttpUriQueryMap() const;
-		std::string							getHttpBodyText() const;
-		int									getHttpTypeBody(void) const;
 		std::vector<struct section>			getHttpSections() const;
+		struct section						getHttpSection() const;
 		std::map<std::string, std::string>	getSectionHeaders(int) const;
 		std::string							getSectionBody(int) const;
 
@@ -49,7 +43,8 @@ class HttpRequest {
 		void								parseBody(std::string, std::string, int);
 		void								exractQuery(std::string);
 		void								parseMultiPartBody(std::string, int);
-		void								extractSections(std::string, std::vector<int>, int, std::string);
+		// void								extractSections(std::string, std::vector<int>, int, std::string);
+		struct section						extractSections(std::string, int firstB, int secondB, std::string b);
 		char								*getBoundary(const char *);
 		std::string							decodeQuery(std::string str);
 		void								cleanProperties(void);
@@ -61,8 +56,8 @@ class HttpRequest {
 		std::map<std::string, std::string>	requestLine;
 		std::map<std::string, std::string>	query;
 		std::map<std::string, std::string>	headers;
-		std::vector<struct section>			sectionsVec;
-		int									typeBody;
+		// std::vector<struct section>			sectionsVec;
+		struct section						sectionInfo;
 };
 
 #endif

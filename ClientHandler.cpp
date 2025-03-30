@@ -87,10 +87,9 @@ void ClientHandler::validateHttpHeaders(void)
 			if (it->second.find(";") != std::string::npos)
 			{
 				std::string genericType = it->second.substr(0, it->second.find(";"));
-				Logger::warn(genericType);
 				if (genericType == "multipart/form-data")
 				{
-					type = this->request.getHttpSections()[0].myMap["content-type"];
+					type = this->request.getHttpSection().myMap["content-type"];
 					if (type.length() >= 1)
 						type.erase(type.length() - 1);
 				}
@@ -99,7 +98,6 @@ void ClientHandler::validateHttpHeaders(void)
 			}
 			else
 				type = it->second;
-			Logger::warn(type);
 			std::map<std::string, std::string>::iterator itC;
 			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); it++)
 			{
@@ -241,7 +239,7 @@ int ClientHandler::clientStatus(void)
 						return 2;
 					}
 					else
-						this->response = prepareResponse(this->request, route);
+						this->response = prepareResponse(route);
 					this->totbytes = 0;
 					this->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
@@ -309,7 +307,7 @@ int ClientHandler::clientStatus(void)
 				}
 				else
 				{
-					this->response = prepareResponse(this->request, route);
+					this->response = prepareResponse(route);
 					this->totbytes = 0;
 					this->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
@@ -478,7 +476,6 @@ int checkNameFile(std::string str, std::string path)
 
 	folder = opendir(path.c_str());
 	std::string convStr;
-	std::cout << path << std::endl;
 	if (folder == NULL)
 		printf("error opening folder\n");
 	while ((data = readdir(folder)))
@@ -491,22 +488,18 @@ int checkNameFile(std::string str, std::string path)
 	return (0);
 }
 
-std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
+std::string ClientHandler::uploadFile(std::string path)
 {
 	std::string body;
 	std::map<std::string, std::string> headersBody;
 	std::string binaryBody;
-	std::vector<struct section> sectionBodies;
+	struct section sectionBody;
 	struct Route page;
 
-	sectionBodies = request.getHttpSections();
-	headersBody = sectionBodies[0].myMap;
-	binaryBody = sectionBodies[0].body;
-	if (sectionBodies.size() > 1)
-	{
-		std::cout << "here" << std::endl;
-		throw ServiceUnavailabledException();
-	}
+	sectionBody = request.getHttpSection();
+	headersBody = sectionBody.myMap;
+	binaryBody = sectionBody.body;
+
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, path) == 1)
@@ -526,6 +519,42 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	body = extractContent(page.path + "/index.html"); //to review how to extract wanted page
 	return body;
 }
+
+// std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
+// {
+// 	std::string body;
+// 	std::map<std::string, std::string> headersBody;
+// 	std::string binaryBody;
+// 	std::vector<struct section> sectionBodies;
+// 	struct Route page;
+
+// 	sectionBodies = request.getHttpSections();
+// 	headersBody = sectionBodies[0].myMap;
+// 	binaryBody = sectionBodies[0].body;
+// 	if (sectionBodies.size() > 1)
+// 	{
+// 		std::cout << "here" << std::endl;
+// 		throw ServiceUnavailabledException();
+// 	}
+// 	std::string fileName = getFileName(headersBody);
+// 	std::string fileType = getFileType(headersBody);
+// 	if (checkNameFile(fileName, path) == 1)
+// 		throw ConflictException();
+// 	path += "/" + fileName;
+// 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+// 	if (file < 0)
+// 		throw BadRequestException();
+// 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
+// 	if (written < 0) {
+// 		perror("Error writing to file");
+// 		close(file);
+// 		throw BadRequestException();
+// 	}
+// 	close(file);
+// 	page = this->configInfo.getRoute()["/success"];
+// 	body = extractContent(page.path + "/index.html"); //to review how to extract wanted page
+// 	return body;
+// }
 
 std::string      ClientHandler::deleteFile(std::string path)
 {
@@ -555,7 +584,7 @@ std::string extraFileName(std::string str)
 	return newStr;
 }
 
-std::string ClientHandler::prepareResponse(HttpRequest request, struct Route route)
+std::string ClientHandler::prepareResponse(struct Route route)
 {
 	std::string body;
 	std::string response;
@@ -577,7 +606,7 @@ std::string ClientHandler::prepareResponse(HttpRequest request, struct Route rou
 		}
 		else if (method == "POST" && route.methods.count(method) > 0)
 		{
-			body = uploadFile(request, route.path);
+			body = uploadFile(route.path);
 			code = 201;
 		}
 		else if (method == "DELETE" && route.methods.count(method) > 0)
