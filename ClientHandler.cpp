@@ -112,7 +112,7 @@ void ClientHandler::validateHttpHeaders(void)
 		}
 		else if (it->first == "transfer-encoding")
 			throw NotImplementedException();
-		else if (it->first == "Upgrade")
+		else if (it->first == "upgrade")
 			throw HttpVersionNotSupported();
 	}
 }
@@ -141,7 +141,16 @@ std::string ClientHandler::findDirectory(std::string uri)
 	return "/";
 }
 
-int ClientHandler::clientStatus(void)
+void ClientHandler::createErrorResponseAndCleanUp(int code, std::string body, std::string message)
+{
+	HttpResponse http(code, body);
+	this->response = http.composeRespone();
+	this->totbytes = 0;
+	this->raw_data.clear();
+	Logger::error(message);
+}
+
+int ClientHandler::manageRequest(void)
 {
 	int result;
 	std::string uri;
@@ -153,179 +162,131 @@ int ClientHandler::clientStatus(void)
 	{
 		std::string stringLowerCases = this->raw_data;
 		std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
-		if (stringLowerCases.find("get") != std::string::npos || stringLowerCases.find("delete") != std::string::npos)
+		try
 		{
-			try
+			if (stringLowerCases.find("get") != std::string::npos || stringLowerCases.find("delete") != std::string::npos)
 			{
 				this->request.HttpParse(this->raw_data, this->totbytes);
-			}
-			catch(const BadRequestException& e)
-			{
-				Logger::error(e.what());
-				HttpResponse http(e.getCode(), e.getBody());
-				this->response = http.composeRespone();
-				this->totbytes = 0;
-				this->raw_data.clear();
-				return 2;
-			}
-			Logger::info("Done http parsing");
-			try
-			{
 				validateHttpHeaders();
-			}
-			catch(UnsupportedMediaTypeException& e)
-			{
-				Logger::error(e.what());
-				HttpResponse http(e.getCode(), e.getBody());
-				this->response = http.composeRespone();
-				this->totbytes = 0;
-				this->raw_data.clear();
-				return 2;
-			}
-			catch(NotImplementedException& e)
-			{
-				Logger::error(e.what());
-				HttpResponse http(e.getCode(), e.getBody());
-				this->response = http.composeRespone();
-				this->totbytes = 0;
-				this->raw_data.clear();
-				return 2;
-			}
-			catch(HttpVersionNotSupported& e)
-			{
-				Logger::error(e.what());
-				HttpResponse http(e.getCode(), e.getBody());
-				this->response = http.composeRespone();
-				this->totbytes = 0;
-				this->raw_data.clear();
-				return 2;
-			}
-			uri = this->request.getHttpRequestLine()["request-uri"];
-			if (this->raw_data.find("DELETE") != std::string::npos)
-			{
-				Logger::debug("extract file to delete and create new uri");
-				std::string newUri;
-				newUri = extractUri(uri);
-				Logger::debug(newUri);
-				uri.clear();
-				uri = newUri;
-			}
-			if (isCgi(uri) == true)
-			{
-				Logger::info("Set up CGI");
-			}
-			else
-			{
-				route = configInfo.getRoute()[uri];
-				// std::?cout << "uri: " << uri << std::endl;
-				// printRo?ute(route);
-				if (route.locSettings.find("redirect") != route.locSettings.end())
-				{
-					route.path.clear();
-					route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
-					route.path.erase(route.path.length(), 1);
-					route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
-					// print?Route(route);
-					HttpResponse http(301, "");
-					this->response = http.composeRespone();
-
-				}
-				else if (route.path.empty())
-				{
-					std::string locationPath;
-					locationPath = findDirectory(uri);
-					struct Route newRoute;
-
-					newRoute = this->configInfo.getRoute()[locationPath];
-					route = newRoute;
-					route.path += uri.erase(0, 1);
-				}
-				this->response = prepareResponse(route);
-				this->totbytes = 0;
-				this->raw_data.clear();
-				Logger::info("Response created successfully and store in clientQueu");
-				return 2;
-			}
-		}
-		else if (stringLowerCases.find("content-length") != std::string::npos)
-		{
-			int start = stringLowerCases.find("content-length") + 16;
-			int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
-			int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-			if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
-			{
-				struct Route errorPage;
-				errorPage = this->configInfo.getRoute()["/413.html"];
-				std::string errorBody = extractContent(errorPage.path);
-				HttpResponse http(413, errorBody);
-				this->response = http.composeRespone();
-				this->totbytes = 0;
-				this->raw_data.clear();
-				return 2;
-			}
-			if (this->totbytes >= bytes_expected)
-			{
-				this->request.HttpParse(this->raw_data, this->totbytes);
-				Logger::debug("Done parsing");
-				try
-				{
-					validateHttpHeaders();
-				}
-				catch(UnsupportedMediaTypeException& e)
-				{
-					Logger::error(e.what());
-
-					HttpResponse http(e.getCode(), e.getBody());
-					this->response = http.composeRespone();
-					this->totbytes = 0;
-					this->raw_data.clear();
-					return 2;
-				}
-				catch(NotImplementedException& e)
-				{
-					Logger::error(e.what());
-
-					HttpResponse http(e.getCode(), e.getBody());
-					this->response = http.composeRespone();
-					this->totbytes = 0;
-					this->raw_data.clear();
-					return 2;
-				}
-				catch(HttpVersionNotSupported& e)
-				{
-					Logger::error(e.what());
-					HttpResponse http(e.getCode(), e.getBody());
-					this->response = http.composeRespone();
-					this->totbytes = 0;
-					this->raw_data.clear();
-					return 2;
-				}
+				Logger::info("Done http parsing");
 				uri = this->request.getHttpRequestLine()["request-uri"];
-				route = configInfo.getRoute()[uri];
-				if (route.path.empty())
-				{
-					std::string locationPath;
-					locationPath = findDirectory(uri);
-					struct Route newRoute;
-
-					newRoute = this->configInfo.getRoute()[locationPath];
-					route = newRoute;
-					route.path += uri.erase(0, 1);
-				}
 				if (isCgi(uri) == true)
 				{
 					Logger::info("Set up CGI");
+					return 0;
 				}
 				else
 				{
+					if (this->raw_data.find("DELETE") != std::string::npos) //to review
+					{
+						Logger::debug("extract file to delete and create new uri");
+						std::string newUri;
+						newUri = extractUri(uri);
+						Logger::debug(newUri);
+						uri.clear();
+						uri = newUri;
+					}
+					route = configInfo.getRoute()[uri];
+					if (route.locSettings.find("redirect") != route.locSettings.end())
+					{
+						route.path.clear();
+						route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
+						route.path.erase(route.path.length(), 1);
+						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
+						HttpResponse http(301, "");
+						this->response = http.composeRespone();
+
+					}
+					else if (route.path.empty())
+					{
+						std::string locationPath;
+						locationPath = findDirectory(uri);
+						struct Route newRoute;
+						newRoute = this->configInfo.getRoute()[locationPath];
+						route = newRoute;
+						route.path += uri.erase(0, 1);
+					}
 					this->response = prepareResponse(route);
 					this->totbytes = 0;
 					this->raw_data.clear();
 					Logger::info("Response created successfully and store in clientQueu");
-					return 2;
 				}
 			}
+			else if (stringLowerCases.find("content-length") != std::string::npos)
+			{
+				int start = stringLowerCases.find("content-length") + 16;
+				int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
+				int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+				if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
+					throw PayLoadTooLargeException();
+				if (this->totbytes >= bytes_expected)
+				{
+					this->request.HttpParse(this->raw_data, this->totbytes);
+					validateHttpHeaders();
+					Logger::debug("Done parsing");
+					uri = this->request.getHttpRequestLine()["request-uri"];
+					route = configInfo.getRoute()[uri];
+					if (route.path.empty())
+					{
+						std::string locationPath;
+						locationPath = findDirectory(uri);
+						struct Route newRoute;
+						newRoute = this->configInfo.getRoute()[locationPath];
+						route = newRoute;
+						route.path += uri.erase(0, 1);
+					}
+					if (isCgi(uri) == true)
+					{
+						Logger::info("Set up CGI");
+						return 0;
+					}
+					else
+					{
+						this->response = prepareResponse(route);
+						this->totbytes = 0;
+						this->raw_data.clear();
+						Logger::info("Response created successfully and store in clientQueu");
+					}
+				}
+				else
+					return 0;
+			}
+			else
+				throw MethodNotAllowedException();
 		}
+		catch (const MethodNotAllowedException &e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(const BadRequestException& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(const NotFoundException& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(UnsupportedMediaTypeException& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(NotImplementedException& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(HttpVersionNotSupported& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(const ServiceUnavailabledException& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		catch(const ConflictException& e)
+		{
+			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+		}
+		return 2;
 	}
 	return 0;
 }
@@ -559,67 +520,32 @@ std::string ClientHandler::prepareResponse(struct Route route)
 {
 	std::string body;
 	std::string response;
-	int code;
+	int code = 200;
 	std::string method;
 	struct Route errorPage;
 	
 	method = this->request.getHttpRequestLine()["method"];
-	try
+	if (method == "GET" && route.methods.count(method) > 0)
 	{
-		if (method == "GET" && route.methods.count(method) > 0)
-		{
-			body = retrievePage(route);
-			if (route.locSettings.find("redirect") != route.locSettings.end())
-				code = 301;
-			else
-				code = 200;
-		}
-		else if (method == "POST" && route.methods.count(method) > 0)
-		{
-			body = uploadFile(route.path);
-			code = 201;
-		}
-		else if (method == "DELETE" && route.methods.count(method) > 0)
-		{
-			std::string fileToDelete;
-			std::string fileName;
-			fileName = extraFileName(this->request.getHttpRequestLine()["request-uri"]);
-			fileToDelete = route.path + fileName;
-			body = deleteFile(fileToDelete);
-			code = 204;
-		}
+		body = retrievePage(route);
+		if (route.locSettings.find("redirect") != route.locSettings.end())
+			code = 301;
 		else
-			throw MethodNotAllowedException();
+			code = 200;
 	}
-	catch(const NotFoundException& e)
+	else if (method == "POST" && route.methods.count(method) > 0)
 	{
-		Logger::error(e.what());
-		code = e.getCode();
-		body = e.getBody();
+		body = uploadFile(route.path);
+		code = 201;
 	}
-	catch(const MethodNotAllowedException& e)
+	else if (method == "DELETE" && route.methods.count(method) > 0)
 	{
-		Logger::error(e.what());
-		code = e.getCode();
-		body = e.getBody();
-	}
-	catch(const BadRequestException& e)
-	{
-		Logger::error(e.what());
-		code = e.getCode();
-		body = e.getBody();
-	}
-	catch(const ServiceUnavailabledException& e)
-	{
-		Logger::error(e.what());
-		code = e.getCode();
-		body = e.getBody();
-	}
-	catch(const ConflictException& e)
-	{
-		Logger::error(e.what());
-		code = e.getCode();
-		body = e.getBody();
+		std::string fileToDelete;
+		std::string fileName;
+		fileName = extraFileName(this->request.getHttpRequestLine()["request-uri"]);
+		fileToDelete = route.path + fileName;
+		body = deleteFile(fileToDelete);
+		code = 204;
 	}
 	HttpResponse http(code, body);
 	response = http.composeRespone();
