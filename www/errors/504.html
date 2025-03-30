@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Webserv - 400 Bad Request</title>
+    <title>Webserv - 504 Gateway Timeout</title>
     <style>
         body {
             margin: 0;
@@ -14,7 +14,7 @@
             perspective: 1200px;
             overflow-x: hidden;
             position: relative;
-            min-height: 100vh; /* Full viewport height */
+            min-height: 100vh;
         }
         .container {
             display: flex;
@@ -135,12 +135,12 @@
     <div class="bg-anim"></div>
     <div class="bg-anim"></div>
     <div class="bg-anim"></div>
-    <h1>400 - Bad Request</h1>
+    <h1>504 - Gateway Timeout</h1>
     <div class="container">
         <div class="error-zone">
-            <h2>Oops! Syntax Slip</h2>
-            <p>Your request hit a glitch in the groove—malformed syntax detected! The Webserv crew can’t jam to this beat. Check your vibe and try again, or swing back to the main stage.</p>
-            <a href="/">RETURN TO THE RHYTHM</a>
+            <h2>Upstream Jammed!</h2>
+            <p>The Webserv crew’s waiting on an upstream solo that’s taking too long! No timely response—try hitting the stage again soon.</p>
+            <a href="/">RETRY THE RHYTHM</a>
         </div>
     </div>
 </body>
