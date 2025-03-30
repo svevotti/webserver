@@ -38,6 +38,21 @@ std::vector<InfoServer*>	Config::getServList( void ) const {
 	return (_servlist);
 }
 
+
+InfoServer*	Config::matchFD( int fd ) {
+
+	std::vector<InfoServer*>::iterator					servIt;
+	std::vector<InfoServer*>							server;
+
+	server = (*this).getServList();
+	for(servIt = server.begin(); servIt != server.end(); servIt++)
+	{
+		if ((*servIt)->getFD() == fd)
+			return (*servIt);
+	}
+	return NULL;
+}
+
 bool	Config::ft_validServer( void )
 {
 	std::vector<InfoServer*>::iterator					servIt;

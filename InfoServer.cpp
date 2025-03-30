@@ -125,8 +125,3 @@ bool	InfoServer::isIPValid( std::string ip ) {
 	return true;
 }
 
-bool	InfoServer::matchFD( int fd ) {
-	if (fd == _fd)
-		return (true);
-	return (false);
-}

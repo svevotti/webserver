@@ -27,6 +27,7 @@ class Config {
 		~Config();
 		std::set<std::string>	parseMethods(std::string method_list);
 		bool	ft_validServer( void );
+		InfoServer*	matchFD( int fd );
 
 		void	setServerList( const std::vector<InfoServer*> servlist );
 		std::vector<InfoServer*>	getServList( void ) const;

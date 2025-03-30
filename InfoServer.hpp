@@ -57,7 +57,6 @@ class InfoServer {
 		Route								getCGI( void ) const;
 		int									getFD( void ) const;
 
-		bool	matchFD( int fd );
 		bool	isIPValid( std::string ip );
 };
 
