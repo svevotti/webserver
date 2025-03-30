@@ -117,10 +117,36 @@ void ClientHandler::validateHttpHeaders(void)
 	}
 }
 
+std::string ClientHandler::findDirectory(std::string uri)
+{
+	struct Route route;
+	size_t index;
+	route = this->configInfo.getRoute()[uri];
+	if (route.path.empty())
+	{
+		std::cout << "route" << std::endl;
+		while (uri.size() > 1)
+		{
+			std::cout << "uri size " << uri.size() << std::endl;
+			index = uri.find_last_of("/");
+			if (index != std::string::npos)
+				uri = uri.substr(0, index);
+			else
+				break;
+			std::cout << "uri " << uri << std::endl;
+			route = this->configInfo.getRoute()[uri];
+			if (!(route.path.empty()))
+				return uri;
+		}
+	}
+	else
+		return (uri);
+	return "/";
+}
+
 int ClientHandler::clientStatus(void)
 {
 	int result;
-	// HttpRequest request;
 	std::string uri;
 	struct Route route;
 	result = readData(this->fd, this->raw_data, this->totbytes);
@@ -177,11 +203,7 @@ int ClientHandler::clientStatus(void)
 				this->raw_data.clear();
 				return 2;
 			}
-			//do useful checks for http request being correct: http, no transfer encoding
 			uri = this->request.getHttpRequestLine()["request-uri"];
-			//create function to find subdirectories
-			if (uri.find("index.html") != std::string::npos) //little tricky, to review
-				uri.erase(uri.size()-11);
 			if (this->raw_data.find("DELETE") != std::string::npos)
 			{
 				Logger::debug("extract file to delete and create new uri");
@@ -197,53 +219,35 @@ int ClientHandler::clientStatus(void)
 			}
 			else
 			{
-					//create function to mathc the uri to route, handle if not found - not i am checking it
-					//path should be without ending / since it comes with the uri
-					//create logic to retrieve prefix uri
-					// if (this->request.getHttpRequestLine().count("query-string") > 0)
-					// {
-					// 	struct Route errorPage;
+				route = configInfo.getRoute()[uri];
+				// std::?cout << "uri: " << uri << std::endl;
+				// printRo?ute(route);
+				if (route.locSettings.find("redirect") != route.locSettings.end())
+				{
+					route.path.clear();
+					route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
+					route.path.erase(route.path.length(), 1);
+					route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
+					// print?Route(route);
+					HttpResponse http(301, "");
+					this->response = http.composeRespone();
 
-					// 	errorPage = this->configInfo.getRoute()["/404.html"];
-					// 	std::string errorBody = extractContent(errorPage.path);
-					// 	HttpResponse http(404, errorBody);
-					// 	this->response = http.composeRespone();
-					// 	this->totbytes = 0;
-					// 	this->raw_data.clear();
-					// 	return 2;
-					// }
-					route = configInfo.getRoute()[uri];
-					// printRoute(route);
-					if (route.locSettings.find("redirect") != route.locSettings.end())
-					{
-						//Logger::warn("should be here");
-						route.path.clear();
-						route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
-						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
-						//Logger::debug(route.path);
-						//printRoute(route);
-						HttpResponse http(301, "");
-						this->response = http.composeRespone();
+				}
+				else if (route.path.empty())
+				{
+					std::string locationPath;
+					locationPath = findDirectory(uri);
+					struct Route newRoute;
 
-					}
-					else if (route.path.empty())
-					{
-						struct Route errorPage;
-
-						errorPage = this->configInfo.getRoute()["/404.html"];
-						std::string errorBody = extractContent(errorPage.path);
-						HttpResponse http(404, errorBody);
-						this->response = http.composeRespone();
-						this->totbytes = 0;
-						this->raw_data.clear();
-						return 2;
-					}
-					else
-						this->response = prepareResponse(route);
-					this->totbytes = 0;
-					this->raw_data.clear();
-					Logger::info("Response created successfully and store in clientQueu");
-					return 2;
+					newRoute = this->configInfo.getRoute()[locationPath];
+					route = newRoute;
+					route.path += uri.erase(0, 1);
+				}
+				this->response = prepareResponse(route);
+				this->totbytes = 0;
+				this->raw_data.clear();
+				Logger::info("Response created successfully and store in clientQueu");
+				return 2;
 			}
 		}
 		else if (stringLowerCases.find("content-length") != std::string::npos)
@@ -300,7 +304,21 @@ int ClientHandler::clientStatus(void)
 					return 2;
 				}
 				uri = this->request.getHttpRequestLine()["request-uri"];
+				std::cout << "uri: " << uri << std::endl;
 				route = configInfo.getRoute()[uri];
+				if (route.path.empty())
+				{
+					std::string locationPath;
+
+					std::cout << "uri: " << uri << std::endl;
+					locationPath = findDirectory(uri);
+					std::cout << "Locationpath: " << locationPath << std::endl;
+					struct Route newRoute;
+
+					newRoute = this->configInfo.getRoute()[locationPath];
+					route = newRoute;
+					route.path += uri.erase(0, 1);
+				}
 				if (isCgi(uri) == true)
 				{
 					Logger::info("Set up CGI");
@@ -388,42 +406,40 @@ bool fileExists(std::string path)
 std::string ClientHandler::extractContent(std::string path)
 {
 	std::ifstream inputFile(path.c_str(), std::ios::binary);
+	if (!inputFile)
+		throw NotFoundException();
+	inputFile.seekg(0, std::ios::end);
+	std::streamsize size = inputFile.tellg();
+	inputFile.seekg(0, std::ios::beg);
+	std::string buffer;
+	std::cout << "size: " << size;
+	buffer.resize(size);
+	if (!(inputFile.read(&buffer[0], size)))
+		throw ServiceUnavailabledException();	
+	inputFile.close();
+	return buffer;
+}
 
-		if (!inputFile)
-		{
-			std::cout << path << std::endl;
-			std::cerr << "Error opening file." << std::endl;
-			return "";
-		}
-
-		inputFile.seekg(0, std::ios::end);
-		std::streamsize size = inputFile.tellg();
-		inputFile.seekg(0, std::ios::beg);
-		std::string buffer; 
-		buffer.resize(size);
-		if (!(inputFile.read(&buffer[0], size)))
-			std::cerr << "Error reading file." << std::endl;
-
-		inputFile.close();
-		return buffer;
-	}
-
-std::string ClientHandler::retrievePage(std::string uri, struct Route route)
+std::string ClientHandler::retrievePage(struct Route route)
 {
 	std::string body;
-	struct stat pathStat;
+	// struct stat pathStat;
 
-	//function to retrieve route from uri
-	(void)uri; //really i dont need to concatenate
-	if (stat(route.path.c_str(), &pathStat) != 0)
-		Logger::error("Failed stat: " + std::string(strerror(errno)));
-	if (S_ISDIR(pathStat.st_mode))
+	std::cout << "1retrieve\n";
+	if (route.path.find("index") == std::string::npos)
 	{
-		if (route.path[route.path.length()-1] == '/')
-			route.path += route.locSettings.find("index")->second;
-		else
-			route.path += "/index.html"; //add index in other location too
+		if (route.locSettings.find("index") != route.locSettings.end())
+			route.path += "/" + route.locSettings.find("index")->second;
 	}
+	// if (stat(route.path.c_str(), &pathStat) != 0)
+	// 	Logger::error("Failed stat: " + std::string(strerror(errno)));
+	// if (S_ISDIR(pathStat.st_mode))
+	// {
+	// 	if (route.path[route.path.length()-1] == '/')
+	// 		route.path += route.locSettings.find("index")->second;
+	// 	else
+	// 		route.path += "/index.html"; //add index in other location too
+	// }
 	body = extractContent(route.path);
 	return body;
 }
@@ -515,46 +531,10 @@ std::string ClientHandler::uploadFile(std::string path)
 		throw BadRequestException();
 	}
 	close(file);
-	page = this->configInfo.getRoute()["/success"];
-	body = extractContent(page.path + "/index.html"); //to review how to extract wanted page
+	page = this->configInfo.getRoute()["/"];
+	body = extractContent(page.path + "success" + "/" + page.locSettings.find("index")->second); //to review how to extract wanted page
 	return body;
 }
-
-// std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
-// {
-// 	std::string body;
-// 	std::map<std::string, std::string> headersBody;
-// 	std::string binaryBody;
-// 	std::vector<struct section> sectionBodies;
-// 	struct Route page;
-
-// 	sectionBodies = request.getHttpSections();
-// 	headersBody = sectionBodies[0].myMap;
-// 	binaryBody = sectionBodies[0].body;
-// 	if (sectionBodies.size() > 1)
-// 	{
-// 		std::cout << "here" << std::endl;
-// 		throw ServiceUnavailabledException();
-// 	}
-// 	std::string fileName = getFileName(headersBody);
-// 	std::string fileType = getFileType(headersBody);
-// 	if (checkNameFile(fileName, path) == 1)
-// 		throw ConflictException();
-// 	path += "/" + fileName;
-// 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-// 	if (file < 0)
-// 		throw BadRequestException();
-// 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
-// 	if (written < 0) {
-// 		perror("Error writing to file");
-// 		close(file);
-// 		throw BadRequestException();
-// 	}
-// 	close(file);
-// 	page = this->configInfo.getRoute()["/success"];
-// 	body = extractContent(page.path + "/index.html"); //to review how to extract wanted page
-// 	return body;
-// }
 
 std::string      ClientHandler::deleteFile(std::string path)
 {
@@ -595,10 +575,9 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	method = this->request.getHttpRequestLine()["method"];
 	try
 	{
-		std::string uri = request.getHttpRequestLine()["request-uri"];
 		if (method == "GET" && route.methods.count(method) > 0)
 		{
-			body = retrievePage(uri, route);
+			body = retrievePage(route);
 			if (route.locSettings.find("redirect") != route.locSettings.end())
 				code = 301;
 			else
