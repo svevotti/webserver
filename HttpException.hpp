@@ -36,12 +36,12 @@ class BadRequestException : public HttpException {
 
 class ForbiddenException : public HttpException {
 	public:
-	ForbiddenException() : HttpException(403, "Forbidden") {}
+		ForbiddenException() : HttpException(403, "Forbidden") {}
 };
 
 class NotFoundException : public HttpException {
 	public:
-	NotFoundException() : HttpException(404, "Not Found") {}
+		NotFoundException() : HttpException(404, "Not Found") {}
 };
 
 class MethodNotAllowedException : public HttpException {
@@ -59,14 +59,29 @@ class PayLoadTooLargeException : public HttpException {
 		PayLoadTooLargeException() : HttpException(413, "Payload Too Large") {}
 };
 
+class UnsupportedMediaTypeException : public HttpException {
+	public:
+		UnsupportedMediaTypeException() : HttpException(415, "Unsupported Media Type") {}
+};
+
 class InternalServerErrorException : public HttpException {
 	public:
-		InternalServerErrorException() : HttpException(500, "Internal InfoServer Error") {}
+		InternalServerErrorException() : HttpException(500, "Internal Server Error") {}
+};
+
+class NotImplementedException : public HttpException {
+	public:
+		NotImplementedException() : HttpException(501, "Not Implemented") {}
 };
 
 class ServiceUnavailabledException : public HttpException {
 	public:
 		ServiceUnavailabledException() : HttpException(503, "Service Unavailabled") {}
+};
+
+class HttpVersionNotSupported : public HttpException {
+	public:
+		HttpVersionNotSupported() : HttpException(505, "Http Version Not Supported") {}
 };
 
 

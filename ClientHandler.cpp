@@ -31,29 +31,29 @@ double ClientHandler::getTime() const
 }
 //Main functions
 
-void printRoute(const Route& route)
-{
-    std::cout << "Route Information:" << std::endl;
-    std::cout << "URI: " << route.uri << std::endl;
-    std::cout << "Path: " << route.path << std::endl;
+// void printRoute(const Route& route)
+// {
+//     std::cout << "Route Information:" << std::endl;
+//     std::cout << "URI: " << route.uri << std::endl;
+//     std::cout << "Path: " << route.path << std::endl;
 
-    std::cout << "Methods: ";
-    if (route.methods.empty()) {
-        std::cout << "None";
-    } else {
-        for (const auto& method : route.methods) {
-            std::cout << method << " ";
-        }
-    }
-    std::cout << std::endl;
+//     std::cout << "Methods: ";
+//     if (route.methods.empty()) {
+//         std::cout << "None";
+//     } else {
+//         for (const auto& method : route.methods) {
+//             std::cout << method << " ";
+//         }
+//     }
+//     std::cout << std::endl;
 
-    std::cout << "Location Settings:" << std::endl;
-    for (const auto& setting : route.locSettings) {
-        std::cout << "  " << setting.first << ": " << setting.second << std::endl;
-    }
+//     std::cout << "Location Settings:" << std::endl;
+//     for (const auto& setting : route.locSettings) {
+//         std::cout << "  " << setting.first << ": " << setting.second << std::endl;
+//     }
 
-    std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
-}
+//     std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
+// }
 
 std::string extractUri(std::string str)
 {
@@ -71,36 +71,54 @@ std::string extractUri(std::string str)
 	return newStr;
 }
 
-int validateHttp(HttpRequest clientRequest)
+void ClientHandler::validateHttpHeaders(void)
 {
-	//map first line: protocol http/1.1
-	std::string protocolVersion = clientRequest.getHttpRequestLine()["protocol"];
-	//map headers: transfer encoding, content type
-	std::map<std::string, std::string> headers = clientRequest.getHttpHeaders();
+	struct Route route;
+
+	std::string uri = this->request.getHttpRequestLine()["request-uri"];
+	route = this->configInfo.getRoute()[uri];
+	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
 		if (it->first == "content-type")
 		{
-			if (it->second.find("multipart/form-data") != std::string::npos || it->second.find("text/") !=  std::string::npos)
+			std::string type;
+			if (it->second.find(";") != std::string::npos)
 			{
-				Logger::error("Not Implemented");
-				return 501;
+				std::string genericType = it->second.substr(0, it->second.find(";"));
+				Logger::warn(genericType);
+				if (genericType == "multipart/form-data")
+				{
+					type = this->request.getHttpSections()[0].myMap["content-type"];
+					if (type.length() >= 1)
+						type.erase(type.length() - 1);
+				}
+				else
+					throw UnsupportedMediaTypeException();
+			}
+			else
+				type = it->second;
+			Logger::warn(type);
+			std::map<std::string, std::string>::iterator itC;
+			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); it++)
+			{
+				if (itC->first == "content_type")
+				{
+					if (itC->second.find(type) != std::string::npos)
+						return;
+					else
+						throw UnsupportedMediaTypeException();
+				}
 			}
 		}
 		else if (it->first == "transfer-encoding")
-		{
-			Logger::error("Bad request");
-			return 400;
-		}
+			throw NotImplementedException();
 		else if (it->first == "Upgrade")
-		{
-			Logger::error("Http version not supported");
-			return 505;
-		}
+			throw HttpVersionNotSupported();
 	}
-	return 0;
 }
+
 int ClientHandler::clientStatus(void)
 {
 	int result;
@@ -123,31 +141,47 @@ int ClientHandler::clientStatus(void)
 			catch(const BadRequestException& e)
 			{
 				Logger::error(e.what());
-				struct Route errorPage;
-
 				HttpResponse http(e.getCode(), e.getBody());
 				this->response = http.composeRespone();
 				this->totbytes = 0;
 				this->raw_data.clear();
 				return 2;
 			}
-			Logger::debug("Done parsing GET/DELETE");
-			int result = validateHttp(this->request);
-			if (result != 0)
+			Logger::info("Done http parsing");
+			try
 			{
-				struct Route errorPage;
-				std::string path = "/" + Utils::toString(result) + ".html";
-				errorPage = this->configInfo.getRoute()[path];
-				std::string errorBody = extractContent(errorPage.path);
-				HttpResponse http(result, path);
+				validateHttpHeaders();
+			}
+			catch(UnsupportedMediaTypeException& e)
+			{
+				Logger::error(e.what());
+				HttpResponse http(e.getCode(), e.getBody());
 				this->response = http.composeRespone();
 				this->totbytes = 0;
 				this->raw_data.clear();
 				return 2;
 			}
-
+			catch(NotImplementedException& e)
+			{
+				Logger::error(e.what());
+				HttpResponse http(e.getCode(), e.getBody());
+				this->response = http.composeRespone();
+				this->totbytes = 0;
+				this->raw_data.clear();
+				return 2;
+			}
+			catch(HttpVersionNotSupported& e)
+			{
+				Logger::error(e.what());
+				HttpResponse http(e.getCode(), e.getBody());
+				this->response = http.composeRespone();
+				this->totbytes = 0;
+				this->raw_data.clear();
+				return 2;
+			}
 			//do useful checks for http request being correct: http, no transfer encoding
 			uri = this->request.getHttpRequestLine()["request-uri"];
+			//create function to find subdirectories
 			if (uri.find("index.html") != std::string::npos) //little tricky, to review
 				uri.erase(uri.size()-11);
 			if (this->raw_data.find("DELETE") != std::string::npos)
@@ -189,7 +223,7 @@ int ClientHandler::clientStatus(void)
 						route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
 						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
 						//Logger::debug(route.path);
-						printRoute(route);
+						//printRoute(route);
 						HttpResponse http(301, "");
 						this->response = http.composeRespone();
 
@@ -234,7 +268,39 @@ int ClientHandler::clientStatus(void)
 			{
 				this->request.HttpParse(this->raw_data, this->totbytes);
 				Logger::debug("Done parsing");
+				try
+				{
+					validateHttpHeaders();
+				}
+				catch(UnsupportedMediaTypeException& e)
+				{
+					Logger::error(e.what());
 
+					HttpResponse http(e.getCode(), e.getBody());
+					this->response = http.composeRespone();
+					this->totbytes = 0;
+					this->raw_data.clear();
+					return 2;
+				}
+				catch(NotImplementedException& e)
+				{
+					Logger::error(e.what());
+
+					HttpResponse http(e.getCode(), e.getBody());
+					this->response = http.composeRespone();
+					this->totbytes = 0;
+					this->raw_data.clear();
+					return 2;
+				}
+				catch(HttpVersionNotSupported& e)
+				{
+					Logger::error(e.what());
+					HttpResponse http(e.getCode(), e.getBody());
+					this->response = http.composeRespone();
+					this->totbytes = 0;
+					this->raw_data.clear();
+					return 2;
+				}
 				uri = this->request.getHttpRequestLine()["request-uri"];
 				route = configInfo.getRoute()[uri];
 				if (isCgi(uri) == true)
@@ -437,7 +503,10 @@ std::string ClientHandler::uploadFile(HttpRequest request, std::string path)
 	headersBody = sectionBodies[0].myMap;
 	binaryBody = sectionBodies[0].body;
 	if (sectionBodies.size() > 1)
+	{
+		std::cout << "here" << std::endl;
 		throw ServiceUnavailabledException();
+	}
 	std::string fileName = getFileName(headersBody);
 	std::string fileType = getFileType(headersBody);
 	if (checkNameFile(fileName, path) == 1)
