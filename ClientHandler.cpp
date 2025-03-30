@@ -141,15 +141,6 @@ std::string ClientHandler::findDirectory(std::string uri)
 	return "/";
 }
 
-void ClientHandler::createErrorResponseAndCleanUp(int code, std::string body, std::string message)
-{
-	HttpResponse http(code, body);
-	this->response = http.composeRespone();
-	this->totbytes = 0;
-	this->raw_data.clear();
-	Logger::error(message);
-}
-
 int ClientHandler::manageRequest(void)
 {
 	int result;
@@ -206,9 +197,8 @@ int ClientHandler::manageRequest(void)
 						route = newRoute;
 						route.path += uri.erase(0, 1);
 					}
-					this->response = prepareResponse(route);
-					this->totbytes = 0;
-					this->raw_data.clear();
+					else
+						this->response = prepareResponse(route);
 					Logger::info("Response created successfully and store in clientQueu");
 				}
 			}
@@ -243,8 +233,6 @@ int ClientHandler::manageRequest(void)
 					else
 					{
 						this->response = prepareResponse(route);
-						this->totbytes = 0;
-						this->raw_data.clear();
 						Logger::info("Response created successfully and store in clientQueu");
 					}
 				}
@@ -254,38 +242,14 @@ int ClientHandler::manageRequest(void)
 			else
 				throw MethodNotAllowedException();
 		}
-		catch (const MethodNotAllowedException &e)
+		catch (const HttpException &e)
 		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
+			HttpResponse http(e.getCode(), e.getBody());
+			this->response = http.composeRespone();
+			Logger::error(e.what());
 		}
-		catch(const BadRequestException& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
-		catch(const NotFoundException& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
-		catch(UnsupportedMediaTypeException& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
-		catch(NotImplementedException& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
-		catch(HttpVersionNotSupported& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
-		catch(const ServiceUnavailabledException& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
-		catch(const ConflictException& e)
-		{
-			createErrorResponseAndCleanUp(e.getCode(), e.getBody(), e.what());
-		}
+		this->totbytes = 0;
+		this->raw_data.clear();
 		return 2;
 	}
 	return 0;
@@ -445,7 +409,6 @@ int checkNameFile(std::string str, std::string path)
 	std::string convStr;
 	if (folder == NULL)
 		throw ServiceUnavailabledException();
-	// std::cout << "here" << std::endl;
 	while ((data = readdir(folder)))
 	{
 		convStr = data->d_name;
@@ -547,6 +510,8 @@ std::string ClientHandler::prepareResponse(struct Route route)
 		body = deleteFile(fileToDelete);
 		code = 204;
 	}
+	else
+		throw MethodNotAllowedException();
 	HttpResponse http(code, body);
 	response = http.composeRespone();
 	return response;
