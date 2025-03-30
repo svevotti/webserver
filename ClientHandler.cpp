@@ -124,16 +124,13 @@ std::string ClientHandler::findDirectory(std::string uri)
 	route = this->configInfo.getRoute()[uri];
 	if (route.path.empty())
 	{
-		std::cout << "route" << std::endl;
 		while (uri.size() > 1)
 		{
-			std::cout << "uri size " << uri.size() << std::endl;
 			index = uri.find_last_of("/");
 			if (index != std::string::npos)
 				uri = uri.substr(0, index);
 			else
 				break;
-			std::cout << "uri " << uri << std::endl;
 			route = this->configInfo.getRoute()[uri];
 			if (!(route.path.empty()))
 				return uri;
@@ -304,15 +301,11 @@ int ClientHandler::clientStatus(void)
 					return 2;
 				}
 				uri = this->request.getHttpRequestLine()["request-uri"];
-				std::cout << "uri: " << uri << std::endl;
 				route = configInfo.getRoute()[uri];
 				if (route.path.empty())
 				{
 					std::string locationPath;
-
-					std::cout << "uri: " << uri << std::endl;
 					locationPath = findDirectory(uri);
-					std::cout << "Locationpath: " << locationPath << std::endl;
 					struct Route newRoute;
 
 					newRoute = this->configInfo.getRoute()[locationPath];
@@ -412,7 +405,6 @@ std::string ClientHandler::extractContent(std::string path)
 	std::streamsize size = inputFile.tellg();
 	inputFile.seekg(0, std::ios::beg);
 	std::string buffer;
-	std::cout << "size: " << size;
 	buffer.resize(size);
 	if (!(inputFile.read(&buffer[0], size)))
 		throw ServiceUnavailabledException();	
@@ -424,8 +416,6 @@ std::string ClientHandler::retrievePage(struct Route route)
 {
 	std::string body;
 	// struct stat pathStat;
-
-	std::cout << "1retrieve\n";
 	if (route.path.find("index") == std::string::npos)
 	{
 		if (route.locSettings.find("index") != route.locSettings.end())
@@ -493,7 +483,8 @@ int checkNameFile(std::string str, std::string path)
 	folder = opendir(path.c_str());
 	std::string convStr;
 	if (folder == NULL)
-		printf("error opening folder\n");
+		throw ServiceUnavailabledException();
+	// std::cout << "here" << std::endl;
 	while ((data = readdir(folder)))
 	{
 		convStr = data->d_name;
@@ -532,7 +523,7 @@ std::string ClientHandler::uploadFile(std::string path)
 	}
 	close(file);
 	page = this->configInfo.getRoute()["/"];
-	body = extractContent(page.path + "success" + "/" + page.locSettings.find("index")->second); //to review how to extract wanted page
+	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second); //to review how to extract wanted page
 	return body;
 }
 
