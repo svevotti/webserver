@@ -30,6 +30,8 @@ class Config {
 		InfoServer*	matchFD( int fd );
 
 		void	setServerList( const std::vector<InfoServer*> servlist );
+
+		int							getServCount( void ) const;
 		std::vector<InfoServer*>	getServList( void ) const;
 };
 

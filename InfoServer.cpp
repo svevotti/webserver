@@ -13,7 +13,13 @@ InfoServer::InfoServer( const InfoServer& copy) {
 InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 	if (this != &copy)
 	{
-		return (*this);
+		_port = copy.getPort();
+		_ip = copy.getIP();
+		_root = copy.getRoot();
+		_index = copy.getIndex();
+		_cgi = copy.getCGI();
+		_settings = copy.getSetting();
+		_routes = copy.getRoute();
 	}
 
 	return (*this);

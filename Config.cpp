@@ -10,7 +10,8 @@ Config::Config( const Config& copy) {
 Config&	Config::operator=( const Config& copy) {
 	if (this != &copy)
 	{
-		return (*this);
+		_servlist = copy.getServList();
+		_servcount = copy.getServCount();
 	}
 
 	return (*this);
@@ -36,6 +37,10 @@ void	Config::setServerList( const std::vector<InfoServer*> servlist ) {
 
 std::vector<InfoServer*>	Config::getServList( void ) const {
 	return (_servlist);
+}
+
+int	Config::getServCount( void ) const {
+	return (_servcount);
 }
 
 
@@ -124,12 +129,12 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 		{
 			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
 			{
-				if (location == "/cgi-bin/")
+				if (location == "/cgi-bin")
 					server->setCGI(route);
-				server->setRoutes(route.uri, route);
+				server->setRoutes(route.path, route);
 				return true;
 			}
-			else if (route.uri == "/old-page/") //This probably will be removed
+			else if (route.uri == "/old-page") //This probably will be removed
 			{
 				server->setRoutes(route.path, route);
 				return true;
