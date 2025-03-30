@@ -84,6 +84,31 @@ bool	test(Config &conf)
 	return true;
 }
 
+bool	ft_validServer(Config& conf)
+{
+	std::vector<InfoServer*>::iterator					servIt;
+	std::vector<InfoServer*>							server;
+	std::set<std::string>								s_port;
+	std::pair<std::set<std::string>::iterator, bool>	inserted;
+
+	server = conf.getServList();
+	if (server.empty())
+	{
+		std::cout << "Error! No server was properly parsed!" << std::endl;
+		return false;
+	}
+	for(servIt = server.begin(); servIt != server.end(); servIt++)
+	{
+		inserted = s_port.insert((*servIt)->getPort());
+		if (!inserted.second)
+		{
+			std::cout << "Error, two servers have the same port!" << std::endl;
+			return false;
+		}
+	}
+	return true;
+}
+
 int	main(int argc, char** argv){
 	if (argc != 2)
 	{
@@ -96,5 +121,7 @@ int	main(int argc, char** argv){
 		std::cout << "All worked well!" << std::endl;
 	else
 		std::cout << "Error!" << std::endl;
+	if (ft_validServer(configuration))
+		return 1;
 	return 0;
 }
