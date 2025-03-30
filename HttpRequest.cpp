@@ -13,8 +13,8 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->requestLine = other.requestLine;
 	this->query = other.query;
 	this->headers = other.headers;
-	this->sectionsVec = other.sectionsVec;
-	this->typeBody = other.typeBody;
+	// this->sectionsVec = other.sectionsVec;
+	this->sectionInfo = other.sectionInfo;
 }
 // Setters and getters
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
@@ -32,25 +32,25 @@ std::map<std::string, std::string> HttpRequest::getHttpUriQueryMap(void) const
 	return query;
 }
 
-std::vector<struct section> HttpRequest::getHttpSections(void) const
+// std::vector<struct section> HttpRequest::getHttpSections(void) const
+// {
+// 	return this->sectionsVec;
+// }
+
+struct section HttpRequest::getHttpSection(void) const
 {
-	return this->sectionsVec;
+	return this->sectionInfo;
 }
 
-int HttpRequest::getHttpTypeBody(void) const
-{
-	return typeBody;
-}
+// std::map<std::string, std::string> HttpRequest::getSectionHeaders(int i) const
+// {
+// 	return(this->sectionsVec[i].myMap);
+// }
 
-std::map<std::string, std::string> HttpRequest::getSectionHeaders(int i) const
-{
-	return(this->sectionsVec[i].myMap);
-}
-
-std::string HttpRequest::getSectionBody(int i) const
-{
-	return(this->sectionsVec[i].body);
-}
+// std::string HttpRequest::getSectionBody(int i) const
+// {
+// 	return(this->sectionsVec[i].body);
+// }
 
 // Main functions
 void HttpRequest::HttpParse(std::string str, int size)
@@ -73,8 +73,6 @@ void HttpRequest::parseRequestHttp(void)
     it = headers.find("content-length");
 	if (it != headers.end())
 		parseBody(getHttpRequestLine()["method"], this->str, this->size);
-	else
-		typeBody = EMPTY;
 }
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
@@ -86,14 +84,10 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	if (method == "POST")
 	{
 		if (contentType.find("boundary") != std::string::npos) //multi format data
-		{
-			this->typeBody = MULTIPART;
 			parseMultiPartBody(buffer, size);
-		}
 		else
 		{
 			struct section data;
-			typeBody = TEXT;
 			data.indexBinary = 0;
 			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
 			if (bodyStart != std::string::npos)
@@ -101,14 +95,12 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 				bodyStart += 4;
 				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
 			}
-			sectionsVec.push_back(data);	
+			this->sectionInfo = data;
+			// sectionsVec.push_back(data);	
 		}
 	}
 	else
-	{
-		typeBody = EMPTY;
 		throw BadRequestException();
-	}
 }
 
 void HttpRequest::parseRequestLine(std::string str)
@@ -205,14 +197,19 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 			boundariesIndexes.push_back(i-2); //correct?
 		}
 	}
-	for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
-	{
-		extractSections(buffer, boundariesIndexes, i, b);
-	}
+	if (boundariesIndexes.size() > 3)
+		throw NotImplementedException();
+	int firstB = boundariesIndexes[1];
+	int secondB = boundariesIndexes[2];
+	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
+	// for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
+	// {
+	// 	extractSections(buffer, boundariesIndexes, i, b);
+	// }
 	delete b;
 }
 
-void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, int i, std::string b)
+struct section HttpRequest::extractSections(std::string buffer, int firstB, int secondB, std::string b)
 {
 	int indexBinary = 0;
 	std::string line;
@@ -221,9 +218,9 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 	struct section data;
 	size_t index;
 
-	std::istringstream streamHeaders(buffer.c_str() + indeces[i]);
+	std::istringstream streamHeaders(buffer.c_str() + firstB);
 
-	indexBinary = indeces[i];
+	indexBinary = firstB;
 	while (getline(streamHeaders, line))
 	{
 		if (line.find_first_not_of("\r\n") == std::string::npos)
@@ -249,10 +246,52 @@ void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, 
 		}
 	}
 	data.indexBinary = indexBinary+2;
-	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
-	//std::cout << data.body << std::endl;
-	sectionsVec.push_back(data);
+	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + secondB - 2);
+	// sectionsVec.push_back(data);
+	return data;
 }
+
+// void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, int i, std::string b)
+// {
+// 	int indexBinary = 0;
+// 	std::string line;
+// 	std::string key;
+// 	std::string value;
+// 	struct section data;
+// 	size_t index;
+
+// 	std::istringstream streamHeaders(buffer.c_str() + indeces[i]);
+
+// 	indexBinary = indeces[i];
+// 	while (getline(streamHeaders, line))
+// 	{
+// 		if (line.find_first_not_of("\r\n") == std::string::npos)
+// 			break ;
+// 		indexBinary += line.length() + 1; //ADD \n in the count
+// 		if (line.find(b) != std::string::npos)
+// 			continue;
+// 		else
+// 		{
+// 			index = line.find(":");
+// 			if (index != std::string::npos)
+// 			{
+// 				key = line.substr(0, index);
+// 				if (line[line.find(":") + 1] != ' ')
+// 					throw BadRequestException();
+// 				value = line.substr(index + 2);
+// 			}
+// 			else
+// 				throw BadRequestException();
+// 			std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
+// 			std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
+// 			data.myMap[key] = value;
+// 		}
+// 	}
+// 	data.indexBinary = indexBinary+2;
+// 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
+// 	//std::cout << data.body << std::endl;
+// 	sectionsVec.push_back(data);
+// }
 
 // Utils
 std::string HttpRequest::decodeQuery(std::string str)
@@ -351,9 +390,10 @@ void	HttpRequest::cleanProperties(void)
 	requestLine.clear();
 	query.clear();
 	headers.clear();
-	std::vector<struct section>::iterator it;
-	sectionsVec.clear();
-	if (!(sectionsVec.empty()))
-		sectionsVec.pop_back();
-	typeBody = EMPTY;
+	sectionInfo.body.clear();
+	sectionInfo.indexBinary = 0;
+	sectionInfo.myMap.clear();
+	// sectionsVec.clear();
+	// if (!(sectionsVec.empty()))
+	// 	sectionsVec.pop_back();
 }

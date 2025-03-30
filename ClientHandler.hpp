@@ -38,9 +38,9 @@ class ClientHandler {
 		int readData(int fd, std::string &str, int &bytes);
 		int clientStatus(void);
 		int isCgi(std::string str);
-		std::string prepareResponse(HttpRequest request, struct Route route);
+		std::string prepareResponse(struct Route route);
 		std::string                                    retrievePage(std::string uri, struct Route route);
-		std::string                                       uploadFile(HttpRequest request, std::string path);
+		std::string                                       uploadFile(std::string path);
 		std::string                                          deleteFile(std::string path);
 		std::string extractContent(std::string path);
 		int	retrieveResponse(void);

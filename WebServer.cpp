@@ -17,7 +17,7 @@ Webserver::Webserver(Config& file)
 	if (this->serverFd > 0)
 		addServerSocketsToPoll(this->serverFd);
 	
-	std::string errorPagePath = "/server_root/errors";
+	std::string errorPagePath = "/www/errors";
 	HttpException::setHtmlRootPath(errorPagePath);
 }
 
