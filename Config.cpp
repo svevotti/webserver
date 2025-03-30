@@ -38,6 +38,35 @@ std::vector<InfoServer*>	Config::getServList( void ) const {
 	return (_servlist);
 }
 
+bool	Config::ft_validServer( void )
+{
+	std::vector<InfoServer*>::iterator					servIt;
+	std::vector<InfoServer*>							server;
+	std::set<std::string>								s_port;
+	std::pair<std::set<std::string>::iterator, bool>	inserted;
+
+	server = (*this).getServList();
+	if (server.empty())
+	{
+		std::cout << "Error! No server was properly parsed!" << std::endl;
+		return false;
+	}
+	for(servIt = server.begin(); servIt != server.end(); servIt++)
+	{
+		inserted = s_port.insert((*servIt)->getPort());
+		if (!inserted.second)
+		{
+			std::cout << "Error, two servers have the same port!" << std::endl;
+			return false;
+		}
+	}
+	if ((int) s_port.size() != _servcount)
+	{
+		std::cout << "Error in parsing a server!" << std::endl;
+		return false;
+	}
+	return true;
+}
 
 std::set<std::string>	Config::parseMethods(std::string method_list)
 {
@@ -214,6 +243,7 @@ bool	Config::parseConfigFile(const std::string &configFile)
 	}
 
 	//reads line by line, extracts all parameters and location blocks
+	_servcount = 0;
 	while (std::getline(conf, line))
 	{
 		if (!trimLine(line))
@@ -221,6 +251,7 @@ bool	Config::parseConfigFile(const std::string &configFile)
 
 		if (line.find("server ") != std::string::npos)
 		{
+			_servcount++;
 			started_server = parseServer(conf);
 			if (started_server == false)
 			{
