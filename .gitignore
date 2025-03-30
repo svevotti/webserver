@@ -39,7 +39,7 @@
 webserver
 
 # Resources
-/server_root/upload/*
+/www/upload/*
 
 # Mac files
 .DS_Store
