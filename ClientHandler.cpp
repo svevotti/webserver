@@ -31,29 +31,29 @@ double ClientHandler::getTime() const
 }
 //Main functions
 
-// void printRoute(const Route& route)
-// {
-//     std::cout << "Route Information:" << std::endl;
-//     std::cout << "URI: " << route.uri << std::endl;
-//     std::cout << "Path: " << route.path << std::endl;
+void printRoute(const Route& route)
+{
+    std::cout << "Route Information:" << std::endl;
+    std::cout << "URI: " << route.uri << std::endl;
+    std::cout << "Path: " << route.path << std::endl;
 
-//     std::cout << "Methods: ";
-//     if (route.methods.empty()) {
-//         std::cout << "None";
-//     } else {
-//         for (const auto& method : route.methods) {
-//             std::cout << method << " ";
-//         }
-//     }
-//     std::cout << std::endl;
+    std::cout << "Methods: ";
+    if (route.methods.empty()) {
+        std::cout << "None";
+    } else {
+        for (const auto& method : route.methods) {
+            std::cout << method << " ";
+        }
+    }
+    std::cout << std::endl;
 
-//     std::cout << "Location Settings:" << std::endl;
-//     for (const auto& setting : route.locSettings) {
-//         std::cout << "  " << setting.first << ": " << setting.second << std::endl;
-//     }
+    std::cout << "Location Settings:" << std::endl;
+    for (const auto& setting : route.locSettings) {
+        std::cout << "  " << setting.first << ": " << setting.second << std::endl;
+    }
 
-//     std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
-// }
+    std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
+}
 
 std::string extractUri(std::string str)
 {
@@ -155,92 +155,49 @@ int ClientHandler::manageRequest(void)
 		std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
 		try
 		{
-			if (stringLowerCases.find("get") != std::string::npos || stringLowerCases.find("delete") != std::string::npos)
-			{
-				this->request.HttpParse(this->raw_data, this->totbytes);
-				validateHttpHeaders();
-				Logger::info("Done http parsing");
-				uri = this->request.getHttpRequestLine()["request-uri"];
-				if (isCgi(uri) == true)
-				{
-					Logger::info("Set up CGI");
-					return 0;
-				}
-				else
-				{
-					if (this->raw_data.find("DELETE") != std::string::npos) //to review
-					{
-						Logger::debug("extract file to delete and create new uri");
-						std::string newUri;
-						newUri = extractUri(uri);
-						Logger::debug(newUri);
-						uri.clear();
-						uri = newUri;
-					}
-					route = configInfo.getRoute()[uri];
-					if (route.locSettings.find("redirect") != route.locSettings.end())
-					{
-						route.path.clear();
-						route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
-						route.path.erase(route.path.length(), 1);
-						route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
-						HttpResponse http(301, "");
-						this->response = http.composeRespone();
-
-					}
-					else if (route.path.empty())
-					{
-						std::string locationPath;
-						locationPath = findDirectory(uri);
-						struct Route newRoute;
-						newRoute = this->configInfo.getRoute()[locationPath];
-						route = newRoute;
-						route.path += uri.erase(0, 1);
-					}
-					else
-						this->response = prepareResponse(route);
-					Logger::info("Response created successfully and store in clientQueu");
-				}
-			}
-			else if (stringLowerCases.find("content-length") != std::string::npos)
+			if (stringLowerCases.find("content-length") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
 			{
 				int start = stringLowerCases.find("content-length") + 16;
 				int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
 				int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
 				if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
 					throw PayLoadTooLargeException();
-				if (this->totbytes >= bytes_expected)
-				{
-					this->request.HttpParse(this->raw_data, this->totbytes);
-					validateHttpHeaders();
-					Logger::debug("Done parsing");
-					uri = this->request.getHttpRequestLine()["request-uri"];
-					route = configInfo.getRoute()[uri];
-					if (route.path.empty())
-					{
-						std::string locationPath;
-						locationPath = findDirectory(uri);
-						struct Route newRoute;
-						newRoute = this->configInfo.getRoute()[locationPath];
-						route = newRoute;
-						route.path += uri.erase(0, 1);
-					}
-					if (isCgi(uri) == true)
-					{
-						Logger::info("Set up CGI");
-						return 0;
-					}
-					else
-					{
-						this->response = prepareResponse(route);
-						Logger::info("Response created successfully and store in clientQueu");
-					}
-				}
-				else
+				if (this->totbytes < bytes_expected)
 					return 0;
 			}
+			this->request.HttpParse(this->raw_data, this->totbytes);
+			validateHttpHeaders();
+			Logger::info("Done parsing");
+			uri = this->request.getHttpRequestLine()["request-uri"];
+			route = configInfo.getRoute()[uri];
+			if (isCgi(uri) == true)
+			{
+				Logger::info("Set up CGI");
+				return 0;
+			}
+			if (route.locSettings.find("redirect") != route.locSettings.end())
+			{
+				route.path.clear();
+				route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
+				route.path.erase(route.path.length(), 1);
+				route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
+				HttpResponse http(301, "");
+				this->response = http.composeRespone();
+			}
 			else
-				throw MethodNotAllowedException();
+			{
+				if (route.path.empty())
+				{
+					std::string locationPath;
+					locationPath = findDirectory(uri);
+					struct Route newRoute;
+					newRoute = this->configInfo.getRoute()[locationPath];
+					route = newRoute;
+					route.path += uri.erase(0, 1);
+				}
+				this->response = prepareResponse(route);
+			}
+			Logger::info("Response created successfully and store in clientQueu");
 		}
 		catch (const HttpException &e)
 		{
@@ -278,6 +235,7 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 
 int ClientHandler::retrieveResponse(void)
 {
+	std::cout << this->response << std::endl;
 	int bytes = send(fd, this->response.c_str(), this->response.size(), 0);
 	if (bytes == -1)
 		return -1;
