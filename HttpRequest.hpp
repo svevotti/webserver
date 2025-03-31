@@ -31,10 +31,18 @@ class HttpRequest {
 		std::map<std::string, std::string>	getHttpHeaders() const;
 		std::map<std::string, std::string>	getHttpRequestLine() const;
 		std::map<std::string, std::string>	getHttpUriQueryMap() const;
-		std::vector<struct section>			getHttpSections() const;
 		struct section						getHttpSection() const;
-		std::map<std::string, std::string>	getSectionHeaders(int) const;
-		std::string							getSectionBody(int) const;
+
+		//specific getters
+		std::string getUri(void) const;
+		std::string getMethod(void) const;
+		std::string getQuery(void) const;
+		std::string getBodyContent(void) const;
+		std::string getContentType (void) const;
+		std::string getContentLength(void) const;
+		std::string getHost(void) const;
+		std::string getProtocol(void) const;
+
 
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
@@ -43,10 +51,10 @@ class HttpRequest {
 		void								parseBody(std::string, std::string, int);
 		void								exractQuery(std::string);
 		void								parseMultiPartBody(std::string, int);
-		// void								extractSections(std::string, std::vector<int>, int, std::string);
 		struct section						extractSections(std::string, int firstB, int secondB, std::string b);
 		char								*getBoundary(const char *);
 		std::string							decodeQuery(std::string str);
+		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								cleanProperties(void);
 		void								validateParsedRequest(void);
 
@@ -56,7 +64,6 @@ class HttpRequest {
 		std::map<std::string, std::string>	requestLine;
 		std::map<std::string, std::string>	query;
 		std::map<std::string, std::string>	headers;
-		// std::vector<struct section>			sectionsVec;
 		struct section						sectionInfo;
 };
 
