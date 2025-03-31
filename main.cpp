@@ -1,4 +1,13 @@
+#include <sys/socket.h>
+#include <iostream>
+#include <sys/types.h> 
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "ServerSockets.hpp"
+#include "WebServer.hpp"
 #include "Config.hpp"
+#include <signal.h>
 
 bool	test(Config &conf)
 {
@@ -12,6 +21,8 @@ bool	test(Config &conf)
 	i = 0;
 	std::vector<InfoServer*> server;
 	server = conf.getServList();
+	if (server.size() == 0)
+		return false;
 	for(servIt = server.begin(); servIt != server.end(); servIt++)
 	{
 		i++;
@@ -64,37 +75,41 @@ bool	test(Config &conf)
 				std::cout << varIt->first << " = " << varIt->second << std::endl;
 			std::cout << std::endl;
 		}
-		Route cgi_route;
-		cgi_route = (*servIt)->getCGI();
-		std::cout << "Checking CGI route " << std::endl << std::endl;
-			std::cout << "URI: " << cgi_route.uri << std::endl;
-			std::cout << "Path: " << cgi_route.path << std::endl;
-			if (cgi_route.internal)
-				std::cout << "It is internal!" << std::endl;
-			else
-				std::cout << "It is not internal!" << std::endl;
-			std::cout << "Allowed methods: ";
-			for(setIt = cgi_route.methods.begin(); setIt != cgi_route.methods.end(); setIt++)
-				std::cout << (*setIt) << " ";
-			std::cout << std::endl << "Other variables:" << std::endl;
-			for(varIt = cgi_route.locSettings.begin(); varIt != cgi_route.locSettings.end(); varIt++)
-				std::cout << varIt->first << " = " << varIt->second << std::endl;
-			std::cout << std::endl;
+		// Route cgi_route;
+		// cgi_route = (*servIt)->getCGI();
+		// std::cout << "Checking CGI route " << std::endl << std::endl;
+		// 	std::cout << "URI: " << cgi_route.uri << std::endl;
+		// 	std::cout << "Path: " << cgi_route.path << std::endl;
+		// 	if (cgi_route.internal)
+		// 		std::cout << "It is internal!" << std::endl;
+		// 	else
+		// 		std::cout << "It is not internal!" << std::endl;
+		// 	std::cout << "Allowed methods: ";
+		// 	for(setIt = cgi_route.methods.begin(); setIt != cgi_route.methods.end(); setIt++)
+		// 		std::cout << (*setIt) << " ";
+		// 	std::cout << std::endl << "Other variables:" << std::endl;
+		// 	for(varIt = cgi_route.locSettings.begin(); varIt != cgi_route.locSettings.end(); varIt++)
+		// 		std::cout << varIt->first << " = " << varIt->second << std::endl;
+		// 	std::cout << std::endl;
 	}
 	return true;
 }
 
-int	main(int argc, char** argv){
-	if (argc != 2)
+int main(void)
+{
+	Config	configuration("default.conf");
+
+	// test(configuration);
+	if (configuration.getServList().size() > 0)
 	{
-		std::cout << "Error! Please include only a path to a config file" << std::endl;
-		return 1;
+		Webserver 	server(configuration);
+		if (server.startServer() == -1)
+		{
+			Logger::error("Could not start the server");
+			return 1;
+		}
 	}
-		Config	configuration(argv[1]);
-	std::cout << "Finished configuration!" << std::endl;
-	if (test(configuration))
-		std::cout << "All worked well!" << std::endl;
 	else
-		std::cout << "Error!" << std::endl;
-	return 0;
+		Logger::error("Parsing configuration file");
+	return (0);
 }

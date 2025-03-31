@@ -2,19 +2,19 @@
 
 //default constructor (only for orthodox form)
 //Copy constructor
-Config::Config( const Config& copy) {
-	*this = copy;
-}
+// Config::Config( const Config& copy) {
+// 	*this = copy;
+// }
 
-//Equal operator
-Config&	Config::operator=( const Config& copy) {
-	if (this != &copy)
-	{
-		return (*this);
-	}
+// //Equal operator
+// Config&	Config::operator=( const Config& copy) {
+// 	if (this != &copy)
+// 	{
+// 		return (*this);
+// 	}
 
-	return (*this);
-}
+// 	return (*this);
+// }
 
 //Deconstructor
 Config::~Config() {

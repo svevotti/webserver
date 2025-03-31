@@ -14,7 +14,9 @@ $fortunes = [
     "Happiness is not a destination, it's a journey.",
     "Your creativity will lead you to new opportunities.",
     "A friend will bring you unexpected joy soon.",
-    "The best is yet to come - stay optimistic."
+    "The best is yet to come - stay optimistic.",
+    "You will soon pass a very cool version of Webserve and mark it as outstanding.",
+    "The future is open."
 ];
 
 // Get a random fortune
