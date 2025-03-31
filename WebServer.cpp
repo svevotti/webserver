@@ -7,16 +7,31 @@
 
 Webserver::Webserver(Config& file)
 {
-	this->configInfo = file.getServList();
-	std::string port = configInfo[0]->getPort();
-	std::string ip = configInfo[0]->getIP();
-	ServerSockets server(ip, port);
-
-	this->serverFd = server.getServerSocket();
-	this->poll_sets.reserve(MAX);
-	if (this->serverFd > 0)
-		addServerSocketsToPoll(this->serverFd);
-	
+	this->configInfo = file.getServList(); //full list of servers
+	int sizeList = this->configInfo.size();
+	for (int i = 0; i < sizeList; i++)
+	{
+		std::string port = configInfo[i]->getPort();
+		std::string ip = configInfo[i]->getIP();
+		ServerSockets server(ip, port);
+		this->serverFd = server.getServerSocket();
+		this->configInfo[i]->setFD(this->serverFd);
+	}
+	//loop to go through each server and create socket
+	//replace server socket in each server fd
+	// for (std::vector<InfoServer*>::const_iterator it = this->configInfo.begin(); it != this->configInfo.end(); ++it)
+	// {
+	// 	InfoServer* server = *it; // Dereference the iterator to get the pointer
+	// 	if (server)
+	// 		std::cout << "Server FD: " << server->getFD() << std::endl; // Print the file
+	// }
+	this->poll_sets.reserve(MAX); //to be able to use indeces
+	//loop to go through each server, retrieve fd and add to poll
+	for (int i = 0; i < sizeList; i++)
+	{
+		if (this->configInfo[i]->getFD() > 0)
+			addServerSocketsToPoll(this->configInfo[i]->getFD());
+	}
 	std::string errorPagePath = "/www/errors";
 	HttpException::setHtmlRootPath(errorPagePath);
 }
@@ -39,7 +54,7 @@ void Webserver::checkTime(void)
 		clientIt = retrieveClient(it->fd);
 		if (clientIt != this->clientsList.end())
 		{
-			if (currentTime - clientIt->getTime() > keepAliveTimeout)
+			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
 				removeClient(it);
@@ -51,9 +66,17 @@ void Webserver::checkTime(void)
 int	Webserver::startServer()
 {
 	int returnPoll;
+	int sizeList = this->configInfo.size();
 
-	if (this->serverFd < 0)
-		return -1;
+	for (int i = 0; i < sizeList; i++)
+	{
+		if (this->configInfo[i]->getFD() < 0)
+		{
+			Logger::error("Failed to create socket " + Utils::toString(this->configInfo[i]->getFD()) + " on port " + this->configInfo[i]->getPort());
+			exit(1);
+		}
+	}
+
 	while (1)
 	{
 		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 2 * 1000);
@@ -75,6 +98,7 @@ void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
 	int result;
+
 
     for (it = poll_sets.begin(); it != poll_sets.end();) 
     {
@@ -151,9 +175,26 @@ int Webserver::processClient(int fd, int event)
 //Utils
 int Webserver::fdIsServerSocket(int fd)
 {
-	if (fd == this->serverFd)
-		return true;
+	int sizeList = this->configInfo.size();
+	for (int i = 0; i < sizeList; i++)
+	{
+		std::cout << "fd " << this->configInfo[i]->getFD() << std::endl;
+		std::cout << "fd event " << fd << std::endl;
+		if (this->configInfo[i]->getFD() == fd)
+			return true;
+	}
 	return false;
+}
+
+InfoServer*	Webserver::matchFD( int fd ) {
+
+	std::vector<InfoServer*>::iterator					servIt;
+	for(servIt = (*this).configInfo.begin(); servIt != (*this).configInfo.end(); servIt++)
+	{
+		if ((*servIt)->getFD() == fd)
+			return (*servIt);
+	}
+	return NULL;
 }
 
 int Webserver::fdIsCGI(int fd)
@@ -164,14 +205,77 @@ int Webserver::fdIsCGI(int fd)
 void Webserver::addServerSocketsToPoll(int fd)
 {
     struct pollfd serverPoll[MAX];
-	serverPoll[0].fd = fd;
-	serverPoll[0].events = POLLIN;
-	this->poll_sets.push_back(serverPoll[0]);
+	int sizeList = this->configInfo.size();
+
+	for (int i = 0; i < sizeList; i++)
+	{
+		serverPoll[i].fd = this->configInfo[i]->getFD();
+		serverPoll[i].events = POLLIN;
+		this->poll_sets.push_back(serverPoll[i]);
+		
+	}
 	Logger::info("Add server sockets to poll sets");
 }
 
+void printServInfo(InfoServer *server)
+{
+	std::map<std::string, std::string>::iterator	mapIt;
+	std::map<std::string, Route>::iterator			locMetIt;
+	std::set<std::string>::iterator					setIt;
+	std::map<std::string, std::string>::iterator	varIt;
+	std::cout << "Checking server " << std::endl;
+	std::cout << "Checking harcoded variables" << std::endl << std::endl;
+	if (server->getIP() != "")
+		std::cout << "IP is " << server->getIP() <<std::endl;
+	else
+		std::cout << "IP doesn't exist!" << std::endl;
+	if (server->getIndex() != "")
+		std::cout << "Index is " << server->getIndex() <<std::endl;
+	else
+		std::cout << "Index doesn't exist!" << std::endl;
+	if (server->getRoot() != "")
+		std::cout << "Root is " << server->getRoot() <<std::endl;
+	else
+		std::cout << "Root doesn't exist!" << std::endl;
+	if (server->getPort() != "")
+		std::cout << "Port is " << server->getPort() <<std::endl;
+	else
+		std::cout << "Port doesn't exist!" << std::endl;
+
+	std::cout << std::endl << "Checking all the settings" << std::endl << std::endl;
+
+	std::map<std::string, std::string> map;
+
+	map = server->getSetting();
+	for(mapIt = map.begin(); mapIt != map.end(); mapIt++)
+		std::cout << mapIt->first << " = " << mapIt->second << std::endl;
+
+	std::cout << std::endl << "Checking all locations" << std::endl << std::endl;
+
+	std::map<std::string, Route> routes;
+
+	routes = server->getRoute();
+	for(locMetIt = routes.begin(); locMetIt != routes.end(); locMetIt++)
+	{
+		std::cout << "Checking location " << locMetIt->first << std::endl << std::endl;
+		std::cout << "URI: " << locMetIt->second.uri << std::endl;
+		std::cout << "Path: " << locMetIt->second.path << std::endl;
+		if (locMetIt->second.internal)
+			std::cout << "It is internal!" << std::endl;
+		else
+			std::cout << "It is not internal!" << std::endl;
+		std::cout << "Allowed methods: ";
+		for(setIt = locMetIt->second.methods.begin(); setIt != locMetIt->second.methods.end(); setIt++)
+			std::cout << (*setIt) << " ";
+		std::cout << std::endl << "Other variables:" << std::endl;
+		for(varIt = locMetIt->second.locSettings.begin(); varIt != locMetIt->second.locSettings.end(); varIt++)
+			std::cout << varIt->first << " = " << varIt->second << std::endl;
+		std::cout << std::endl;
+	}
+}
 void Webserver::createNewClient(int fd)
 {
+	Logger::debug("New client on fd " + Utils::toString(fd));
 	socklen_t clientSize;
 	struct sockaddr_storage clientStruct;
 	struct pollfd clientPoll;
@@ -187,7 +291,15 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	ClientHandler newClient(clientFd, *this->configInfo[0]);
+	std::vector<pollfd> newSet = poll_sets;
+	std::cout << "size: " << newSet.size() << std::endl;
+	for (int i = 0; i < newSet.size(); i++)
+	{
+		Logger::debug(Utils::toString(newSet[i].fd));
+	}
+	InfoServer *server = matchFD(fd);
+	//printServInfo(server);
+	ClientHandler newClient(clientFd, *server);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }

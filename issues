@@ -1,3 +1,2 @@
-1)fix redirection
-2)implement handling multiple servers
-3)create function to separete uri and file
+1)multi server implementation
+2)set empty string if field not found
