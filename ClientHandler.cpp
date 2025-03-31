@@ -1,12 +1,13 @@
 #include "ClientHandler.hpp"
 
 //Constructor and Destructor
-ClientHandler::ClientHandler(int fd, InfoServer &configInfo)
+ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 {
 	this->fd = fd;
 	this->totbytes = 0;
 	this->configInfo = configInfo;
 	this->startingTime = time(NULL);
+	this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
 }
 
 //Setters and Getters
@@ -29,31 +30,36 @@ double ClientHandler::getTime() const
 {
 	return this->startingTime;
 }
+
+double ClientHandler::getTimeOut(void) const
+{
+	return this->timeoutTime;
+}
 //Main functions
 
-void printRoute(const Route& route)
-{
-    std::cout << "Route Information:" << std::endl;
-    std::cout << "URI: " << route.uri << std::endl;
-    std::cout << "Path: " << route.path << std::endl;
+// void printRoute(const Route& route)
+// {
+//     std::cout << "Route Information:" << std::endl;
+//     std::cout << "URI: " << route.uri << std::endl;
+//     std::cout << "Path: " << route.path << std::endl;
 
-    std::cout << "Methods: ";
-    if (route.methods.empty()) {
-        std::cout << "None";
-    } else {
-        for (const auto& method : route.methods) {
-            std::cout << method << " ";
-        }
-    }
-    std::cout << std::endl;
+//     std::cout << "Methods: ";
+//     if (route.methods.empty()) {
+//         std::cout << "None";
+//     } else {
+//         for (const auto& method : route.methods) {
+//             std::cout << method << " ";
+//         }
+//     }
+//     std::cout << std::endl;
 
-    std::cout << "Location Settings:" << std::endl;
-    for (const auto& setting : route.locSettings) {
-        std::cout << "  " << setting.first << ": " << setting.second << std::endl;
-    }
+//     std::cout << "Location Settings:" << std::endl;
+//     for (const auto& setting : route.locSettings) {
+//         std::cout << "  " << setting.first << ": " << setting.second << std::endl;
+//     }
 
-    std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
-}
+//     std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
+// }
 
 std::string extractUri(std::string str)
 {

@@ -30,11 +30,12 @@
 
 class ClientHandler {
 	public:
-		ClientHandler(int fd, InfoServer &configInfo);
+		ClientHandler(int fd, InfoServer const &configInfo);
 		int getFd(void) const;
 		HttpRequest getRequest() const;
 		std::string getResponse() const;
 		double getTime() const;
+		double getTimeOut(void) const;
 		int readData(int fd, std::string &str, int &bytes);
 		int manageRequest(void);
 		int isCgi(std::string str);
@@ -55,6 +56,7 @@ class ClientHandler {
 	std::string response;
 	InfoServer configInfo;
 	double startingTime;
+	double timeoutTime;
 };
 
 #endif
