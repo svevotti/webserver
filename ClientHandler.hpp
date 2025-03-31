@@ -36,7 +36,7 @@ class ClientHandler {
 		std::string getResponse() const;
 		double getTime() const;
 		int readData(int fd, std::string &str, int &bytes);
-		int clientStatus(void);
+		int manageRequest(void);
 		int isCgi(std::string str);
 		std::string prepareResponse(struct Route route);
 		std::string                                    retrievePage(struct Route route);
@@ -46,6 +46,7 @@ class ClientHandler {
 		int	retrieveResponse(void);
 		void validateHttpHeaders(void);
 		std::string findDirectory(std::string uri);
+		void createErrorResponseAndCleanUp(int code, std::string body, std::string message);
 	private:
 	std::string raw_data;
 	int totbytes;

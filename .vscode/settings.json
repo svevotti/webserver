@@ -51,6 +51,7 @@
 		"string_view": "cpp",
 		"tuple": "cpp",
 		"typeinfo": "cpp",
-		"variant": "cpp"
+		"variant": "cpp",
+		"system_error": "cpp"
 	}
 }

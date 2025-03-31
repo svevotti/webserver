@@ -142,7 +142,7 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
-		status = clientIt->clientStatus();
+		status = clientIt->manageRequest();
 	else
 		status = clientIt->retrieveResponse();
 	return status;

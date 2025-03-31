@@ -40,7 +40,6 @@ std::string HttpException::extractFile(void)
 		std::cerr << "Error opening file httpexception" << std::endl;
 		return "";
 	}
-
 	inputFile.seekg(0, std::ios::end);
 	std::streamsize size = inputFile.tellg();
 	inputFile.seekg(0, std::ios::beg);
