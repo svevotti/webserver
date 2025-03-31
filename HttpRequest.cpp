@@ -32,25 +32,54 @@ std::map<std::string, std::string> HttpRequest::getHttpUriQueryMap(void) const
 	return query;
 }
 
-// std::vector<struct section> HttpRequest::getHttpSections(void) const
-// {
-// 	return this->sectionsVec;
-// }
-
 struct section HttpRequest::getHttpSection(void) const
 {
 	return this->sectionInfo;
 }
 
-// std::map<std::string, std::string> HttpRequest::getSectionHeaders(int i) const
-// {
-// 	return(this->sectionsVec[i].myMap);
-// }
+std::string HttpRequest::findValue(std::map<std::string, std::string> map, std::string key) const
+{
+	return map[key];
+}
 
-// std::string HttpRequest::getSectionBody(int i) const
-// {
-// 	return(this->sectionsVec[i].body);
-// }
+std::string HttpRequest::getUri(void) const
+{
+	return findValue(this->requestLine, "request-uri");
+}
+
+std::string HttpRequest::getMethod(void) const
+{
+	return findValue(this->requestLine, "method");
+}
+std::string HttpRequest::getQuery(void) const
+{
+	return findValue(this->requestLine, "query-string");
+}
+
+std::string HttpRequest::getBodyContent(void) const
+{
+	return this->sectionInfo.body;
+}
+
+std::string HttpRequest::getContentType(void) const
+{
+	return findValue(this->sectionInfo.myMap, "content-type");
+}
+
+std::string HttpRequest::getContentLength(void) const
+{
+	return findValue(this->headers, "content-length");
+}
+
+std::string HttpRequest::getHost(void) const
+{
+	return findValue(this->headers, "host");
+}
+
+std::string HttpRequest::getProtocol(void) const
+{
+	return findValue(this->requestLine, "protocol");
+}
 
 // Main functions
 void HttpRequest::HttpParse(std::string str, int size)
@@ -72,7 +101,7 @@ void HttpRequest::parseRequestHttp(void)
 	parseHeaders(request);
     it = headers.find("content-length");
 	if (it != headers.end())
-		parseBody(getHttpRequestLine()["method"], this->str, this->size);
+		parseBody(requestLine["method"], this->str, this->size);
 }
 
 void HttpRequest::parseBody(std::string method, std::string buffer, int size)
@@ -96,7 +125,6 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
 			}
 			this->sectionInfo = data;
-			// sectionsVec.push_back(data);	
 		}
 	}
 	else
@@ -110,6 +138,7 @@ void HttpRequest::parseRequestLine(std::string str)
 	std::string uri;
 	std::string protocol;
 	size_t index;
+	std::string newUri;
 
 	index = str.find(" ");
 	if (index != std::string::npos)
@@ -124,15 +153,15 @@ void HttpRequest::parseRequestLine(std::string str)
 	if (index != std::string::npos)
 	{
 		uri = str.substr(0, index);
+		newUri = uri;
 		if (uri.find("?") != std::string::npos)
 		{
-			std::string newUri = uri;
 			newUri = uri.substr(0, uri.find("?"));
-			uri.clear();
+			// uri.clear();
 			exractQuery(uri);
-			uri = newUri;
+			// uri = newUri;
 		}
-		this->requestLine["request-uri"] = uri;
+		this->requestLine["request-uri"] = newUri;
 	}
 	else
 		throw BadRequestException();
@@ -156,7 +185,6 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 
 	while (getline(str, line))
 	{
-		// std::cout << "line: " << line << std::endl;
 		key.clear();
 		value.clear();
 		if (line.find_first_not_of("\r\n") == std::string::npos)
@@ -172,9 +200,7 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 		else
 			throw BadRequestException();
 		std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
-		// std::cout << "key: " << key << std::endl;
 		std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
-		// std::cout << "value: " << value << std::endl;
 		this->headers[key] = value;
 	}
 }
@@ -202,10 +228,6 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
-	// for (int i = 1; i < (int)boundariesIndexes.size() - 1; i++) //excluding first and last
-	// {
-	// 	extractSections(buffer, boundariesIndexes, i, b);
-	// }
 	delete b;
 }
 
@@ -225,7 +247,7 @@ struct section HttpRequest::extractSections(std::string buffer, int firstB, int 
 	{
 		if (line.find_first_not_of("\r\n") == std::string::npos)
 			break ;
-		indexBinary += line.length() + 1; //ADD \n in the count
+		indexBinary += line.length() + 1;
 		if (line.find(b) != std::string::npos)
 			continue;
 		else
@@ -250,48 +272,6 @@ struct section HttpRequest::extractSections(std::string buffer, int firstB, int 
 	// sectionsVec.push_back(data);
 	return data;
 }
-
-// void	HttpRequest::extractSections(std::string buffer, std::vector<int> indeces, int i, std::string b)
-// {
-// 	int indexBinary = 0;
-// 	std::string line;
-// 	std::string key;
-// 	std::string value;
-// 	struct section data;
-// 	size_t index;
-
-// 	std::istringstream streamHeaders(buffer.c_str() + indeces[i]);
-
-// 	indexBinary = indeces[i];
-// 	while (getline(streamHeaders, line))
-// 	{
-// 		if (line.find_first_not_of("\r\n") == std::string::npos)
-// 			break ;
-// 		indexBinary += line.length() + 1; //ADD \n in the count
-// 		if (line.find(b) != std::string::npos)
-// 			continue;
-// 		else
-// 		{
-// 			index = line.find(":");
-// 			if (index != std::string::npos)
-// 			{
-// 				key = line.substr(0, index);
-// 				if (line[line.find(":") + 1] != ' ')
-// 					throw BadRequestException();
-// 				value = line.substr(index + 2);
-// 			}
-// 			else
-// 				throw BadRequestException();
-// 			std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
-// 			std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
-// 			data.myMap[key] = value;
-// 		}
-// 	}
-// 	data.indexBinary = indexBinary+2;
-// 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + indeces[i+1]-2);
-// 	//std::cout << data.body << std::endl;
-// 	sectionsVec.push_back(data);
-// }
 
 // Utils
 std::string HttpRequest::decodeQuery(std::string str)
@@ -328,28 +308,29 @@ void HttpRequest::exractQuery(std::string str)
 	url = str.substr(0, str.find("?"));
 	requestLine["url"] = url; //url : only url
 	queryString = str.substr(str.find("?") + 1, str.length() - str.find("?"));
-	requestLine["query-string"] = queryString; //query-string only query
-	while (i < queryString.length())
+	std::string decodedQuery = decodeQuery(queryString);
+	requestLine["query-string"] = decodedQuery; //query-string only query
+	while (i < decodedQuery.length())
 	{
-		while (queryString[i] != '=')
+		while (decodedQuery[i] != '=')
 		{
-			if (i == queryString.length())
+			if (i == decodedQuery.length())
 				break;
-			key.append(1, queryString[i]);
+			key.append(1, decodedQuery[i]);
 			i++;
 		}
-		if (i == queryString.length())
+		if (i == decodedQuery.length())
 			break;
 		i++;
-		while (queryString[i] != '&')
+		while (decodedQuery[i] != '&')
 		{
-			if (i == queryString.length())
+			if (i == decodedQuery.length())
 				break;
-			value.append(1, queryString[i]);
+			value.append(1, decodedQuery[i]);
 			i++;
 		}
 		query[key] = value;
-		if (i == queryString.length())
+		if (i == decodedQuery.length())
 			break;
 		key.clear();
 		value.clear();
@@ -393,7 +374,4 @@ void	HttpRequest::cleanProperties(void)
 	sectionInfo.body.clear();
 	sectionInfo.indexBinary = 0;
 	sectionInfo.myMap.clear();
-	// sectionsVec.clear();
-	// if (!(sectionsVec.empty()))
-	// 	sectionsVec.pop_back();
 }

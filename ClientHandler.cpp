@@ -168,6 +168,15 @@ int ClientHandler::manageRequest(void)
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			validateHttpHeaders();
 			Logger::info("Done parsing");
+			// std::cout << "Request Information:" << std::endl;
+			// std::cout << "URI: " << this->request.getUri() << std::endl;
+			// std::cout << "Method: " << this->request.getMethod() << std::endl;
+			// std::cout << "Query: " << this->request.getQuery() << std::endl;
+			// std::cout << "Body Content: " << this->request.getBodyContent() << std::endl;
+			// std::cout << "Content Type: " << this->request.getContentType() << std::endl;
+			// std::cout << "Content Length: " << this->request.getContentLength() << std::endl;
+			// std::cout << "Host: " << this->request.getHost() << std::endl;
+			// std::cout << "Protocol: " << this->request.getProtocol() << std::endl;
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (isCgi(uri) == true)
@@ -235,7 +244,6 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 
 int ClientHandler::retrieveResponse(void)
 {
-	std::cout << this->response << std::endl;
 	int bytes = send(fd, this->response.c_str(), this->response.size(), 0);
 	if (bytes == -1)
 		return -1;
