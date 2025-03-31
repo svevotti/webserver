@@ -1,8 +1,3 @@
-1)by what timeout in siege is affected - done need to merge
-2)lowercase headers
-3)validation
-4)check redirection: implement logic for location header with status code 301
-5)take care of content_type
-6)don't need vector for body uploads: we will only be able to accomodate one upload
-7)implement handling multiple servers
-8)create function to separete uri and file
+1)fix redirection
+2)implement handling multiple servers
+3)create function to separete uri and file
