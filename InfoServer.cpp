@@ -10,14 +10,21 @@ InfoServer::InfoServer( void ) {
 // }
 
 //Equal operator
-// InfoServer&	InfoServer::operator=( const InfoServer& copy) {
-// 	if (this != &copy)
-// 	{
-// 		return (*this);
-// 	}
 
-// 	return (*this);
-// }
+InfoServer&	InfoServer::operator=( const InfoServer& copy) {
+	if (this != &copy)
+	{
+		_port = copy.getPort();
+		_ip = copy.getIP();
+		_root = copy.getRoot();
+		_index = copy.getIndex();
+		_cgi = copy.getCGI();
+		_settings = copy.getSetting();
+		_routes = copy.getRoute();
+	}
+
+	return (*this);
+}
 
 //Deconstructor
 InfoServer::~InfoServer() {
@@ -54,6 +61,10 @@ void	InfoServer::setSetting( const std::string key, const std::string &value) {
 	this->_settings[key] = value;
 }
 
+void	InfoServer::setFD( int fd ) {
+	this->_fd = fd;
+}
+
 std::string	InfoServer::getPort( void ) const {
 	return (_port);
 }
@@ -80,6 +91,10 @@ std::map<std::string, Route>	InfoServer::getRoute ( void ) const {
 
 Route	InfoServer::getCGI ( void ) const {
 	return (_cgi);
+}
+
+int	InfoServer::getFD ( void ) const {
+	return (_fd);
 }
 
 bool	InfoServer::isIPValid( std::string ip ) {
@@ -116,3 +131,4 @@ bool	InfoServer::isIPValid( std::string ip ) {
 		return false;
 	return true;
 }
+
