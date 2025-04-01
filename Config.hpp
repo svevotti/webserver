@@ -27,7 +27,7 @@ class Config {
 		~Config();
 		std::set<std::string>	parseMethods(std::string method_list);
 		bool	ft_validServer( void );
-		InfoServer*	matchFD( int fd );
+		//InfoServer*	matchFD( int fd ); Not needed, commented for now JIC, will delete after everything confirmed to work
 
 		void	setServerList( const std::vector<InfoServer*> servlist );
 

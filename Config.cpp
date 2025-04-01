@@ -44,19 +44,19 @@ int	Config::getServCount( void ) const {
 }
 
 
-InfoServer*	Config::matchFD( int fd ) {
+// InfoServer*	Config::matchFD( int fd ) {
 
-	std::vector<InfoServer*>::iterator					servIt;
-	std::vector<InfoServer*>							server;
+// 	std::vector<InfoServer*>::iterator					servIt;
+// 	std::vector<InfoServer*>							server;
 
-	server = (*this).getServList();
-	for(servIt = server.begin(); servIt != server.end(); servIt++)
-	{
-		if ((*servIt)->getFD() == fd)
-			return (*servIt);
-	}
-	return NULL;
-}
+// 	server = (*this).getServList();
+// 	for(servIt = server.begin(); servIt != server.end(); servIt++)
+// 	{
+// 		if ((*servIt)->getFD() == fd)
+// 			return (*servIt);
+// 	}
+// 	return NULL;
+// }
 
 bool	Config::ft_validServer( void )
 {
@@ -193,6 +193,7 @@ bool	Config::parseServer(std::istream &conf)
 				_servlist.push_back(server);
 				return true;
 			}
+			delete server;
 			return false; //Check if memory is lost and I need to add a delete here
 		}
 		else if (line.find("location ") != std::string::npos) //If we find a location block, we need to parse it
@@ -237,6 +238,7 @@ bool	Config::parseServer(std::istream &conf)
 		}
 	}
 	std::cout << "This should not have happened (parseServer)" << std::endl;
+	delete server;
 	return false; //We should never get here, so if we do, something is messed up somewhere
 }
 
