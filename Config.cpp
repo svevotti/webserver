@@ -218,7 +218,7 @@ bool	Config::parseServer(std::istream &conf)
 			server->setSetting(key, value);
 			if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
 			{
-				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535)
+				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
 					server->setPort(value); //Saved as string, change to int?
 				else
 					std::cerr << "Incorrect port value: " << value << std::endl;
