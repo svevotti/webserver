@@ -4,12 +4,13 @@
 InfoServer::InfoServer( void ) {
 }
 
-//Copy constructor
-InfoServer::InfoServer( const InfoServer& copy) {
-	*this = copy;
-}
+// //Copy constructor
+// InfoServer::InfoServer( const InfoServer& copy) {
+// 	*this = copy;
+// }
 
 //Equal operator
+
 InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 	if (this != &copy)
 	{

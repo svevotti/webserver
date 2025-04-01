@@ -2,9 +2,9 @@
 
 //default constructor (only for orthodox form)
 //Copy constructor
-Config::Config( const Config& copy) {
-	*this = copy;
-}
+// Config::Config( const Config& copy) {
+// 	*this = copy;
+// }
 
 //Equal operator
 Config&	Config::operator=( const Config& copy) {
@@ -13,8 +13,7 @@ Config&	Config::operator=( const Config& copy) {
 		_servlist = copy.getServList();
 		_servcount = copy.getServCount();
 	}
-
-	return (*this);
+ 	return (*this);
 }
 
 //Deconstructor

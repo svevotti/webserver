@@ -22,8 +22,8 @@ class Config {
 
 	public:
 		Config( const std::string& configFile);
-		Config( const Config& copy);
-		Config& operator=(const Config& copy);
+		// Config( const Config& copy);
+		// Config& operator=(const Config& copy);
 		~Config();
 		std::set<std::string>	parseMethods(std::string method_list);
 		bool	ft_validServer( void );
