@@ -1,0 +1,6 @@
+1)understand ubuntu tester
+- make sure to recv all headers too..which means look for the \r\n\r\n?
+1)implement checking/cleaning route.path before starting adding to it
+2)get rid of not used functions and comments
+3)add stricly necessary logs
+4)look up for testings

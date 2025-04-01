@@ -165,18 +165,12 @@ int ClientHandler::manageRequest(void)
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}
+			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
+				return 0;
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			validateHttpHeaders();
+			Logger::debug(this->raw_data);
 			Logger::info("Done parsing");
-			// std::cout << "Request Information:" << std::endl;
-			// std::cout << "URI: " << this->request.getUri() << std::endl;
-			// std::cout << "Method: " << this->request.getMethod() << std::endl;
-			// std::cout << "Query: " << this->request.getQuery() << std::endl;
-			// std::cout << "Body Content: " << this->request.getBodyContent() << std::endl;
-			// std::cout << "Content Type: " << this->request.getContentType() << std::endl;
-			// std::cout << "Content Length: " << this->request.getContentLength() << std::endl;
-			// std::cout << "Host: " << this->request.getHost() << std::endl;
-			// std::cout << "Protocol: " << this->request.getProtocol() << std::endl;
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (isCgi(uri) == true)
@@ -404,10 +398,13 @@ std::string ClientHandler::uploadFile(std::string path)
 	path += "/" + fileName;
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
+	{
+		Logger::error("No able to write file in upload file (creation)");
 		throw BadRequestException();
+	}
 	ssize_t written = write(file, binaryBody.c_str(), binaryBody.length());
 	if (written < 0) {
-		perror("Error writing to file");
+		Logger::error("No able to write on file in upload file");
 		close(file);
 		throw BadRequestException();
 	}
