@@ -46,7 +46,7 @@ class ClientHandler {
 		int	retrieveResponse(void);
 		void validateHttpHeaders(void);
 		std::string findDirectory(std::string uri);
-		void createErrorResponseAndCleanUp(int code, std::string body, std::string message);
+		std::string extraFileName(std::string uri);
 	private:
 	std::string raw_data;
 	int totbytes;
