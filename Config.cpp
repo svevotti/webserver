@@ -127,21 +127,24 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 
 		if (line == "}") //end of block
 		{
-			if (route.internal)
+			if (route.uri == "/old-page") //This probably will be changed
+			{
+				server->setRoutes(route.path, route);
+				return true;
+			}
+			if (route.path.empty())
 			{
 				std::map<std::string, std::string> settingMap;
 				settingMap = server->getSetting();
-				route.path =("." + settingMap["error_path"] + route.uri);
+				if (route.internal)
+					route.path =("." + settingMap["error_path"] + route.uri);
+				else
+				route.path =("." + settingMap["root"] + route.uri);
 			}
 			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
 			{
 				if (location == "/cgi-bin")
 					server->setCGI(route);
-				server->setRoutes(route.path, route);
-				return true;
-			}
-			else if (route.uri == "/old-page") //This probably will be removed
-			{
 				server->setRoutes(route.path, route);
 				return true;
 			}
