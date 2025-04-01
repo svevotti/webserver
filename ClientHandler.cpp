@@ -124,6 +124,16 @@ std::string ClientHandler::findDirectory(std::string uri)
 	route = this->configInfo.getRoute()[uri];
 	if (route.path.empty())
 	{
+		index = uri.find(".");
+		if (index != std::string::npos)
+		{
+			index = uri.find_last_of("/");
+			uri = uri.substr(0, index);
+			std::cout << uri << std::endl;
+			route = this->configInfo.getRoute()[uri];
+			if (!route.path.empty())
+				return uri;
+		}
 		while (uri.size() > 1)
 		{
 			index = uri.find_last_of("/");
@@ -168,6 +178,7 @@ int ClientHandler::manageRequest(void)
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			validateHttpHeaders();
 			Logger::info("Done parsing");
+			Logger::debug(this->raw_data);
 			// std::cout << "Request Information:" << std::endl;
 			// std::cout << "URI: " << this->request.getUri() << std::endl;
 			// std::cout << "Method: " << this->request.getMethod() << std::endl;
@@ -179,6 +190,7 @@ int ClientHandler::manageRequest(void)
 			// std::cout << "Protocol: " << this->request.getProtocol() << std::endl;
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
+			printRoute(route);
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
@@ -202,8 +214,17 @@ int ClientHandler::manageRequest(void)
 					struct Route newRoute;
 					newRoute = this->configInfo.getRoute()[locationPath];
 					route = newRoute;
-					route.path += uri.erase(0, 1);
+					if (this->request.getHttpRequestLine()["method"] == "DELETE")
+					{
+						std::string fileName;
+						fileName = extraFileName(this->request.getHttpRequestLine()["request-uri"]);
+						std::cout << route.path << std::endl;
+						route.path += "/" + fileName;
+					}
+					else
+						route.path += uri.erase(0, 1);
 				}
+				printRoute(route);
 				this->response = prepareResponse(route);
 			}
 			Logger::info("Response created successfully and store in clientQueu");
@@ -429,20 +450,24 @@ std::string      ClientHandler::deleteFile(std::string path)
 	return body;
 }
 
-std::string extraFileName(std::string str)
+std::string ClientHandler::extraFileName(std::string uri)
 {
-	std::string newStr;
-	int size;
-
-	size = str.size();
-	int i = 0;
-	for (i = size - 1; i > 0; i--)
+	size_t index;
+	index = uri.find(".");
+	std::string file;
+	if (index != std::string::npos)
 	{
-		if (str[i] == '/')
-			break;
+		index = uri.find_last_of("/");
+		if (index != std::string::npos)
+		{
+			Logger::debug(uri);
+			file = uri.substr(index + 1);
+			Logger::debug(file);
+		}
+		else
+			throw BadRequestException();
 	}
-	newStr = str.substr(i);
-	return newStr;
+	return file;
 }
 
 std::string ClientHandler::prepareResponse(struct Route route)
@@ -469,11 +494,7 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	}
 	else if (method == "DELETE" && route.methods.count(method) > 0)
 	{
-		std::string fileToDelete;
-		std::string fileName;
-		fileName = extraFileName(this->request.getHttpRequestLine()["request-uri"]);
-		fileToDelete = route.path + fileName;
-		body = deleteFile(fileToDelete);
+		body = deleteFile(route.path);
 		code = 204;
 	}
 	else

@@ -177,20 +177,34 @@
     <div class="bg-anim"></div>
     <div class="bg-anim"></div>
     <div class="bg-anim"></div>
-    <h1>Delete Zone</h1>
-    <div class="container">
-        <div class="zone">
-            <h2>Trash These Goodies</h2>
-            <p>Clear the zone! Pick the images you want to zap away.</p>
-            <div class="image-gallery">
-                <!-- Dynamic content placeholder: Replace with server-generated image list or no-items message -->
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Delete Zone</title>
+    </head>
+    <body>
+        <h1>Delete Zone</h1>
+        <div class="container">
+            <div class="zone">
+                <h2>Trash These Goodies</h2>
+                <p>Clear the zone! Pick the images you want to zap away.</p>
+                <div class="image-gallery">
+                    <!-- Dynamic content placeholder: Replace with server-generated image list or no-items message -->
+                </div>
+                <form action="/delete" method="POST" enctype="multipart/form-data">
+                    <label for="file-name">Enter file name to delete:</label>
+                    <input type="text" id="file-name" name="file-name" placeholder="Enter file name" required />
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
+            <div class="zone">
+                <h2>Back to the Beat</h2>
+                <p>Return to the main groove for more action.</p>
+                <a href="/">HIT THE FLOOR</a>
             </div>
         </div>
-        <div class="zone">
-            <h2>Back to the Beat</h2>
-            <p>Return to the main groove for more action.</p>
-            <a href="/">HIT THE FLOOR</a>
-        </div>
-    </div>
-</body>
-</html>
+    </body>
+    </html>
+  
