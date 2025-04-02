@@ -13,7 +13,6 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->requestLine = other.requestLine;
 	this->query = other.query;
 	this->headers = other.headers;
-	// this->sectionsVec = other.sectionsVec;
 	this->sectionInfo = other.sectionInfo;
 }
 // Setters and getters
@@ -374,4 +373,46 @@ void	HttpRequest::cleanProperties(void)
 	sectionInfo.body.clear();
 	sectionInfo.indexBinary = 0;
 	sectionInfo.myMap.clear();
+}
+
+std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
+    // Print the request line
+    std::map<std::string, std::string> requestLine = request.getHttpRequestLine();
+    output << "HTTP Request Line:" << std::endl;
+    for (std::map<std::string, std::string>::const_iterator it = requestLine.begin(); it != requestLine.end(); ++it) {
+        output << it->first << ": " << it->second << std::endl;
+    }
+
+    // Print the URI
+    output << "URI: " << request.getUri() << std::endl;
+
+    // Print the method
+    output << "Method: " << request.getMethod() << std::endl;
+
+    // Print the query
+    output << "Query: " << request.getQuery() << std::endl;
+
+    // Print the body content
+    output << "Body Content: " << request.getBodyContent() << std::endl;
+
+    // Print the content type
+    output << "Content Type: " << request.getContentType() << std::endl;
+
+    // Print the content length
+    output << "Content Length: " << request.getContentLength() << std::endl;
+
+    // Print the host
+    output << "Host: " << request.getHost() << std::endl;
+
+    // Print the protocol
+    output << "Protocol: " << request.getProtocol() << std::endl;
+
+    // Print the headers
+    output << "Headers:" << std::endl;
+    std::map<std::string, std::string> headers = request.getHttpHeaders();
+    for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+        output << it->first << ": " << it->second << std::endl;
+    }
+
+    return output;
 }

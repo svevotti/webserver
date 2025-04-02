@@ -47,19 +47,20 @@ double ClientHandler::getTimeOut(void) const
 //     if (route.methods.empty()) {
 //         std::cout << "None";
 //     } else {
-//         for (const auto& method : route.methods) {
-//             std::cout << method << " ";
+//         for (std::set<std::string>::const_iterator it = route.methods.begin(); it != route.methods.end(); ++it) {
+//             std::cout << *it << " "; // Dereference the iterator to get the value
 //         }
 //     }
 //     std::cout << std::endl;
 
-//     std::cout << "Location Settings:" << std::endl;
-//     for (const auto& setting : route.locSettings) {
-//         std::cout << "  " << setting.first << ": " << setting.second << std::endl;
+// 	std::cout << "Location Settings:" << std::endl;
+//     for (std::map<std::string, std::string>::const_iterator it = route.locSettings.begin(); it != route.locSettings.end(); ++it) {
+//         std::cout << "  " << it->first << ": " << it->second << std::endl;
 //     }
 
 //     std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
 // }
+
 
 std::string extractUri(std::string str)
 {
@@ -147,6 +148,28 @@ std::string ClientHandler::findDirectory(std::string uri)
 	return "/";
 }
 
+std::string ClientHandler::createPath(struct Route route, std::string uri)
+{
+	std::string lastItem;
+	std::string path = route.path;
+	std::string defaultFile = route.locSettings["index"];
+	size_t index;
+
+	if (path == "/")
+		return "";
+	if (path[path.size() - 1] == '/')
+		path.erase(path.size() - 1, 1);
+	index = uri.find_last_of("/");
+	if (index != std::string::npos)
+		lastItem = uri.substr(index + 1);
+	index = lastItem.find(".");
+	if (index != std::string::npos && defaultFile.empty())
+		path += "/" + lastItem;
+	else
+		path += uri;
+	return path;
+}
+
 int ClientHandler::manageRequest(void)
 {
 	int result;
@@ -174,17 +197,21 @@ int ClientHandler::manageRequest(void)
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			validateHttpHeaders();
 			Logger::info("Done parsing");
-			// std::cout << "Request Information:" << std::endl;
-			// std::cout << "URI: " << this->request.getUri() << std::endl;
-			// std::cout << "Method: " << this->request.getMethod() << std::endl;
-			// std::cout << "Query: " << this->request.getQuery() << std::endl;
-			// std::cout << "Body Content: " << this->request.getBodyContent() << std::endl;
-			// std::cout << "Content Type: " << this->request.getContentType() << std::endl;
-			// std::cout << "Content Length: " << this->request.getContentLength() << std::endl;
-			// std::cout << "Host: " << this->request.getHost() << std::endl;
-			// std::cout << "Protocol: " << this->request.getProtocol() << std::endl;
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
+			if (route.path.empty())
+			{
+				std::string locationPath;
+				locationPath = findDirectory(uri);
+				struct Route newRoute;
+				newRoute = this->configInfo.getRoute()[locationPath];
+				route = newRoute;
+				std::string newPath;
+				newPath = createPath(route, uri);
+				route.path.clear();
+				route.path = newPath;
+				Logger::debug(route.path);
+			}
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
@@ -200,18 +227,7 @@ int ClientHandler::manageRequest(void)
 				this->response = http.composeRespone();
 			}
 			else
-			{
-				if (route.path.empty())
-				{
-					std::string locationPath;
-					locationPath = findDirectory(uri);
-					struct Route newRoute;
-					newRoute = this->configInfo.getRoute()[locationPath];
-					route = newRoute;
-					route.path += uri.erase(0, 1);
-				}
 				this->response = prepareResponse(route);
-			}
 			Logger::info("Response created successfully and store in clientQueu");
 		}
 		catch (const HttpException &e)
@@ -318,15 +334,6 @@ std::string ClientHandler::retrievePage(struct Route route)
 		if (route.locSettings.find("index") != route.locSettings.end())
 			route.path += "/" + route.locSettings.find("index")->second;
 	}
-	// if (stat(route.path.c_str(), &pathStat) != 0)
-	// 	Logger::error("Failed stat: " + std::string(strerror(errno)));
-	// if (S_ISDIR(pathStat.st_mode))
-	// {
-	// 	if (route.path[route.path.length()-1] == '/')
-	// 		route.path += route.locSettings.find("index")->second;
-	// 	else
-	// 		route.path += "/index.html"; //add index in other location too
-	// }
 	body = extractContent(route.path);
 	return body;
 }
@@ -475,11 +482,7 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	}
 	else if (method == "DELETE" && route.methods.count(method) > 0)
 	{
-		std::string fileToDelete;
-		std::string fileName;
-		fileName = extraFileName(this->request.getHttpRequestLine()["request-uri"]);
-		fileToDelete = route.path + fileName;
-		body = deleteFile(fileToDelete);
+		body = deleteFile(route.path);
 		code = 204;
 	}
 	else
@@ -487,4 +490,30 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	HttpResponse http(code, body);
 	response = http.composeRespone();
 	return response;
+}
+
+
+std::ostream &operator<<(std::ostream &output, ClientHandler const &obj) {
+    // Get the HttpRequest object from the ClientHandler
+    HttpRequest request = obj.getRequest();
+
+    // Print the properties of the HttpRequest
+    output << "HTTP Request:" << std::endl;
+    output << "Method: " << request.getMethod() << std::endl;
+    output << "URI: " << request.getUri() << std::endl;
+    output << "Query: " << request.getQuery() << std::endl;
+    output << "Body Content: " << request.getBodyContent() << std::endl;
+    output << "Content Type: " << request.getContentType() << std::endl;
+    output << "Content Length: " << request.getContentLength() << std::endl;
+    output << "Host: " << request.getHost() << std::endl;
+    output << "Protocol: " << request.getProtocol() << std::endl;
+
+    // Optionally, print headers
+    std::map<std::string, std::string> headers = request.getHttpHeaders();
+    output << "Headers:" << std::endl;
+    for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+        output << it->first << ": " << it->second << std::endl;
+    }
+
+    return output;
 }

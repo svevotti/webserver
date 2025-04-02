@@ -292,11 +292,6 @@ void Webserver::createNewClient(int fd)
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
 	std::vector<pollfd> newSet = poll_sets;
-	std::cout << "size: " << newSet.size() << std::endl;
-	for (int i = 0; i < newSet.size(); i++)
-	{
-		Logger::debug(Utils::toString(newSet[i].fd));
-	}
 	InfoServer *server = matchFD(fd);
 	//printServInfo(server);
 	ClientHandler newClient(clientFd, *server);

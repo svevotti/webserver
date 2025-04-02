@@ -47,6 +47,7 @@ class ClientHandler {
 		int	retrieveResponse(void);
 		void validateHttpHeaders(void);
 		std::string findDirectory(std::string uri);
+		std::string createPath(struct Route route, std::string uri);
 		void createErrorResponseAndCleanUp(int code, std::string body, std::string message);
 	private:
 	std::string raw_data;
@@ -59,4 +60,5 @@ class ClientHandler {
 	double timeoutTime;
 };
 
+std::ostream &operator<<(std::ostream &output, ClientHandler const &obj);
 #endif
