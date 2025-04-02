@@ -67,4 +67,6 @@ class HttpRequest {
 		struct section						sectionInfo;
 };
 
+std::ostream &operator<<(std::ostream &output, HttpRequest const &request);
+
 #endif

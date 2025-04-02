@@ -36,7 +36,7 @@ std::string HttpException::extractFile(void)
 
 	if (!inputFile)
 	{
-		std::cout << this->file << std::endl;
+		// std::cout << this->file << std::endl;
 		std::cerr << "Error opening file httpexception" << std::endl;
 		return "";
 	}
