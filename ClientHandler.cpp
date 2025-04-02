@@ -37,51 +37,8 @@ double ClientHandler::getTimeOut(void) const
 }
 //Main functions
 
-// void printRoute(const Route& route)
-// {
-//     std::cout << "Route Information:" << std::endl;
-//     std::cout << "URI: " << route.uri << std::endl;
-//     std::cout << "Path: " << route.path << std::endl;
-
-//     std::cout << "Methods: ";
-//     if (route.methods.empty()) {
-//         std::cout << "None";
-//     } else {
-//         for (std::set<std::string>::const_iterator it = route.methods.begin(); it != route.methods.end(); ++it) {
-//             std::cout << *it << " "; // Dereference the iterator to get the value
-//         }
-//     }
-//     std::cout << std::endl;
-
-// 	std::cout << "Location Settings:" << std::endl;
-//     for (std::map<std::string, std::string>::const_iterator it = route.locSettings.begin(); it != route.locSettings.end(); ++it) {
-//         std::cout << "  " << it->first << ": " << it->second << std::endl;
-//     }
-
-//     std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
-// }
-
-
-std::string extractUri(std::string str)
+void ClientHandler::validateHttpHeaders(struct Route route)
 {
-	int size;
-	std::string newStr;
-	int i = 0;
-
-	size = str.size();
-	for (i = size - 1; i > 0; i--)
-	{
-		if (str[i] == '/')
-			break;
-	}
-	newStr = str.substr(0, i);
-	return newStr;
-}
-
-void ClientHandler::validateHttpHeaders(void)
-{
-	struct Route route;
-
 	std::string uri = this->request.getHttpRequestLine()["request-uri"];
 	route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
@@ -194,8 +151,8 @@ int ClientHandler::manageRequest(void)
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}
+			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
-			validateHttpHeaders();
 			Logger::info("Done parsing");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
@@ -212,6 +169,9 @@ int ClientHandler::manageRequest(void)
 				route.path = newPath;
 				Logger::debug(route.path);
 			}
+			Logger::info("Got route");
+			validateHttpHeaders(route);
+			Logger::info("Validate http request");
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
@@ -228,13 +188,14 @@ int ClientHandler::manageRequest(void)
 			}
 			else
 				this->response = prepareResponse(route);
+			Logger::info("It is static");
 			Logger::info("Response created successfully and store in clientQueu");
 		}
 		catch (const HttpException &e)
 		{
 			HttpResponse http(e.getCode(), e.getBody());
 			this->response = http.composeRespone();
-			Logger::error(e.what());
+			Logger::error(Utils::toString(e.getCode()) + " " + e.what());
 		}
 		this->totbytes = 0;
 		this->raw_data.clear();
@@ -276,37 +237,9 @@ int ClientHandler::retrieveResponse(void)
 	return 0;
 }
 
-int	searchPage(std::string path)
-{
-	FILE *folder;
-
-	folder = fopen(path.c_str(), "rb");
-	if (folder == NULL)
-		return false;
-	fclose(folder);
-	return true;
-}
-
 int ClientHandler::isCgi(std::string str)
 {
 	return false;
-}
-
-bool fileExists(std::string path)
-{
-	std::ifstream file;
-	std::string line;
-	std::string htmlFile;
-	std::string temp;
-
-	file.open(path.c_str(), std::fstream::in | std::fstream::out | std::fstream::binary);
-	if (!file)
-	{
-		Logger::error("Failed to open html file: " + std::string(strerror(errno)));
-		return (false);
-	}
-	file.close();
-	return true;
 }
 
 std::string ClientHandler::extractContent(std::string path)
@@ -328,7 +261,6 @@ std::string ClientHandler::extractContent(std::string path)
 std::string ClientHandler::retrievePage(struct Route route)
 {
 	std::string body;
-	// struct stat pathStat;
 	if (route.path.find("index") == std::string::npos)
 	{
 		if (route.locSettings.find("index") != route.locSettings.end())
@@ -426,8 +358,7 @@ std::string ClientHandler::uploadFile(std::string path)
 	}
 	close(file);
 	page = this->configInfo.getRoute()["/"];
-	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second); //to review how to extract wanted page
-	return body;
+	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second); //need to take care
 }
 
 std::string      ClientHandler::deleteFile(std::string path)
@@ -440,22 +371,6 @@ std::string      ClientHandler::deleteFile(std::string path)
 	else
 		remove(path.c_str());
 	return body;
-}
-
-std::string extraFileName(std::string str)
-{
-	std::string newStr;
-	int size;
-
-	size = str.size();
-	int i = 0;
-	for (i = size - 1; i > 0; i--)
-	{
-		if (str[i] == '/')
-			break;
-	}
-	newStr = str.substr(i);
-	return newStr;
 }
 
 std::string ClientHandler::prepareResponse(struct Route route)
@@ -490,30 +405,4 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	HttpResponse http(code, body);
 	response = http.composeRespone();
 	return response;
-}
-
-
-std::ostream &operator<<(std::ostream &output, ClientHandler const &obj) {
-    // Get the HttpRequest object from the ClientHandler
-    HttpRequest request = obj.getRequest();
-
-    // Print the properties of the HttpRequest
-    output << "HTTP Request:" << std::endl;
-    output << "Method: " << request.getMethod() << std::endl;
-    output << "URI: " << request.getUri() << std::endl;
-    output << "Query: " << request.getQuery() << std::endl;
-    output << "Body Content: " << request.getBodyContent() << std::endl;
-    output << "Content Type: " << request.getContentType() << std::endl;
-    output << "Content Length: " << request.getContentLength() << std::endl;
-    output << "Host: " << request.getHost() << std::endl;
-    output << "Protocol: " << request.getProtocol() << std::endl;
-
-    // Optionally, print headers
-    std::map<std::string, std::string> headers = request.getHttpHeaders();
-    output << "Headers:" << std::endl;
-    for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
-        output << it->first << ": " << it->second << std::endl;
-    }
-
-    return output;
 }

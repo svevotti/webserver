@@ -17,20 +17,23 @@
 
 #include "Logger.hpp"
 
-//constructor and destructor
+//Constructor and destructor
+
 ServerSockets::ServerSockets(std::string ip, std::string port)
 {
 	this->ip = ip;
 	this->port = port;
 	initSockets();
 }
-//setter and getters
+//Setter and getters
+
 int	ServerSockets::getServerSocket(void) const
 {
 	return this->fd;
 }
 
-//main functions
+//Main functions
+
 void	ServerSockets::initSockets(void)
 {
 	this->fd = createSocket();
@@ -50,7 +53,7 @@ int ServerSockets::createSocket(void)
 	int opt = 1;
 
 	Utils::ft_memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET; //flag to set iPV4 - want to also handle ipv6?
+	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	error = getaddrinfo(this->ip.c_str(), this->port.c_str(), &hints, &serverInfo);
 	if (error < 0)
@@ -73,7 +76,7 @@ int ServerSockets::createSocket(void)
 		return (-1);
 	}
 	freeaddrinfo(serverInfo);
-	if (listen(fd, 128) == -1) //128 is backlog for incoming connections. 
+	if (listen(fd, 128) == -1)
 	{
 		Logger::error("Failed listen socket: " + std::string(strerror(errno)));
 		return (-1);

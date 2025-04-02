@@ -31,34 +31,35 @@
 class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
-		int getFd(void) const;
-		HttpRequest getRequest() const;
-		std::string getResponse() const;
-		double getTime() const;
-		double getTimeOut(void) const;
-		int readData(int fd, std::string &str, int &bytes);
-		int manageRequest(void);
-		int isCgi(std::string str);
-		std::string prepareResponse(struct Route route);
-		std::string                                    retrievePage(struct Route route);
-		std::string                                       uploadFile(std::string path);
-		std::string                                          deleteFile(std::string path);
-		std::string extractContent(std::string path);
-		int	retrieveResponse(void);
-		void validateHttpHeaders(void);
+
+		int 		getFd(void) const;
+		double 		getTime(void) const;
+		double 		getTimeOut(void) const;
+		HttpRequest	getRequest(void) const;
+		std::string getResponse(void) const;
+
+		int 		manageRequest(void);
+		int 		readData(int fd, std::string &str, int &bytes);
 		std::string findDirectory(std::string uri);
 		std::string createPath(struct Route route, std::string uri);
-		void createErrorResponseAndCleanUp(int code, std::string body, std::string message);
+		void 		validateHttpHeaders(struct Route route);
+		std::string	retrievePage(struct Route route);
+		std::string extractContent(std::string path);
+		std::string uploadFile(std::string path);
+		std::string deleteFile(std::string path);
+		std::string prepareResponse(struct Route route);
+		int			retrieveResponse(void);
+		int 		isCgi(std::string str);
+
 	private:
+	int 		fd;
+	int 		totbytes;
 	std::string raw_data;
-	int totbytes;
-	int fd;
+	double		startingTime;
+	double		timeoutTime;
+	InfoServer	configInfo;
 	HttpRequest request;
 	std::string response;
-	InfoServer configInfo;
-	double startingTime;
-	double timeoutTime;
 };
 
-std::ostream &operator<<(std::ostream &output, ClientHandler const &obj);
 #endif

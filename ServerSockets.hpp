@@ -17,12 +17,14 @@
 class ServerSockets {
 	public:
 		ServerSockets(std::string ip, std::string port);
-		int	getServerSocket(void) const;
+
+		int					getServerSocket(void) const;
+
 		void				initSockets(void);
 		int					createSocket(void);
 
 	private:
-		int	fd;
+		int			fd;
 		std::string ip;
 		std::string port;
 };
