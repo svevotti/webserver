@@ -48,10 +48,10 @@ class Webserver {
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
         void                                    removeClient(std::vector<struct pollfd>::iterator it);
         void checkTime(void);
+        InfoServer*	matchFD( int fd );
 
     private:
         std::vector<InfoServer*> configInfo;
-        InfoServer configServer;
         std::vector<struct pollfd>  poll_sets;
         int            serverFd;
         std::vector<ClientHandler>  clientsList;

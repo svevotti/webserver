@@ -20,13 +20,10 @@ HttpResponse::HttpResponse(int code, std::string str)
 	//2xx is for success
 	this->mapStatusCode.insert(std::pair<int, std::string>(200, "200 OK"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(201, "201 Created"));
-	// this->mapStatusCode.insert(std::pair<int, std::string>(202, "202 Accepted"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(204, "204 No Content"));
 
 	//3xx is for redirection
 	this->mapStatusCode.insert(std::pair<int, std::string>(301, "301 Moved Permanently"));
-	// this->mapStatusCode.insert(std::pair<int, std::string>(302, "302 Found"));
-	// this->mapStatusCode.insert(std::pair<int, std::string>(304, "304 Not Modified"));
 
 	//4xxis for client error
 	this->mapStatusCode.insert(std::pair<int, std::string>(400, "400 Bad Request"));
@@ -34,13 +31,13 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(405, "405 Method Not Allowed"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(409, "409 Conflict"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(413, "413 Payload Too Large"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(415, "415 Unsupported Media Type"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(415, "415 Unsupported Media Type")); //ask Simona if she can make it :)
 
 	//5xx for server error
 	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(501, "501 Not Implemented"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(505, "HTTP Version Not Supported")); //ask Simona if she can make it :)
 	
 }
 
@@ -53,10 +50,9 @@ std::string HttpResponse::composeRespone(void)
 
 	statusLine = generateStatusLine(this->statusCode);
 	response += statusLine;
-	headers = generateHttpHeaders(); //dynamic assemble depending on method?
+	headers = generateHttpHeaders();
 	response += headers + "\r\n";
 	response += this->body;
-	//Logger::debug("response: " + response);
 	return response;
 }
 
@@ -80,12 +76,11 @@ std::string HttpResponse::generateHttpHeaders(void)
 
 	if (!(this->body.empty()))
 	{
-		type = verifyType(this->body); //now only html or jpeg
+		type = verifyType(this->body);
 		headers += "Content-Type: " + type + "\r\n";
 	}
-	//std::cout << this->statusCode << std::endl;
 	if (this->statusCode == 301)
-		headers += "Location: http://localhost:8080/\r\n"; 
+		headers += "Location: http://localhost:8080/\r\n"; //need to take care
 	length = Utils::toString(this->body.size());
 	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";
@@ -95,7 +90,7 @@ std::string HttpResponse::generateHttpHeaders(void)
 	return headers;
 }
 
-std::string HttpResponse::verifyType(std::string str)
+std::string HttpResponse::verifyType(std::string str) //need to take care
 {
 	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
 		return "text/html";
@@ -111,5 +106,3 @@ std::string HttpResponse::findTimeStamp(void)
 	std::string str(time);
 	return str;
 }
-
-//NOTE: headers are case insensitive, order doesnt matter

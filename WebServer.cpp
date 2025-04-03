@@ -8,16 +8,22 @@
 Webserver::Webserver(Config& file)
 {
 	this->configInfo = file.getServList();
-	std::string port = configInfo[0]->getPort();
-	std::string ip = configInfo[0]->getIP();
-	ServerSockets server(ip, port);
-
-	this->serverFd = server.getServerSocket();
+	int sizeList = this->configInfo.size();
+	for (int i = 0; i < sizeList; i++)
+	{
+		std::string port = configInfo[i]->getPort();
+		std::string ip = configInfo[i]->getIP();
+		ServerSockets server(ip, port);
+		this->serverFd = server.getServerSocket();
+		this->configInfo[i]->setFD(this->serverFd);
+	}
 	this->poll_sets.reserve(MAX);
-	if (this->serverFd > 0)
-		addServerSocketsToPoll(this->serverFd);
-	
-	std::string errorPagePath = "/www/errors";
+	for (int i = 0; i < sizeList; i++)
+	{
+		if (this->configInfo[i]->getFD() > 0)
+			addServerSocketsToPoll(this->configInfo[i]->getFD());
+	}
+	std::string errorPagePath = "/www/errors"; //need to take care of this
 	HttpException::setHtmlRootPath(errorPagePath);
 }
 
@@ -33,13 +39,12 @@ void Webserver::checkTime(void)
 	std::time_t currentTime = std::time(NULL);
 	std::vector<ClientHandler>::iterator clientIt;
 	std::vector<struct pollfd>::iterator it;
-	double keepAliveTimeout = atof(this->configInfo[0]->getSetting()["keepalive_timeout"].c_str());
 	for (it = this->poll_sets.begin(); it < this->poll_sets.end(); it++)
 	{
 		clientIt = retrieveClient(it->fd);
 		if (clientIt != this->clientsList.end())
 		{
-			if (currentTime - clientIt->getTime() > keepAliveTimeout)
+			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
 				removeClient(it);
@@ -48,12 +53,20 @@ void Webserver::checkTime(void)
 	}
 }
 // Main functions
+
 int	Webserver::startServer()
 {
 	int returnPoll;
+	int sizeList = this->configInfo.size();
 
-	if (this->serverFd < 0)
-		return -1;
+	for (int i = 0; i < sizeList; i++)
+	{
+		if (this->configInfo[i]->getFD() < 0)
+		{
+			Logger::error("Failed to create socket " + Utils::toString(this->configInfo[i]->getFD()) + " on port " + this->configInfo[i]->getPort());
+			exit(1);
+		}
+	}
 	while (1)
 	{
 		returnPoll = poll(this->poll_sets.data(), this->poll_sets.size(), 1 * 2 * 1000);
@@ -149,11 +162,28 @@ int Webserver::processClient(int fd, int event)
 }
 
 //Utils
+
 int Webserver::fdIsServerSocket(int fd)
 {
-	if (fd == this->serverFd)
-		return true;
+	int sizeList = this->configInfo.size();
+	for (int i = 0; i < sizeList; i++)
+	{
+		if (this->configInfo[i]->getFD() == fd)
+			return true;
+	}
 	return false;
+}
+
+InfoServer*	Webserver::matchFD( int fd ) {
+
+	std::vector<InfoServer*>::iterator servIt;
+
+	for(servIt = (*this).configInfo.begin(); servIt != (*this).configInfo.end(); servIt++)
+	{
+		if ((*servIt)->getFD() == fd)
+			return (*servIt);
+	}
+	return NULL;
 }
 
 int Webserver::fdIsCGI(int fd)
@@ -163,7 +193,8 @@ int Webserver::fdIsCGI(int fd)
 
 void Webserver::addServerSocketsToPoll(int fd)
 {
-    struct pollfd serverPoll[MAX];
+    struct pollfd serverPoll[1];
+
 	serverPoll[0].fd = fd;
 	serverPoll[0].events = POLLIN;
 	this->poll_sets.push_back(serverPoll[0]);
@@ -172,6 +203,7 @@ void Webserver::addServerSocketsToPoll(int fd)
 
 void Webserver::createNewClient(int fd)
 {
+	Logger::debug("New client on fd " + Utils::toString(fd));
 	socklen_t clientSize;
 	struct sockaddr_storage clientStruct;
 	struct pollfd clientPoll;
@@ -187,7 +219,9 @@ void Webserver::createNewClient(int fd)
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
-	ClientHandler newClient(clientFd, *this->configInfo[0]);
+	std::vector<pollfd> newSet = poll_sets;
+	InfoServer *server = matchFD(fd);
+	ClientHandler newClient(clientFd, *server);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }

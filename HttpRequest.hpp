@@ -28,43 +28,43 @@ class HttpRequest {
 	public:
 		HttpRequest() {};
 		HttpRequest(HttpRequest const &other);
+
 		std::map<std::string, std::string>	getHttpHeaders() const;
 		std::map<std::string, std::string>	getHttpRequestLine() const;
 		std::map<std::string, std::string>	getHttpUriQueryMap() const;
 		struct section						getHttpSection() const;
 
-		//specific getters
-		std::string getUri(void) const;
-		std::string getMethod(void) const;
-		std::string getQuery(void) const;
-		std::string getBodyContent(void) const;
-		std::string getContentType (void) const;
-		std::string getContentLength(void) const;
-		std::string getHost(void) const;
-		std::string getProtocol(void) const;
+		std::string 						getUri(void) const;
+		std::string 						getMethod(void) const;
+		std::string 						getQuery(void) const;
+		std::string 						getBodyContent(void) const;
+		std::string 						getContentType (void) const;
+		std::string 						getContentLength(void) const;
+		std::string 						getHost(void) const;
+		std::string 						getProtocol(void) const;
 
-
+		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
 		void								parseRequestLine(std::string);
+		void								exractQuery(std::string);
+		std::string							decodeQuery(std::string str);
 		void								parseHeaders(std::istringstream&);
 		void								parseBody(std::string, std::string, int);
-		void								exractQuery(std::string);
 		void								parseMultiPartBody(std::string, int);
-		struct section						extractSections(std::string, int firstB, int secondB, std::string b);
 		char								*getBoundary(const char *);
-		std::string							decodeQuery(std::string str);
-		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
+		struct section						extractSections(std::string, int firstB, int secondB, std::string b);
 		void								cleanProperties(void);
-		void								validateParsedRequest(void);
 
 	private:
-		std::string							str;
 		int									size;
+		std::string							str;
 		std::map<std::string, std::string>	requestLine;
 		std::map<std::string, std::string>	query;
 		std::map<std::string, std::string>	headers;
 		struct section						sectionInfo;
 };
+
+std::ostream &operator<<(std::ostream &output, HttpRequest const &request);
 
 #endif

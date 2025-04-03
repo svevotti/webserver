@@ -13,7 +13,6 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->requestLine = other.requestLine;
 	this->query = other.query;
 	this->headers = other.headers;
-	// this->sectionsVec = other.sectionsVec;
 	this->sectionInfo = other.sectionInfo;
 }
 // Setters and getters
@@ -82,6 +81,7 @@ std::string HttpRequest::getProtocol(void) const
 }
 
 // Main functions
+
 void HttpRequest::HttpParse(std::string str, int size)
 {
     this->str = str;
@@ -112,7 +112,7 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 
 	if (method == "POST")
 	{
-		if (contentType.find("boundary") != std::string::npos) //multi format data
+		if (contentType.find("boundary") != std::string::npos) //need to take care
 			parseMultiPartBody(buffer, size);
 		else
 		{
@@ -140,6 +140,7 @@ void HttpRequest::parseRequestLine(std::string str)
 	size_t index;
 	std::string newUri;
 
+	//make also request line in lowercase
 	index = str.find(" ");
 	if (index != std::string::npos)
 	{
@@ -157,9 +158,7 @@ void HttpRequest::parseRequestLine(std::string str)
 		if (uri.find("?") != std::string::npos)
 		{
 			newUri = uri.substr(0, uri.find("?"));
-			// uri.clear();
 			exractQuery(uri);
-			// uri = newUri;
 		}
 		this->requestLine["request-uri"] = newUri;
 	}
@@ -269,11 +268,11 @@ struct section HttpRequest::extractSections(std::string buffer, int firstB, int 
 	}
 	data.indexBinary = indexBinary+2;
 	data.body.append(buffer.c_str() + data.indexBinary, buffer.c_str() + secondB - 2);
-	// sectionsVec.push_back(data);
 	return data;
 }
 
 // Utils
+
 std::string HttpRequest::decodeQuery(std::string str)
 {
 	std::string newStr;
@@ -306,10 +305,10 @@ void HttpRequest::exractQuery(std::string str)
 	size_t i = 0;
 
 	url = str.substr(0, str.find("?"));
-	requestLine["url"] = url; //url : only url
+	requestLine["url"] = url;
 	queryString = str.substr(str.find("?") + 1, str.length() - str.find("?"));
 	std::string decodedQuery = decodeQuery(queryString);
-	requestLine["query-string"] = decodedQuery; //query-string only query
+	requestLine["query-string"] = decodedQuery;
 	while (i < decodedQuery.length())
 	{
 		while (decodedQuery[i] != '=')
@@ -374,4 +373,45 @@ void	HttpRequest::cleanProperties(void)
 	sectionInfo.body.clear();
 	sectionInfo.indexBinary = 0;
 	sectionInfo.myMap.clear();
+}
+
+std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
+    // Print the request line
+    std::map<std::string, std::string> requestLine = request.getHttpRequestLine();
+    output << "HTTP Request Line:" << std::endl;
+    for (std::map<std::string, std::string>::const_iterator it = requestLine.begin(); it != requestLine.end(); ++it) {
+        output << it->first << ": " << it->second << std::endl;
+    }
+    // Print the URI
+    output << "URI: " << request.getUri() << std::endl;
+
+    // Print the method
+    output << "Method: " << request.getMethod() << std::endl;
+
+    // Print the query
+    output << "Query: " << request.getQuery() << std::endl;
+
+    // Print the body content
+    output << "Body Content: " << request.getBodyContent() << std::endl;
+
+    // Print the content type
+    output << "Content Type: " << request.getContentType() << std::endl;
+
+    // Print the content length
+    output << "Content Length: " << request.getContentLength() << std::endl;
+
+    // Print the host
+    output << "Host: " << request.getHost() << std::endl;
+
+    // Print the protocol
+    output << "Protocol: " << request.getProtocol() << std::endl;
+
+    // Print the headers
+    output << "Headers:" << std::endl;
+    std::map<std::string, std::string> headers = request.getHttpHeaders();
+    for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+        output << it->first << ": " << it->second << std::endl;
+    }
+
+    return output;
 }
