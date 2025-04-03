@@ -197,7 +197,7 @@ int ClientHandler::manageRequest(void)
 				route.path.clear();
 				route.path = redirectRoute.path;
 				route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
-				HttpResponse http(301, "");
+				HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
 				http.setUriLocation(redirectRoute.uri);
 				this->response = http.composeRespone();
 			}
