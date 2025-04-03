@@ -41,6 +41,12 @@ HttpResponse::HttpResponse(int code, std::string str)
 	
 }
 
+//Setters and Getters
+void HttpResponse::setUriLocation(std::string url)
+{
+	this->redirectedUrl = url;
+}
+
 // Main functions
 std::string HttpResponse::composeRespone(void)
 {
@@ -80,7 +86,7 @@ std::string HttpResponse::generateHttpHeaders(void)
 		headers += "Content-Type: " + type + "\r\n";
 	}
 	if (this->statusCode == 301)
-		headers += "Location: http://localhost:8080/\r\n"; //need to take care
+		headers += "Location: " + this->redirectedUrl + "\r\n"; //need to take care
 	length = Utils::toString(this->body.size());
 	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";

@@ -1,4 +1,5 @@
 #include "ClientHandler.hpp"
+#include "PrintFunction.hpp"
 
 //Constructor and Destructor
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
@@ -162,12 +163,12 @@ int ClientHandler::manageRequest(void)
 				locationPath = findDirectory(uri);
 				struct Route newRoute;
 				newRoute = this->configInfo.getRoute()[locationPath];
+				printRoute(newRoute);
 				route = newRoute;
 				std::string newPath;
 				newPath = createPath(route, uri);
 				route.path.clear();
 				route.path = newPath;
-				Logger::debug(route.path);
 			}
 			Logger::info("Got route");
 			validateHttpHeaders(route);
@@ -179,11 +180,25 @@ int ClientHandler::manageRequest(void)
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())
 			{
+				struct Route redirectRoute;
+				redirectRoute = this->configInfo.getRoute()[route.locSettings.find("redirect")->second];
+				if (redirectRoute.path.empty())
+				{
+					std::string locationPath;
+					locationPath = findDirectory(route.locSettings.find("redirect")->second);
+					struct Route newRoute;
+					newRoute = this->configInfo.getRoute()[locationPath];
+					redirectRoute = newRoute;
+					std::string newPath;
+					newPath = createPath(redirectRoute, route.locSettings.find("redirect")->second);
+					redirectRoute.path.clear();
+					redirectRoute.path = newPath;
+				}
 				route.path.clear();
-				route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
-				route.path.erase(route.path.length(), 1);
-				route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
+				route.path = redirectRoute.path;
+				route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
 				HttpResponse http(301, "");
+				http.setUriLocation(redirectRoute.uri);
 				this->response = http.composeRespone();
 			}
 			else
@@ -359,6 +374,7 @@ std::string ClientHandler::uploadFile(std::string path)
 	close(file);
 	page = this->configInfo.getRoute()["/"];
 	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second); //need to take care
+	return body;
 }
 
 std::string      ClientHandler::deleteFile(std::string path)
@@ -385,10 +401,7 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	if (method == "GET" && route.methods.count(method) > 0)
 	{
 		body = retrievePage(route);
-		if (route.locSettings.find("redirect") != route.locSettings.end())
-			code = 301;
-		else
-			code = 200;
+		code = 200;
 	}
 	else if (method == "POST" && route.methods.count(method) > 0)
 	{
