@@ -1,0 +1,29 @@
+tests with curl
+
+GET request
+
+curl -v http://localhost:8080 (homepage)--> 200
+curl -v http://localhost:8080/about (about page) -->200
+curl -v http://localhost:8080/uploads (static upload page) -->200
+curl -v http://localhost:8080/ciao (404 not found page) -->404
+curl -v -L http://localhost:8080/old-page (redirection, should see 301 first and then 200). in the configuration need to write "/" as redirect (not /static as it is now)
+
+curl -v -o downloaded_image.jpg http://localhost:8080/upload/image.jpg (should see downloaded_image in webserver folder)
+curl -v -o downloaded_image.jpg http://localhost:8080/upload/image.jpg (if image.jpg doesn't exist, not found I guess)
+
+POST request (static)
+curl -v -X POST -F "file=@./image.jpg" http://localhost:8080/upload (success)
+curl -v -X POST -F "file=@./image.jpg" http://localhost:8080/upload (if already store it, it should be conflict)
+curl -v -X POST -F "file=@./image.jpg" http://localhost:8080 (fail)
+
+DELETE request
+curl -v -X DELETE http://localhost:8080/upload/image.jpg (success)
+curl -v -X DELETE http://localhost:8080/upload/image.jpg (after success, not found)
+curl -v -X DELETE http://localhost:8080/uploads/index.html (failure)
+
+you can also test on the web browser
+http://localhost:8080 and then click on the pages (only the one we know provides a static page/static upload)
+
+siege -c255 -t1m http://localhost:8080 --> availability 99.4++ and failure possibly zero
+255 is the max to test with siege by default. it can increase in the siege configuration file\
+while doing siege, you should try to perform other requests.

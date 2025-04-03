@@ -17,3 +17,4 @@
 5) it any other upload comes in, throw not supported/implemented
 	=> if (contentType.find("boundary") != std::string::npos)
 6) make sure also the requestline is in lowercase for consistency
+7) create tests
