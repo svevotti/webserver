@@ -1,0 +1,17 @@
+TODO_SIMONA
+
+1. Simplify CGI initialization and remove superfluous functions
+
+2. Add code to use the php script
+
+3. Fix how we get script path (so far hardcoded)
+
+4. Break handleCGIOutput
+
+5. understand why so many breaks in DispatchEvents
+
+6. Check the headers are right in the output
+
+7. CHeck if I can remove the return of the iterator in DispAtchEvents Loop
+
+8. Perfect dispatchevents and take out iterator if possible

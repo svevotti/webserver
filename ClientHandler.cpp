@@ -29,6 +29,21 @@ double ClientHandler::getTime() const
 {
 	return this->startingTime;
 }
+
+//*** ADDED BY SIMONA */
+void ClientHandler::setResponse(const std::string& resp) 
+{
+    this->response = resp;
+}
+
+// FOR TESTING  - to be removed later
+std::string ClientHandler::getRawData() const 
+{
+    return raw_data;
+}
+//*** END OF BIT ADDED BY SIMONA */
+
+
 //Main functions
 
 void printRoute(const Route& route)
@@ -182,7 +197,7 @@ int ClientHandler::manageRequest(void)
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
-				return 0;
+				return 3;
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())
 			{
@@ -206,7 +221,7 @@ int ClientHandler::manageRequest(void)
 				}
 				this->response = prepareResponse(route);
 			}
-			Logger::info("Response created successfully and store in clientQueu");
+			Logger::info("Response created successfully and store in clientQueue");
 		}
 		catch (const HttpException &e)
 		{
@@ -265,9 +280,25 @@ int	searchPage(std::string path)
 	return true;
 }
 
+// IN PROGRESS
 int ClientHandler::isCgi(std::string str)
 {
-	return false;
+	std::map<std::string, Route> routes = configInfo.getRoute();
+    Route cgiRoute = configInfo.getCGI();
+    std::map<std::string, Route>::const_iterator routeIt = routes.find(findDirectory(str));
+    if (routeIt != routes.end()) 
+	{
+        if (routeIt->second.locSettings.find("cgi") != routeIt->second.locSettings.end() ||
+            str.find(".py") != std::string::npos || str == "/upload") 
+		{
+            return true;
+        }
+    }
+    if (!cgiRoute.uri.empty() && str.find(cgiRoute.uri) == 0) // Check if URI starts with CGI path
+	{ 
+        return true;
+    }
+    return false;
 }
 
 bool fileExists(std::string path)
@@ -482,3 +513,4 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	response = http.composeRespone();
 	return response;
 }
+

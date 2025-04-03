@@ -28,8 +28,12 @@
 
 #define BUFFER 1024
 
+class Webserver; // Forward declaration for friend - needed for confinginfo passing to CGI
+
 class ClientHandler {
+
 	public:
+
 		ClientHandler(int fd, InfoServer &configInfo);
 		int getFd(void) const;
 		HttpRequest getRequest() const;
@@ -47,14 +51,21 @@ class ClientHandler {
 		void validateHttpHeaders(void);
 		std::string findDirectory(std::string uri);
 		void createErrorResponseAndCleanUp(int code, std::string body, std::string message);
+		std::string getRawData() const; // FOR TESTING - to be removed later 
+		void setResponse(const std::string& resp); // added by Simona
+	
 	private:
-	std::string raw_data;
-	int totbytes;
-	int fd;
-	HttpRequest request;
-	std::string response;
-	InfoServer configInfo;
-	double startingTime;
+
+		std::string raw_data;
+		int totbytes;
+		int fd;
+		HttpRequest request;
+		std::string response;
+		InfoServer configInfo;
+		double startingTime;
+
+		friend class Webserver; // needed for confinginfo passing to CGI
 };
 
 #endif
+

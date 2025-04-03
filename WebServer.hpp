@@ -8,6 +8,7 @@
 #include "HttpException.hpp"
 #include "ClientHandler.hpp"
 #include "Config.hpp"
+#include "CGIHandler.hpp" // Simona added this include
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +47,10 @@ class Webserver {
         int                                     processClient(int fd, int event);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
-        void                                    removeClient(std::vector<struct pollfd>::iterator it);
+        // OLD VERSION (commented out by Simona) -- no return
+         void                                    removeClient(std::vector<struct pollfd>::iterator it);
+        // NEW VERSION -- with return
+        //std::vector<struct pollfd>::iterator removeClient(std::vector<struct pollfd>::iterator it); // This way Simona can use it too for CGI stuff
         void checkTime(void);
 
     private:
@@ -55,6 +59,7 @@ class Webserver {
         std::vector<struct pollfd>  poll_sets;
         int            serverFd;
         std::vector<ClientHandler>  clientsList;
+        CGIHandler cgiHandler; // Added by Simona -- has to be here for processClient to use it
 
 };
 #endif

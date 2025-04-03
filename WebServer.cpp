@@ -71,64 +71,98 @@ int	Webserver::startServer()
 	return 0;
 }
 
+// Updated by Simona (CGI plus more logs and a couple of flags)
 void Webserver::dispatchEvents()
 {
-	std::vector<struct pollfd>::iterator it;
-	int result;
+    std::vector<struct pollfd>::iterator it = poll_sets.begin();
 
-    for (it = poll_sets.begin(); it != poll_sets.end();) 
+    Logger::debug("Starting dispatchEvents with " + Utils::toString(poll_sets.size()) + " FDs");
+    
+    while (it != poll_sets.end()) // Simona: Switched to while loop (easier for Simo)
     {
-		Logger::debug("Client: " + Utils::toString(it->fd));
-		result = 0;
+        Logger::debug("Processing FD: " + Utils::toString(it->fd)); // updated message
+
+        //Simona: Moved FD type-checks outside event blocks (to keep function shorter)
+        bool isServer = fdIsServerSocket(it->fd);
+        bool isCGI = !isServer && fdIsCGI(it->fd);
+
+        int fd = it->fd; // Simona: Stored fd to avoid repeated dereferencing, safer post-erase
+
         if (it->revents & POLLIN)
         {
-			if (fdIsServerSocket(it->fd) == true)
-				createNewClient(it->fd);
-			else if (fdIsCGI(it->fd) == true)
-			{
-				Logger::info("Start CGI logic here");
-			}
-			else
-			{
-				result = processClient(it->fd, READ);
-				if (result == DISCONNECTED)
-				{
-					removeClient(it);
-                    return ;
-				}
-				else if (result == 2)
-					it->events = POLLOUT;
-			}
+            if (isServer) 
+            { 
+                createNewClient(fd); 
+                break; 
+            }
+            if (isCGI) 
+            { 
+                Logger::info("Processing CGI read: " + Utils::toString(fd)); 
+                cgiHandler.handleCGIOutput(fd, poll_sets, clientsList); 
+                break; 
+            }
+            int result = processClient(fd, READ);
+            if (result == DISCONNECTED) 
+            { 
+                removeClient(it); 
+                break; 
+            }
+            if (result == 2) 
+                it->events = POLLOUT; 
+            ++it;
         }
-		else if (it->revents & POLLOUT)
-		{
-			if (processClient(it->fd, WRITE) == -1)
-			{
-				Logger::error("Something went wrong with send - don't know the meaning of it yet");
-			}
-			it->events = POLLIN;
-		}
-		else if (it->revents & POLLERR)
-		{
-			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
-			removeClient(it);
-			return;
-		}
-		else if (it->revents & POLLHUP)
-		{
-			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
-			removeClient(it);
-			return;
-		}
-		else if (it->revents & POLLNVAL)
-		{
-			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
-			removeClient(it);
-			return;
-		}
-		it++;
-	}
+        else if (it->revents & POLLOUT)
+        {
+            if (isCGI) 
+            {
+                Logger::info("Processing CGI write: " + Utils::toString(fd)); 
+                cgiHandler.handleCGIWrite(fd, poll_sets); 
+                break; 
+            }
+            int result = processClient(fd, WRITE);
+            if (result == -1) 
+            { 
+                Logger::error("Send failed for client FD " + Utils::toString(fd)); 
+                removeClient(it); 
+                break; 
+            }
+            it->events = POLLIN;
+            ++it;
+        }
+        else if (it->revents & POLLERR) //perhaps later from here on in a separate function
+        {
+            Logger::error("POLLERR on " + std::string(isCGI ? "CGI" : "client") + " FD " + Utils::toString(fd));
+            if (isCGI) 
+                cgiHandler.handleCGIError(fd, poll_sets, clientsList);
+            else removeClient(it);
+            break;
+        }
+        else if (it->revents & POLLHUP)
+        {
+            Logger::info("POLLHUP on " + std::string(isCGI ? "CGI" : "client") + " FD " + Utils::toString(fd) + (isCGI ? "" : ": client disconnected"));
+            if (isCGI) 
+                cgiHandler.handleCGIHangup(fd, poll_sets, clientsList);
+            else 
+                removeClient(it);
+            break;
+        }
+        else if (it->revents & POLLNVAL)
+        {
+            Logger::error("POLLNVAL on FD " + Utils::toString(fd) + ": invalid FD");
+            if (isCGI) 
+                cgiHandler.handleCGIError(fd, poll_sets, clientsList);
+            else if (retrieveClient(fd) != clientsList.end()) // Simona: Added check
+                removeClient(it); 
+            else 
+                poll_sets.erase(it); // Simona: Added fallback for non-client FDs
+            break;
+        }
+        else
+            ++it;
+    }
+    Logger::debug("Finished dispatchEvents with " + Utils::toString(poll_sets.size()) + " FDs remaining");
 }
+       
 
 int Webserver::processClient(int fd, int event)
 {
@@ -142,13 +176,24 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
+	{
 		status = clientIt->manageRequest();
+		//***** START OF CHANGES BY SIMONA *****//
+		if (status == 3 && clientIt->isCgi(clientIt->getRequest().getHttpRequestLine()["request-uri"]))
+        {
+			Logger::info("Processing CGI read for FD " + Utils::toString(fd));
+            // Using friend access to pass configInfo to CGIHandler
+            cgiHandler.startCGI(*clientIt, clientIt->getRawData(), clientIt->configInfo, poll_sets);
+            return 0; // CGI is being processed
+        }
+		//**** END OF CHANGES BY SIMONA ****//
+	}
 	else
 		status = clientIt->retrieveResponse();
 	return status;
 }
 
-//Utils
+// Utils
 int Webserver::fdIsServerSocket(int fd)
 {
 	if (fd == this->serverFd)
@@ -156,9 +201,17 @@ int Webserver::fdIsServerSocket(int fd)
 	return false;
 }
 
+// Updated by Simona
 int Webserver::fdIsCGI(int fd)
 {
-	return false;
+	std::vector<CGITracker>::iterator it;
+    for (it = cgiHandler.getCGIQueue().begin(); it != cgiHandler.getCGIQueue().end(); ++it)
+    {
+        if (it->pipeFd == fd || it->cgi->getInPipeWriteFd() == fd ||
+            it->cgi->getOutPipeReadFd() == fd || it->cgi->getErrPipeReadFd() == fd)
+            return true;
+    }
+    return false;
 }
 
 void Webserver::addServerSocketsToPoll(int fd)
@@ -215,10 +268,24 @@ void Webserver::closeSockets()
 	}
 }
 
+// SVEVA's ORIGINAL VERSION (works well too)
+// void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
+// {
+//	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
+//	close(it->fd);
+//	this->clientsList.erase(retrieveClient(it->fd));
+//	this->poll_sets.erase(it);
+//}
+
+// Updated version by Simona (more logs and safety checks)
+// - added a check before erasing from clientsList to avoid crashes if the FD isn’t found
+// - extra logs
 void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
-	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
-	close(it->fd);
-	this->clientsList.erase(retrieveClient(it->fd));
-	this->poll_sets.erase(it);
+    Logger::info("Removing client FD " + Utils::toString(it->fd));
+    close(it->fd);
+    std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
+    if (clientIt != clientsList.end())
+        clientsList.erase(clientIt);
+    poll_sets.erase(it);
 }

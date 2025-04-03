@@ -15,8 +15,10 @@ $fortunes = [
     "Your creativity will lead you to new opportunities.",
     "A friend will bring you unexpected joy soon.",
     "The best is yet to come - stay optimistic.",
-    "You will soon pass a very cool version of Webserve and mark it as outstanding.",
-    "The future is open."
+    "You will soon pass a very cool version of Webserv and mark it as outstanding.",
+    "No idea. The future is open.",
+    "You will smoke weed soon.",
+    "A big rock may try to catch you in the following days. Don't ask why."
 ];
 
 // Get a random fortune
