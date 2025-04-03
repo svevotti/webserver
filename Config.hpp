@@ -14,19 +14,24 @@
 class Config {
 	private:
 		std::vector<InfoServer*>	_servlist;
-		bool parseConfigFile(const std::string &configFile);
-		bool	parseServer(std::istream &conf);
-		bool	parseLocation(std::istream &conf, InfoServer *server, const std::string location);
-		bool	trimLine(std::string& line);
+		bool						parseConfigFile(const std::string &configFile);
+		bool						parseServer(std::istream &conf);
+		bool						parseLocation(std::istream &conf, InfoServer *server, const std::string location);
+		bool						trimLine(std::string& line);
+		int							_servcount;
+		Config( const Config& copy);
+		Config& operator=(const Config& copy);
 
 	public:
 		Config( const std::string& configFile);
-		// Config( const Config& copy);
-		// Config& operator=(const Config& copy);
 		~Config();
 		std::set<std::string>	parseMethods(std::string method_list);
+		bool	ft_validServer( void );
+		//InfoServer*	matchFD( int fd ); Not needed, commented for now JIC, will delete after everything confirmed to work
 
 		void	setServerList( const std::vector<InfoServer*> servlist );
+
+		int							getServCount( void ) const;
 		std::vector<InfoServer*>	getServList( void ) const;
 };
 

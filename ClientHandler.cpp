@@ -89,6 +89,16 @@ std::string ClientHandler::findDirectory(std::string uri)
 	route = this->configInfo.getRoute()[uri];
 	if (route.path.empty())
 	{
+		index = uri.find(".");
+		if (index != std::string::npos)
+		{
+			index = uri.find_last_of("/");
+			uri = uri.substr(0, index);
+			std::cout << uri << std::endl;
+			route = this->configInfo.getRoute()[uri];
+			if (!route.path.empty())
+				return uri;
+		}
 		while (uri.size() > 1)
 		{
 			index = uri.find_last_of("/");
@@ -155,6 +165,7 @@ int ClientHandler::manageRequest(void)
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
+
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (route.path.empty())

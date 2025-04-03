@@ -5,19 +5,26 @@ InfoServer::InfoServer( void ) {
 }
 
 // //Copy constructor
-// InfoServer::InfoServer( const InfoServer& copy) {
-// 	*this = copy;
-// }
+InfoServer::InfoServer( const InfoServer& copy) {
+	*this = copy;
+}
 
 //Equal operator
-// InfoServer&	InfoServer::operator=( const InfoServer& copy) {
-// 	if (this != &copy)
-// 	{
-// 		return (*this);
-// 	}
 
-// 	return (*this);
-// }
+InfoServer&	InfoServer::operator=( const InfoServer& copy) {
+	if (this != &copy)
+	{
+		_port = copy.getPort();
+		_ip = copy.getIP();
+		_root = copy.getRoot();
+		_index = copy.getIndex();
+		_cgi = copy.getCGI();
+		_settings = copy.getSetting();
+		_routes = copy.getRoute();
+	}
+
+	return (*this);
+}
 
 //Deconstructor
 InfoServer::~InfoServer() {
@@ -124,3 +131,4 @@ bool	InfoServer::isIPValid( std::string ip ) {
 		return false;
 	return true;
 }
+
