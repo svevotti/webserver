@@ -52,6 +52,27 @@
 		"tuple": "cpp",
 		"typeinfo": "cpp",
 		"variant": "cpp",
-		"system_error": "cpp"
+		"system_error": "cpp",
+		"atomic": "cpp",
+		"bit": "cpp",
+		"*.tcc": "cpp",
+		"compare": "cpp",
+		"concepts": "cpp",
+		"set": "cpp",
+		"exception": "cpp",
+		"algorithm": "cpp",
+		"functional": "cpp",
+		"iterator": "cpp",
+		"memory": "cpp",
+		"memory_resource": "cpp",
+		"numeric": "cpp",
+		"random": "cpp",
+		"type_traits": "cpp",
+		"utility": "cpp",
+		"numbers": "cpp",
+		"ranges": "cpp",
+		"span": "cpp",
+		"sstream": "cpp",
+		"cinttypes": "cpp"
 	}
 }

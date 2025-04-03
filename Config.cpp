@@ -6,15 +6,23 @@
 // 	*this = copy;
 // }
 
-// //Equal operator
-// Config&	Config::operator=( const Config& copy) {
-// 	if (this != &copy)
-// 	{
-// 		return (*this);
-// 	}
-
-// 	return (*this);
-// }
+//Equal operator
+Config&	Config::operator=( const Config& copy) {
+	if (this != &copy)
+	{
+		_servcount = copy.getServCount();
+		std::vector<InfoServer*> server;
+		server = copy.getServList();
+		std::vector<InfoServer*>::iterator				servIt;
+		for (servIt = server.begin(); servIt != server.end(); servIt++)
+		{
+			InfoServer *new_server= new InfoServer[_servcount];
+			new_server = (*servIt);
+			_servlist.push_back(new_server);
+		}
+	}
+ 	return (*this);
+}
 
 //Deconstructor
 Config::~Config() {
@@ -38,6 +46,54 @@ std::vector<InfoServer*>	Config::getServList( void ) const {
 	return (_servlist);
 }
 
+int	Config::getServCount( void ) const {
+	return (_servcount);
+}
+
+
+// InfoServer*	Config::matchFD( int fd ) {
+
+// 	std::vector<InfoServer*>::iterator					servIt;
+// 	std::vector<InfoServer*>							server;
+
+// 	server = (*this).getServList();
+// 	for(servIt = server.begin(); servIt != server.end(); servIt++)
+// 	{
+// 		if ((*servIt)->getFD() == fd)
+// 			return (*servIt);
+// 	}
+// 	return NULL;
+// }
+
+bool	Config::ft_validServer( void )
+{
+	std::vector<InfoServer*>::iterator					servIt;
+	std::vector<InfoServer*>							server;
+	std::set<std::string>								s_port;
+	std::pair<std::set<std::string>::iterator, bool>	inserted;
+
+	server = (*this).getServList();
+	if (server.empty())
+	{
+		std::cout << "Error! No server was properly parsed!" << std::endl;
+		return false;
+	}
+	for(servIt = server.begin(); servIt != server.end(); servIt++)
+	{
+		inserted = s_port.insert((*servIt)->getPort());
+		if (!inserted.second)
+		{
+			std::cout << "Error, two servers have the same port!" << std::endl;
+			return false;
+		}
+	}
+	if ((int) s_port.size() != _servcount)
+	{
+		std::cout << "Error, not all servers were parsed!" << std::endl;
+		return false;
+	}
+	return true;
+}
 
 std::set<std::string>	Config::parseMethods(std::string method_list)
 {
@@ -57,6 +113,7 @@ std::set<std::string>	Config::parseMethods(std::string method_list)
 		methods.insert(new_method);
 		pos = leftover.find(" ");
 	}
+	methods.insert(leftover);
 	return methods;
 }
 
@@ -77,16 +134,25 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 
 		if (line == "}") //end of block
 		{
-			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
+			if (route.uri == "/old-page") //This probably will be changed
 			{
-				if (location == "/cgi-bin/")
-					server->setCGI(route);
 				server->setRoutes(route.uri, route);
 				return true;
 			}
-			else if (route.uri == "/old-page/") //This probably will be removed
+			if (route.path.empty())
 			{
-				server->setRoutes(route.path, route);
+				std::map<std::string, std::string> settingMap;
+				settingMap = server->getSetting();
+				if (route.internal)
+					route.path =("." + settingMap["error_path"] + route.uri);
+				else
+				route.path =("." + settingMap["root"] + route.uri);
+			}
+			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
+			{
+				if (location == "/cgi-bin")
+					server->setCGI(route);
+				server->setRoutes(route.uri, route);
 				return true;
 			}
 			std::cout << "Error is in " << location << std::endl;
@@ -137,6 +203,7 @@ bool	Config::parseServer(std::istream &conf)
 				_servlist.push_back(server);
 				return true;
 			}
+			delete server;
 			return false; //Check if memory is lost and I need to add a delete here
 		}
 		else if (line.find("location ") != std::string::npos) //If we find a location block, we need to parse it
@@ -144,6 +211,9 @@ bool	Config::parseServer(std::istream &conf)
 			line = line.substr(line.find("location ") + 9); //Remove the "location " bit of the line
 			size_t n = line.find(" ");
 			std::string	location = line.substr(0, n);
+			//Remove last slash
+			if (location != "/" && location[location.size() - 1] == '/')
+				location = location.substr(0, location.size() - 1);
 			location_ok = parseLocation(conf, server, location);
 			if (location_ok == false)
 				std::cerr << "Error in location block!" << std::endl;
@@ -161,7 +231,7 @@ bool	Config::parseServer(std::istream &conf)
 			server->setSetting(key, value);
 			if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
 			{
-				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535)
+				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
 					server->setPort(value); //Saved as string, change to int?
 				else
 					std::cerr << "Incorrect port value: " << value << std::endl;
@@ -181,6 +251,7 @@ bool	Config::parseServer(std::istream &conf)
 		}
 	}
 	std::cout << "This should not have happened (parseServer)" << std::endl;
+	delete server;
 	return false; //We should never get here, so if we do, something is messed up somewhere
 }
 
@@ -214,6 +285,7 @@ bool	Config::parseConfigFile(const std::string &configFile)
 	}
 
 	//reads line by line, extracts all parameters and location blocks
+	_servcount = 0;
 	while (std::getline(conf, line))
 	{
 		if (!trimLine(line))
@@ -221,12 +293,10 @@ bool	Config::parseConfigFile(const std::string &configFile)
 
 		if (line.find("server ") != std::string::npos)
 		{
+			_servcount++;
 			started_server = parseServer(conf);
 			if (started_server == false)
-			{
-				std::cout << "Something went wrong in parseServer" <<std::endl;
-				return false;
-			}
+				std::cout << "Something went wrong in parseServer, skipped one server" <<std::endl;
 		}
 	// 	//Look for info, locations have space separators, while parameters have \t
 	// 	size_t pos = line.find('\t');
