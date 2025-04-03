@@ -370,6 +370,7 @@ std::string ClientHandler::uploadFile(std::string path)
 	close(file);
 	page = this->configInfo.getRoute()["/"];
 	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second); //need to take care
+	return body;
 }
 
 std::string      ClientHandler::deleteFile(std::string path)
