@@ -100,7 +100,7 @@ int main(void)
 	Config	configuration("default.conf");
 
 	// test(configuration);
-	if (configuration.getServList().size() > 0)
+	if (configuration.ft_validServer())
 	{
 		Webserver 	server(configuration);
 		if (server.startServer() == -1)
