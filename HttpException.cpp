@@ -36,8 +36,7 @@ std::string HttpException::extractFile(void)
 
 	if (!inputFile)
 	{
-		// std::cout << this->file << std::endl;
-		std::cerr << "Error opening file httpexception" << std::endl;
+		// std::cerr << "Error opening file httpexception" << std::endl;
 		return "";
 	}
 	inputFile.seekg(0, std::ios::end);
@@ -46,7 +45,7 @@ std::string HttpException::extractFile(void)
 	std::string html; 
 	html.resize(size);
 	if (!(inputFile.read(&html[0], size)))
-		std::cerr << "Error reading file." << std::endl;
+		return"";
 	inputFile.close();
 	return html;
 }

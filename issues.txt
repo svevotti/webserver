@@ -1,0 +1,19 @@
+1) correctly set up http header location for redirection
+	=> if (this->statusCode == 301)
+			headers += "Location: http://localhost:8080/\r\n";
+
+2) implement logic to extract correct content type
+	=> std::string HttpResponse::verifyType(std::string str)
+		{
+			if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
+				return "text/html";
+			return "image/jpeg";
+		}
+
+3) get info from config file, take in mind each server has different error path(?)
+	=> std::string errorPagePath = "/www/errors";
+4) maybe it is fine
+	=> body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second);
+5) it any other upload comes in, throw not supported/implemented
+	=> if (contentType.find("boundary") != std::string::npos)
+6) make sure also the requestline is in lowercase for consistency
