@@ -71,6 +71,7 @@ bool	Config::ft_validServer( void )
 	std::vector<InfoServer*>							server;
 	std::set<std::string>								s_port;
 	std::pair<std::set<std::string>::iterator, bool>	inserted;
+	std::string											name_port;
 
 	server = (*this).getServList();
 	if (server.empty())
@@ -80,7 +81,8 @@ bool	Config::ft_validServer( void )
 	}
 	for(servIt = server.begin(); servIt != server.end(); servIt++)
 	{
-		inserted = s_port.insert((*servIt)->getPort());
+		name_port = (*servIt)->getIP() + (*servIt)->getPort();
+		inserted = s_port.insert(name_port);
 		if (!inserted.second)
 		{
 			std::cout << "Error, two servers have the same port!" << std::endl;
