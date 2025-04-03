@@ -1,6 +1,6 @@
 #include <sys/socket.h>
 #include <iostream>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -99,7 +99,6 @@ int main(void)
 {
 	Config	configuration("default.conf");
 
-	// test(configuration);
 	if (configuration.ft_validServer())
 	{
 		Webserver 	server(configuration);

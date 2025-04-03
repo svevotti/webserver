@@ -10,8 +10,16 @@
 Config&	Config::operator=( const Config& copy) {
 	if (this != &copy)
 	{
-		_servlist = copy.getServList();
 		_servcount = copy.getServCount();
+		std::vector<InfoServer*> server;
+		server = copy.getServList();
+		std::vector<InfoServer*>::iterator				servIt;
+		for (servIt = server.begin(); servIt != server.end(); servIt++)
+		{
+			InfoServer *new_server= new InfoServer[_servcount];
+			new_server = (*servIt);
+			_servlist.push_back(new_server);
+		}
 	}
  	return (*this);
 }
@@ -128,7 +136,7 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 		{
 			if (route.uri == "/old-page") //This probably will be changed
 			{
-				server->setRoutes(route.path, route);
+				server->setRoutes(route.uri, route);
 				return true;
 			}
 			if (route.path.empty())
@@ -144,7 +152,7 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 			{
 				if (location == "/cgi-bin")
 					server->setCGI(route);
-				server->setRoutes(route.path, route);
+				server->setRoutes(route.uri, route);
 				return true;
 			}
 			std::cout << "Error is in " << location << std::endl;
@@ -203,6 +211,9 @@ bool	Config::parseServer(std::istream &conf)
 			line = line.substr(line.find("location ") + 9); //Remove the "location " bit of the line
 			size_t n = line.find(" ");
 			std::string	location = line.substr(0, n);
+			//Remove last slash
+			if (location != "/" && location[location.size() - 1] == '/')
+				location = location.substr(0, location.size() - 1);
 			location_ok = parseLocation(conf, server, location);
 			if (location_ok == false)
 				std::cerr << "Error in location block!" << std::endl;

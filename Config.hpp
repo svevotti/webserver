@@ -19,11 +19,11 @@ class Config {
 		bool						parseLocation(std::istream &conf, InfoServer *server, const std::string location);
 		bool						trimLine(std::string& line);
 		int							_servcount;
+		Config( const Config& copy);
+		Config& operator=(const Config& copy);
 
 	public:
 		Config( const std::string& configFile);
-		// Config( const Config& copy);
-		// Config& operator=(const Config& copy);
 		~Config();
 		std::set<std::string>	parseMethods(std::string method_list);
 		bool	ft_validServer( void );

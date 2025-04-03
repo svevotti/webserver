@@ -5,9 +5,9 @@ InfoServer::InfoServer( void ) {
 }
 
 // //Copy constructor
-// InfoServer::InfoServer( const InfoServer& copy) {
-// 	*this = copy;
-// }
+InfoServer::InfoServer( const InfoServer& copy) {
+	*this = copy;
+}
 
 //Equal operator
 
