@@ -9,6 +9,8 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 	this->configInfo = configInfo;
 	this->startingTime = time(NULL);
 	this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
+	std::string errorPath = this->configInfo.getSetting()["error_path"];
+	HttpException::setHtmlRootPath(errorPath);
 }
 
 //Setters and Getters
@@ -173,7 +175,6 @@ int ClientHandler::manageRequest(void)
 				locationPath = findDirectory(uri);
 				struct Route newRoute;
 				newRoute = this->configInfo.getRoute()[locationPath];
-				printRoute(newRoute);
 				route = newRoute;
 				std::string newPath;
 				newPath = createPath(route, uri);
