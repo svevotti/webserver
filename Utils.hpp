@@ -59,6 +59,11 @@ class Utils {
 		{
 			return std::tolower(static_cast<unsigned char>(c));
 		}
+
+		static char toUpperCase(char c)
+		{
+			return std::toupper(static_cast<unsigned char>(c));
+		}
 	private:
 		Utils();		
 };

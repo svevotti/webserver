@@ -1,4 +1,5 @@
 #include "ClientHandler.hpp"
+#include "PrintFunction.hpp"
 
 //Constructor and Destructor
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
@@ -8,6 +9,8 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 	this->configInfo = configInfo;
 	this->startingTime = time(NULL);
 	this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
+	std::string errorPath = this->configInfo.getSetting()["error_path"];
+	HttpException::setHtmlRootPath(errorPath);
 }
 
 //Setters and Getters
@@ -164,10 +167,9 @@ int ClientHandler::manageRequest(void)
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
-
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
-			if (route.path.empty())
+			if (route.uri.empty())
 			{
 				std::string locationPath;
 				locationPath = findDirectory(uri);
@@ -178,7 +180,6 @@ int ClientHandler::manageRequest(void)
 				newPath = createPath(route, uri);
 				route.path.clear();
 				route.path = newPath;
-				Logger::debug(route.path);
 			}
 			Logger::info("Got route");
 			validateHttpHeaders(route);
@@ -190,11 +191,25 @@ int ClientHandler::manageRequest(void)
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())
 			{
+				struct Route redirectRoute;
+				redirectRoute = this->configInfo.getRoute()[route.locSettings.find("redirect")->second];
+				if (redirectRoute.path.empty())
+				{
+					std::string locationPath;
+					locationPath = findDirectory(route.locSettings.find("redirect")->second);
+					struct Route newRoute;
+					newRoute = this->configInfo.getRoute()[locationPath];
+					redirectRoute = newRoute;
+					std::string newPath;
+					newPath = createPath(redirectRoute, route.locSettings.find("redirect")->second);
+					redirectRoute.path.clear();
+					redirectRoute.path = newPath;
+				}
 				route.path.clear();
-				route.path = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].path;
-				route.path.erase(route.path.length(), 1);
-				route.methods = this->configInfo.getRoute()[route.locSettings.find("redirect")->second].methods;
-				HttpResponse http(301, "");
+				route.path = redirectRoute.path;
+				route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
+				HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
+				http.setUriLocation(redirectRoute.uri);
 				this->response = http.composeRespone();
 			}
 			else
@@ -397,10 +412,7 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	if (method == "GET" && route.methods.count(method) > 0)
 	{
 		body = retrievePage(route);
-		if (route.locSettings.find("redirect") != route.locSettings.end())
-			code = 301;
-		else
-			code = 200;
+		code = 200;
 	}
 	else if (method == "POST" && route.methods.count(method) > 0)
 	{
