@@ -165,10 +165,9 @@ int ClientHandler::manageRequest(void)
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
-
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
-			if (route.path.empty())
+			if (route.uri.empty())
 			{
 				std::string locationPath;
 				locationPath = findDirectory(uri);
