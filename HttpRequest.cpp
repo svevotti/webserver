@@ -145,6 +145,7 @@ void HttpRequest::parseRequestLine(std::string str)
 	if (index != std::string::npos)
 	{
 		method = str.substr(0, index);
+		std::transform(method.begin(), method.end(), method.begin(), Utils::toUpperCase);
 		this->requestLine["method"] = method;
 	}
 	else
@@ -169,6 +170,7 @@ void HttpRequest::parseRequestLine(std::string str)
 	if (index != std::string::npos)
 	{
 		protocol = str.substr(0, index);
+		std::transform(method.begin(), method.end(), method.begin(), Utils::toUpperCase);
 		requestLine["protocol"] = protocol;
 	}
 	else
