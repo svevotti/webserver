@@ -23,8 +23,6 @@ Webserver::Webserver(Config& file)
 		if (this->configInfo[i]->getFD() > 0)
 			addServerSocketsToPoll(this->configInfo[i]->getFD());
 	}
-	std::string errorPagePath = "/www/errors"; //need to take care of this
-	HttpException::setHtmlRootPath(errorPagePath);
 }
 
 Webserver::~Webserver()
