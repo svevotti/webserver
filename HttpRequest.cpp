@@ -112,9 +112,9 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 
 	if (method == "POST")
 	{
-		if (contentType.find("boundary") != std::string::npos) //need to take care
+		if (contentType.find("multipart/form-data") != std::string::npos)
 			parseMultiPartBody(buffer, size);
-		else
+		else if (contentType.find("text/plain"))
 		{
 			struct section data;
 			data.indexBinary = 0;
@@ -126,6 +126,8 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 			}
 			this->sectionInfo = data;
 		}
+		else
+			throw NotImplementedException();
 	}
 	else
 		throw BadRequestException();
