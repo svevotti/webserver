@@ -47,6 +47,10 @@ void HttpResponse::setUriLocation(std::string url)
 	this->redirectedUrl = url;
 }
 
+void HttpResponse::setContentType(std::string type)
+{
+	this->type = type;
+}
 // Main functions
 std::string HttpResponse::composeRespone(void)
 {
@@ -81,10 +85,7 @@ std::string HttpResponse::generateHttpHeaders(void)
 	std::string	timeStamp;
 
 	if (!(this->body.empty()))
-	{
-		type = verifyType(this->body);
-		headers += "Content-Type: " + type + "\r\n";
-	}
+		headers += "Content-Type: " + this->type + "\r\n";
 	if (this->statusCode == 301)
 		headers += "Location: " + this->redirectedUrl + "\r\n"; //need to take care
 	length = Utils::toString(this->body.size());
@@ -94,13 +95,6 @@ std::string HttpResponse::generateHttpHeaders(void)
 	headers += "Cache-Control: no-cache\r\n";
 	headers += "Connection: keep-alive\r\n";
 	return headers;
-}
-
-std::string HttpResponse::verifyType(std::string str) //need to take care
-{
-	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
-		return "text/html";
-	return "image/jpeg";
 }
 
 std::string HttpResponse::findTimeStamp(void)
