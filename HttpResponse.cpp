@@ -87,7 +87,6 @@ std::string HttpResponse::generateHttpHeaders(void)
 	if (!(this->body.empty()))
 	{
 		type = findType(this->body);
-		std::cout << type << std::endl;
 		headers += "Content-Type: " + type + "\r\n";
 	}
 	if (this->statusCode == 301)
