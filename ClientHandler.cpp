@@ -427,6 +427,8 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	else
 		throw MethodNotAllowedException();
 	HttpResponse http(code, body);
+	if (method == "POST")
+		http.setContentType(this->request.getContentType());
 	response = http.composeRespone();
 	return response;
 }

@@ -23,6 +23,7 @@ class HttpResponse {
 		HttpResponse(int code, std::string body);
 
 		void 		setUriLocation(std::string url);
+		void		setContentType(std::string type);
 		std::string composeRespone();
 		std::string generateStatusLine(int);
 		std::string generateHttpHeaders();
@@ -34,6 +35,7 @@ class HttpResponse {
 		std::string body;
 		std::string redirectedUrl;
 		std::map<int, std::string> mapStatusCode;
+		std::string type;
 		
 };
 
