@@ -111,10 +111,11 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	std::map<std::string, std::string>::iterator it;
 
 	if (method == "POST")
-	{
+	{	
+		Logger::debug(contentType);
 		if (contentType.find("multipart/form-data") != std::string::npos)
 			parseMultiPartBody(buffer, size);
-		else if (contentType.find("text/plain"))
+		else if (contentType.find("text/plain\r"))
 		{
 			struct section data;
 			data.indexBinary = 0;
@@ -198,7 +199,11 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 			key = line.substr(0, index);
 			if (line[line.find(":") + 1] != ' ')
 				throw BadRequestException();
-			value = line.substr(index + 2);
+			size_t indexEnd = line.find("\r");
+			if (indexEnd != std::string::npos)
+				value = line.substr(index + 2, indexEnd - index - 2);
+			else
+				throw BadRequestException();
 		}
 		else
 			throw BadRequestException();
