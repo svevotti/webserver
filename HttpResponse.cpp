@@ -47,6 +47,10 @@ void HttpResponse::setUriLocation(std::string url)
 	this->redirectedUrl = url;
 }
 
+void HttpResponse::setImageType(std::string str)
+{
+	this->extension = str;
+}
 // Main functions
 std::string HttpResponse::composeRespone(void)
 {
@@ -82,11 +86,12 @@ std::string HttpResponse::generateHttpHeaders(void)
 
 	if (!(this->body.empty()))
 	{
-		type = verifyType(this->body);
+		type = findType(this->body);
+		std::cout << type << std::endl;
 		headers += "Content-Type: " + type + "\r\n";
 	}
 	if (this->statusCode == 301)
-		headers += "Location: " + this->redirectedUrl + "\r\n"; //need to take care
+		headers += "Location: " + this->redirectedUrl + "\r\n";
 	length = Utils::toString(this->body.size());
 	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";
@@ -96,11 +101,37 @@ std::string HttpResponse::generateHttpHeaders(void)
 	return headers;
 }
 
-std::string HttpResponse::verifyType(std::string str) //need to take care
+std::string HttpResponse::findType(std::string str)
 {
+	int i = 0;
 	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
 		return "text/html";
-	return "image/jpeg";
+	std::string	extensions[7] = {"jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"};
+	for (;i < 7; i++)
+	{
+		if (extensions[i] == this->extension)
+			break;
+	}
+	switch (i)
+	{
+		case 0:
+			return "image/jpg";
+		case 1:
+			return "image/jpeg";
+		case 2:
+			return "image/png";
+		case 3:
+			return "image/gif";
+		case 4:
+			return "image/bmp";
+		case 5:
+			return "image/svg";
+		case 6:
+			return "image/webp";
+		default:
+			return "image/x-icon";
+	}
+	return "";
 }
 
 std::string HttpResponse::findTimeStamp(void)
