@@ -96,7 +96,6 @@ std::string ClientHandler::findDirectory(std::string uri)
 		{
 			index = uri.find_last_of("/");
 			uri = uri.substr(0, index);
-			std::cout << uri << std::endl;
 			route = this->configInfo.getRoute()[uri];
 			if (!route.path.empty())
 				return uri;
@@ -427,6 +426,12 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	else
 		throw MethodNotAllowedException();
 	HttpResponse http(code, body);
+	if (route.uri.find("/images") != std::string::npos)
+	{
+		std::string file;
+		file = route.path.substr(route.path.find_last_of(".") + 1);
+		http.setImageType(file);
+	}
 	response = http.composeRespone();
 	return response;
 }
