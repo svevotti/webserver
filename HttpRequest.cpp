@@ -112,21 +112,8 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 
 	if (method == "POST")
 	{	
-		Logger::debug(contentType);
 		if (contentType.find("multipart/form-data") != std::string::npos)
 			parseMultiPartBody(buffer, size);
-		else if (contentType.find("text/plain\r"))
-		{
-			struct section data;
-			data.indexBinary = 0;
-			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
-			if (bodyStart != std::string::npos)
-			{
-				bodyStart += 4;
-				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
-			}
-			this->sectionInfo = data;
-		}
 		else
 			throw NotImplementedException();
 	}
