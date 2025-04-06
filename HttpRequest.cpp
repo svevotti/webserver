@@ -67,7 +67,7 @@ std::string HttpRequest::getContentType(void) const
 
 std::string HttpRequest::getContentLength(void) const
 {
-	return findValue(this->headers, "content-length");
+	return Utils::toString(this->sectionInfo.body.length());
 }
 
 std::string HttpRequest::getHost(void) const
@@ -111,21 +111,11 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	std::map<std::string, std::string>::iterator it;
 
 	if (method == "POST")
-	{
-		if (contentType.find("boundary") != std::string::npos) //need to take care
+	{	
+		if (contentType.find("multipart/form-data") != std::string::npos)
 			parseMultiPartBody(buffer, size);
 		else
-		{
-			struct section data;
-			data.indexBinary = 0;
-			std::string::size_type bodyStart = buffer.find("\r\n\r\n");
-			if (bodyStart != std::string::npos)
-			{
-				bodyStart += 4;
-				data.body = buffer.substr(bodyStart, buffer.length() - bodyStart - 2);
-			}
-			this->sectionInfo = data;
-		}
+			throw NotImplementedException();
 	}
 	else
 		throw BadRequestException();
@@ -196,7 +186,11 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 			key = line.substr(0, index);
 			if (line[line.find(":") + 1] != ' ')
 				throw BadRequestException();
-			value = line.substr(index + 2);
+			size_t indexEnd = line.find("\r");
+			if (indexEnd != std::string::npos)
+				value = line.substr(index + 2, indexEnd - index - 2);
+			else
+				throw BadRequestException();
 		}
 		else
 			throw BadRequestException();
@@ -259,7 +253,11 @@ struct section HttpRequest::extractSections(std::string buffer, int firstB, int 
 				key = line.substr(0, index);
 				if (line[line.find(":") + 1] != ' ')
 					throw BadRequestException();
-				value = line.substr(index + 2);
+				size_t indexEnd = line.find("\r");
+				if (indexEnd != std::string::npos)
+					value = line.substr(index + 2, indexEnd - index - 2);
+				else
+					throw BadRequestException();
 			}
 			else
 				throw BadRequestException();
@@ -397,7 +395,7 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     output << "Body Content: " << request.getBodyContent() << std::endl;
 
     // Print the content type
-    output << "Content Type: " << request.getContentType() << std::endl;
+    output << "Content Type: " << request.getContentType() << ";" << std::endl;
 
     // Print the content length
     output << "Content Length: " << request.getContentLength() << std::endl;
@@ -412,7 +410,7 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     output << "Headers:" << std::endl;
     std::map<std::string, std::string> headers = request.getHttpHeaders();
     for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
-        output << it->first << ": " << it->second << std::endl;
+        output << it->first << ": " << it->second << ";" << std::endl;
     }
 
     return output;
