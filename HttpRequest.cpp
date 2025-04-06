@@ -67,7 +67,7 @@ std::string HttpRequest::getContentType(void) const
 
 std::string HttpRequest::getContentLength(void) const
 {
-	return findValue(this->headers, "content-length");
+	return Utils::toString(this->sectionInfo.body.length());
 }
 
 std::string HttpRequest::getHost(void) const
@@ -253,7 +253,11 @@ struct section HttpRequest::extractSections(std::string buffer, int firstB, int 
 				key = line.substr(0, index);
 				if (line[line.find(":") + 1] != ' ')
 					throw BadRequestException();
-				value = line.substr(index + 2);
+				size_t indexEnd = line.find("\r");
+				if (indexEnd != std::string::npos)
+					value = line.substr(index + 2, indexEnd - index - 2);
+				else
+					throw BadRequestException();
 			}
 			else
 				throw BadRequestException();
@@ -391,7 +395,7 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     output << "Body Content: " << request.getBodyContent() << std::endl;
 
     // Print the content type
-    output << "Content Type: " << request.getContentType() << std::endl;
+    output << "Content Type: " << request.getContentType() << ";" << std::endl;
 
     // Print the content length
     output << "Content Length: " << request.getContentLength() << std::endl;
@@ -406,7 +410,7 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     output << "Headers:" << std::endl;
     std::map<std::string, std::string> headers = request.getHttpHeaders();
     for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
-        output << it->first << ": " << it->second << std::endl;
+        output << it->first << ": " << it->second << ";" << std::endl;
     }
 
     return output;
