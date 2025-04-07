@@ -158,6 +158,8 @@ int ClientHandler::manageRequest(void)
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}
+			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
+				return 0;
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
