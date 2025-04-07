@@ -275,7 +275,7 @@ std::string ClientHandler::extractContent(std::string path)
 	std::string buffer;
 	buffer.resize(size);
 	if (!(inputFile.read(&buffer[0], size)))
-		throw ServiceUnavailabledException();	
+		throw ServiceUnavailabledException();
 	inputFile.close();
 	return buffer;
 }
@@ -376,25 +376,25 @@ std::string ClientHandler::uploadFile(std::string path)
 
 		// Create an ofstream object to open the file in append mode
 		std::ofstream outfile;
-	
+
 		// Open the file in append mode
 		outfile.open(filename.c_str(), std::ios::app); // std::ios::app opens the file for appending
-	
+
 		// Check if the file is open
 		if (!outfile.is_open()) {
 			std::cerr << "Error opening file for writing." << std::endl;
 			return ""; // Return with an error code
 		}
-	
+
 		// Data to append
 		std::string dataToAppend = this->request.getBodyContent();
-	
+
 		// Write data to the file
 		outfile << dataToAppend;
-	
+
 		// Close the file
 		outfile.close();
-	
+
 		std::cout << "Data appended to " << filename << " successfully." << std::endl;
 	}
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -431,7 +431,7 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	int code = 200;
 	std::string method;
 	struct Route errorPage;
-	
+
 	method = this->request.getHttpRequestLine()["method"];
 	if (method == "GET" && route.methods.count(method) > 0)
 	{

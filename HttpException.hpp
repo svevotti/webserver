@@ -76,7 +76,7 @@ class NotImplementedException : public HttpException {
 
 class ServiceUnavailabledException : public HttpException {
 	public:
-		ServiceUnavailabledException() : HttpException(503, "Service Unavailabled") {}
+		ServiceUnavailabledException() : HttpException(503, "Service Unavailable") {}
 };
 
 class HttpVersionNotSupported : public HttpException {

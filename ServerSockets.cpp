@@ -42,7 +42,7 @@ void	ServerSockets::initSockets(void)
 		Logger::error("Failed to create socket on port " + port + ": " + std::string(strerror(errno)));
 		return;
 	}
-	Logger::info("Socker on port " + port + ": successfully created");
+	Logger::info("Socket on port " + port + ": successfully created");
 }
 
 int ServerSockets::createSocket(void)
