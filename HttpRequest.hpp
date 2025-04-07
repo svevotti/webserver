@@ -42,6 +42,7 @@ class HttpRequest {
 		std::string 						getContentLength(void) const;
 		std::string 						getHost(void) const;
 		std::string 						getProtocol(void) const;
+		std::string							getRawBody(void) const;
 
 		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
@@ -63,6 +64,7 @@ class HttpRequest {
 		std::map<std::string, std::string>	query;
 		std::map<std::string, std::string>	headers;
 		struct section						sectionInfo;
+		std::string							raw_body;
 };
 
 std::ostream &operator<<(std::ostream &output, HttpRequest const &request);

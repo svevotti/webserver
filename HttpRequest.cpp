@@ -80,6 +80,11 @@ std::string HttpRequest::getProtocol(void) const
 	return findValue(this->requestLine, "protocol");
 }
 
+std::string HttpRequest::getRawBody(void) const
+{
+	return this->raw_body;
+}
+
 // Main functions
 
 void HttpRequest::HttpParse(std::string str, int size)
@@ -222,6 +227,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 		throw NotImplementedException();
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
+	this->raw_body = buffer.c_str() + firstB + blen + 4;
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
 	delete b;
 }
@@ -405,6 +411,9 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
 
     // Print the protocol
     output << "Protocol: " << request.getProtocol() << std::endl;
+
+	// Print the raw body
+	output << "Raw Body: " << request.getRawBody() << std::endl;
 
     // Print the headers
     output << "Headers:" << std::endl;
