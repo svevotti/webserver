@@ -14,6 +14,7 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->query = other.query;
 	this->headers = other.headers;
 	this->sectionInfo = other.sectionInfo;
+	this->raw_body = other.raw_body;
 }
 // Setters and getters
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
@@ -227,7 +228,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 		throw NotImplementedException();
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
-	this->raw_body = buffer.c_str() + firstB + blen + 4;
+	this->raw_body = buffer.substr(firstB);
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
 	delete b;
 }

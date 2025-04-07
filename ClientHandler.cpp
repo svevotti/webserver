@@ -162,6 +162,7 @@ int ClientHandler::manageRequest(void)
 				return 0;
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
+			std::cout << this->request << std::endl;
 			Logger::info("Done parsing");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
