@@ -432,6 +432,8 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	std::string method;
 	struct Route errorPage;
 
+	if (route.internal == true)
+		throw NotFoundException();
 	method = this->request.getHttpRequestLine()["method"];
 	if (method == "GET" && route.methods.count(method) > 0)
 	{
