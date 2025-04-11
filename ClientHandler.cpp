@@ -275,7 +275,7 @@ std::string ClientHandler::extractContent(std::string path)
 	std::string buffer;
 	buffer.resize(size);
 	if (!(inputFile.read(&buffer[0], size)))
-		throw ServiceUnavailabledException();
+		throw NotFoundException();
 	inputFile.close();
 	return buffer;
 }
@@ -341,7 +341,7 @@ int checkNameFile(std::string str, std::string path)
 	folder = opendir(path.c_str());
 	std::string convStr;
 	if (folder == NULL)
-		throw ServiceUnavailabledException();
+		throw NotFoundException();
 	while ((data = readdir(folder)))
 	{
 		convStr = data->d_name;
@@ -369,34 +369,6 @@ std::string ClientHandler::uploadFile(std::string path)
 	if (checkNameFile(fileName, path) == 1)
 		throw ConflictException();
 	path += "/" + fileName;
-	std::string contentType = this->request.getHttpHeaders()["content-type"];
-	if (contentType == "text/plain")
-	{
-		std::string filename = "text_plain.txt";
-
-		// Create an ofstream object to open the file in append mode
-		std::ofstream outfile;
-
-		// Open the file in append mode
-		outfile.open(filename.c_str(), std::ios::app); // std::ios::app opens the file for appending
-
-		// Check if the file is open
-		if (!outfile.is_open()) {
-			std::cerr << "Error opening file for writing." << std::endl;
-			return ""; // Return with an error code
-		}
-
-		// Data to append
-		std::string dataToAppend = this->request.getBodyContent();
-
-		// Write data to the file
-		outfile << dataToAppend;
-
-		// Close the file
-		outfile.close();
-
-		std::cout << "Data appended to " << filename << " successfully." << std::endl;
-	}
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 		throw BadRequestException();
@@ -453,12 +425,6 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	else
 		throw MethodNotAllowedException();
 	HttpResponse http(code, body);
-	if (route.uri.find("/images") != std::string::npos)
-	{
-		std::string file;
-		file = route.path.substr(route.path.find_last_of(".") + 1);
-		http.setImageType(file);
-	}
 	response = http.composeRespone();
 	return response;
 }
