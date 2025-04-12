@@ -148,6 +148,8 @@ int ClientHandler::manageRequest(void)
 		std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
 		try
 		{
+			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
+				return 0;
 			if (stringLowerCases.find("content-length") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
 			{
 				int start = stringLowerCases.find("content-length") + 16;
@@ -158,8 +160,15 @@ int ClientHandler::manageRequest(void)
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}
-			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
-				return 0;
+			if (stringLowerCases.find("transfer-encoding") != std::string::npos)
+			{
+				Logger::info("transfer encoding");
+				size_t emptyLines = stringLowerCases.find("\r\n\r\n");
+				if (stringLowerCases.find("0\r\n", emptyLines) == std::string::npos)
+					return 0;
+				Logger::debug(stringLowerCases.substr(stringLowerCases.find("0", emptyLines)));
+			}
+			Logger::debug(this->raw_data);
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
@@ -178,7 +187,7 @@ int ClientHandler::manageRequest(void)
 				route.path = newPath;
 			}
 			Logger::info("Got route");
-			validateHttpHeaders(route);
+			// validateHttpHeaders(route);
 			Logger::info("Validate http request");
 			if (isCgi(uri) == true)
 			{
@@ -211,6 +220,7 @@ int ClientHandler::manageRequest(void)
 			else
 				this->response = prepareResponse(route);
 			Logger::info("It is static");
+			Logger::debug(this->response);
 			Logger::info("Response created successfully and store in clientQueu");
 		}
 		catch (const HttpException &e)

@@ -135,7 +135,7 @@ void HttpRequest::parseRequestLine(std::string str)
 	size_t index;
 	std::string newUri;
 
-	//make also request line in lowercase
+	Logger::debug("start with request line");
 	index = str.find(" ");
 	if (index != std::string::npos)
 	{
@@ -144,7 +144,10 @@ void HttpRequest::parseRequestLine(std::string str)
 		this->requestLine["method"] = method;
 	}
 	else
+	{
+		Logger::error("no space after method");
 		throw BadRequestException();
+	}
 	str.erase(0, method.length()+1);
 	index = str.find(" ");
 	if (index != std::string::npos)
@@ -159,7 +162,10 @@ void HttpRequest::parseRequestLine(std::string str)
 		this->requestLine["request-uri"] = newUri;
 	}
 	else
+	{
+		Logger::error("no space after uri");
 		throw BadRequestException();
+	}
 	str.erase(0, uri.length()+1);
 	index = str.find("\r\n");
 	if (index != std::string::npos)
@@ -169,7 +175,11 @@ void HttpRequest::parseRequestLine(std::string str)
 		requestLine["protocol"] = protocol;
 	}
 	else
+	{
+		Logger::error("no \r\n after protocol");
 		throw BadRequestException();
+	}
+	Logger::debug("done with request line");
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -179,6 +189,7 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 	std::string value;
 	size_t index;
 
+	Logger::debug("start with headers");
 	while (getline(str, line))
 	{
 		key.clear();
@@ -195,7 +206,10 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 			if (indexEnd != std::string::npos)
 				value = line.substr(index + 2, indexEnd - index - 2);
 			else
+			{
+				Logger::error("no \r in headers");
 				throw BadRequestException();
+			}
 		}
 		else
 			throw BadRequestException();
@@ -203,6 +217,7 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 		std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
 		this->headers[key] = value;
 	}
+	Logger::debug("done with headers");
 }
 
 void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
