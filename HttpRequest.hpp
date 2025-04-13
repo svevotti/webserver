@@ -47,7 +47,7 @@ class HttpRequest {
 		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
-		void								parseRequestLine(std::string);
+		void								parseRequestLine(std::string str);
 		void								exractQuery(std::string);
 		std::string							decodeQuery(std::string str);
 		void								parseHeaders(std::istringstream&);

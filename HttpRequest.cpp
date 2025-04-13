@@ -14,6 +14,7 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->query = other.query;
 	this->headers = other.headers;
 	this->sectionInfo = other.sectionInfo;
+	this->raw_body = other.raw_body;
 }
 // Setters and getters
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
@@ -103,6 +104,8 @@ void HttpRequest::parseRequestHttp(void)
 	
 	parseRequestLine(inputString);
 	getline(request, line);
+	if (isspace(line[0]) != 0 || line.empty())
+		getline(request, line);
 	parseHeaders(request);
     it = headers.find("content-length");
 	if (it != headers.end())
@@ -135,7 +138,13 @@ void HttpRequest::parseRequestLine(std::string str)
 	size_t index;
 	std::string newUri;
 
-	Logger::debug("start with request line");
+	if (isspace(str[0]) != 0)
+	{
+		int i = 0;
+		while (isspace(str[i]) != 0)
+			i++;
+		str = str.substr(i);
+	}
 	index = str.find(" ");
 	if (index != std::string::npos)
 	{
@@ -167,19 +176,27 @@ void HttpRequest::parseRequestLine(std::string str)
 		throw BadRequestException();
 	}
 	str.erase(0, uri.length()+1);
-	index = str.find("\r\n");
+	index = str.find(" ");
 	if (index != std::string::npos)
 	{
-		protocol = str.substr(0, index);
-		std::transform(method.begin(), method.end(), method.begin(), Utils::toUpperCase);
-		requestLine["protocol"] = protocol;
+		index = str.find("\r\n");
+		if (index != std::string::npos)
+		{
+			protocol = str.substr(0, index);
+			std::transform(method.begin(), method.end(), method.begin(), Utils::toUpperCase);
+			this->requestLine["protocol"] = protocol;
+		}
+		else
+		{
+			Logger::error("no \r\n protocol");
+			throw BadRequestException();
+		}
 	}
 	else
 	{
-		Logger::error("no \r\n after protocol");
+		Logger::error("no space protocol");
 		throw BadRequestException();
 	}
-	Logger::debug("done with request line");
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -189,7 +206,6 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 	std::string value;
 	size_t index;
 
-	Logger::debug("start with headers");
 	while (getline(str, line))
 	{
 		key.clear();
@@ -201,7 +217,10 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 		{
 			key = line.substr(0, index);
 			if (line[line.find(":") + 1] != ' ')
+			{
+				Logger::error("no space after : in headers");
 				throw BadRequestException();
+			}
 			size_t indexEnd = line.find("\r");
 			if (indexEnd != std::string::npos)
 				value = line.substr(index + 2, indexEnd - index - 2);
@@ -212,12 +231,15 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 			}
 		}
 		else
+		{
+			Logger::error("line : " + line);
+			Logger::error("no : in headers");
 			throw BadRequestException();
+		}
 		std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
 		std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
 		this->headers[key] = value;
 	}
-	Logger::debug("done with headers");
 }
 
 void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
