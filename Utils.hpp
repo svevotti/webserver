@@ -55,6 +55,23 @@ class Utils {
 			return (temp);
 		}
 
+		static void	*ft_memchr(const void *s, int c, size_t n)
+		{
+			char	ch;
+			char	*ptr;
+
+			ch = c;
+			ptr = (char *)s;
+			while (n > 0)
+			{
+				if (*ptr == ch)
+					return (ptr);
+				ptr++;
+				n--;
+			}
+			return (NULL);
+		};
+
 		static char toLowerChar(char c)
 		{
 			return std::tolower(static_cast<unsigned char>(c));

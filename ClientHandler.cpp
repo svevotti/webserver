@@ -158,9 +158,16 @@ int ClientHandler::manageRequest(void)
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}
+			if (stringLowerCases.find("transfer-encoding") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
+			{
+				size_t endData = stringLowerCases.find("0\r\n\r\n");
+				if (endData == std::string::npos)
+					return 0;
+			}
 			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
 				return 0;
 			Logger::info("Done receving request");
+			// Logger::debug(this->raw_data);
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
 			uri = this->request.getHttpRequestLine()["request-uri"];
@@ -369,34 +376,6 @@ std::string ClientHandler::uploadFile(std::string path)
 	if (checkNameFile(fileName, path) == 1)
 		throw ConflictException();
 	path += "/" + fileName;
-	std::string contentType = this->request.getHttpHeaders()["content-type"];
-	if (contentType == "text/plain")
-	{
-		std::string filename = "text_plain.txt";
-
-		// Create an ofstream object to open the file in append mode
-		std::ofstream outfile;
-
-		// Open the file in append mode
-		outfile.open(filename.c_str(), std::ios::app); // std::ios::app opens the file for appending
-
-		// Check if the file is open
-		if (!outfile.is_open()) {
-			std::cerr << "Error opening file for writing." << std::endl;
-			return ""; // Return with an error code
-		}
-
-		// Data to append
-		std::string dataToAppend = this->request.getBodyContent();
-
-		// Write data to the file
-		outfile << dataToAppend;
-
-		// Close the file
-		outfile.close();
-
-		std::cout << "Data appended to " << filename << " successfully." << std::endl;
-	}
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 		throw BadRequestException();

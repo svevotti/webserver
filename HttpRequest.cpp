@@ -94,18 +94,66 @@ void HttpRequest::HttpParse(std::string str, int size)
     parseRequestHttp();
 }
 
+void HttpRequest::unchunkData(void)
+{
+	std::string body;
+
+	size_t index = this->str.find("\r\n\r\n");
+	std::string headers = this->str.substr(0, index);
+	// Logger::debug("headers\n" + headers + "-");
+	body = this->str.substr(index + 4);
+	// Logger::debug("body with boudary\n" + body);
+	if (body.find("-") != std::string::npos)
+	{
+		size_t boundary = body.find_first_of("\r\n");
+		body.erase(0, boundary + 2);
+		// Logger::debug("body\n" + body + "-");
+	}
+	const char *chunked = body.c_str();
+	int chunkedLength = this->str.size();
+	std::string unchunked;
+	int pos = 0;
+	while(pos < chunkedLength)
+	{
+		const char *chunkEnd = static_cast<const char*>(Utils::ft_memchr(chunked + pos, '\r', chunkedLength - pos));
+		int lengthSize = chunkEnd - (chunked + pos);
+		//std::cout << "lengthSize: " << lengthSize << std::endl;
+		if (chunkEnd == 0)
+			break;
+		int chunkSizeLength = chunkEnd - (chunked + pos);
+		std::string HexNum(chunked + pos, chunkEnd);
+		//std::cout << HexNum << std::endl;
+		size_t chunkSize = strtoul(HexNum.c_str(), nullptr, 16);
+		//std::cout << chunkSize << std::endl;
+		if (chunkSize == 0)
+			break;
+		pos += chunkSizeLength + 2;
+		unchunked.append(chunked + pos, chunkSize);
+		//Logger::debug(unchunked);
+		pos += chunkSize + 2;
+	}
+	this->str.clear();
+	this->str = headers + "\r\n\r\n" + unchunked;
+	Logger::debug("new str\n" + this->str);
+}
+
 void HttpRequest::parseRequestHttp(void)
 {
 	std::string inputString(this->str);
 	std::istringstream request(inputString);
 	std::string line;
-    std::map<std::string, std::string>::iterator it;
+    std::map<std::string, std::string>::iterator itTransfer;
+	std::map<std::string, std::string>::iterator itLength;
 	
+	Logger::debug("here");
 	parseRequestLine(inputString);
 	getline(request, line);
 	parseHeaders(request);
-    it = headers.find("content-length");
-	if (it != headers.end())
+	itTransfer = headers.find("transfer-encoding");
+	if (itTransfer != headers.end())
+		unchunkData();
+	itLength = headers.find("content-length");
+	if (itLength != headers.end() || itTransfer != headers.end())
 		parseBody(requestLine["method"], this->str, this->size);
 }
 
@@ -120,7 +168,7 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 		if (contentType.find("multipart/form-data") != std::string::npos)
 			parseMultiPartBody(buffer, size);
 		else
-			throw NotImplementedException();
+			return;
 	}
 	else
 		throw BadRequestException();

@@ -48,6 +48,7 @@ class HttpRequest {
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
 		void								parseRequestLine(std::string);
+		void 								unchunkData(void);
 		void								exractQuery(std::string);
 		std::string							decodeQuery(std::string str);
 		void								parseHeaders(std::istringstream&);
