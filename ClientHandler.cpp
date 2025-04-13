@@ -167,9 +167,11 @@ int ClientHandler::manageRequest(void)
 			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
 				return 0;
 			Logger::info("Done receving request");
-			// Logger::debug(this->raw_data);
+			Logger::debug(this->raw_data);
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
+			std::cout << this->request << std::endl;
+			Logger::info("Done reading the request parsed");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (route.uri.empty())
@@ -366,16 +368,31 @@ std::string ClientHandler::uploadFile(std::string path)
 	std::string binaryBody;
 	struct section sectionBody;
 	struct Route page;
+	std::string fileName;
 
 	sectionBody = request.getHttpSection();
 	headersBody = sectionBody.myMap;
 	binaryBody = sectionBody.body;
-
-	std::string fileName = getFileName(headersBody);
-	std::string fileType = getFileType(headersBody);
+	if (binaryBody.empty())
+	{
+		fileName = "file";
+		std::string type = this->request.getHttpHeaders()["content-type"];
+		Logger::debug(type);
+		size_t index = type.find("/");
+		type = type.substr(index + 1);
+		Logger::debug(type);
+		fileName += "." + type;
+		binaryBody = this->request.getBodyContent();
+	}
+	else
+	{
+		fileName = getFileName(headersBody);
+		std::string fileType = getFileType(headersBody);
+	}
 	if (checkNameFile(fileName, path) == 1)
 		throw ConflictException();
 	path += "/" + fileName;
+	Logger::debug("path: " + path);
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 		throw BadRequestException();

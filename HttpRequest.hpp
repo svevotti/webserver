@@ -40,14 +40,21 @@ class HttpRequest {
 		std::string 						getBodyContent(void) const;
 		std::string 						getContentType (void) const;
 		std::string 						getContentLength(void) const;
+		// std::string							getPathInfo(void) const;
+		// std::string							getRemoteAddr(void) const;
+		// std::string							getRemoteHost(void) const;
 		std::string 						getHost(void) const;
 		std::string 						getProtocol(void) const;
-		std::string							getRawBody(void) const;
+		// std::string							getScriptName(void) const;
+		// std::string							getServerPort(void)const;
+		// std::string							getServerProtocol(void) const;
 
 		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
 		void								parseRequestLine(std::string);
+		void 								setCorrectHeaders(void);
+		void								parseOtherTypes(std::string buffer);
 		void 								unchunkData(void);
 		void								exractQuery(std::string);
 		std::string							decodeQuery(std::string str);
@@ -65,7 +72,7 @@ class HttpRequest {
 		std::map<std::string, std::string>	query;
 		std::map<std::string, std::string>	headers;
 		struct section						sectionInfo;
-		std::string							raw_body;
+		std::string							body;
 };
 
 std::ostream &operator<<(std::ostream &output, HttpRequest const &request);
