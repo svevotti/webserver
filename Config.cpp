@@ -224,32 +224,36 @@ bool	Config::parseServer(std::istream &conf)
 		else //It's a line that we need to split into key and value
 		{
 			size_t pos = line.find('\t'); //We look for the tab(s) that split the key and value
-			key = line.substr(0, pos);
-			value = line.substr(pos + 1, line.length() - key.length()); //To avoid the ; in the end
-			//Trim again
-			key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
-			value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
+			if ( pos != std::string::npos)
+			{
+				key = line.substr(0, pos);
+				value = line.substr(pos + 1, line.length() - key.length()); //To avoid the ; in the end
+				//Trim again
+				key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
+				value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
 
-			server->setSetting(key, value);
-			if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
-			{
-				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
-					server->setPort(value); //Saved as string, change to int?
-				else
-					std::cerr << "Incorrect port value: " << value << std::endl;
+				server->setSetting(key, value);
+				if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
+				{
+					if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
+						server->setPort(value); //Saved as string, change to int?
+					else
+						std::cerr << "Incorrect port value: " << value << std::endl;
+				}
+				if (key == "server_name") //host?
+				{
+					if (server->isIPValid(value))
+						server->setIP(value); //Saved as string
+					else
+						std::cerr << "Incorrect IP: " << value << std::endl;
+				}
+				if (key == "root")
+					server->setRoot(value);
+				if (key == "index")
+					server->setIndex(value);
+				//Expand if we need more variables
 			}
-			if (key == "server_name") //host?
-			{
-				if (server->isIPValid(value))
-					server->setIP(value); //Saved as string
-				else
-					std::cerr << "Incorrect IP: " << value << std::endl;
-			}
-			if (key == "root")
-				server->setRoot(value);
-			if (key == "index")
-				server->setIndex(value);
-			//Expand if we need more variables
+			//If there is a line that is not a key	value it is ignored, keep in mind
 		}
 	}
 	std::cout << "This should not have happened (parseServer)" << std::endl;
