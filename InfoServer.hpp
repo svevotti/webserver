@@ -57,6 +57,7 @@ class InfoServer {
 		std::map<std::string, Route>		getRoute ( void ) const;
 		Route								getCGI( void ) const;
 		int									getFD( void ) const;
+		double								getCGIProcessingTimeout(void) const;
 
 		bool	isIPValid( std::string ip );
 };

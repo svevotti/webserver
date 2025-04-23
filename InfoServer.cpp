@@ -97,6 +97,14 @@ int	InfoServer::getFD ( void ) const {
 	return (_fd);
 }
 
+double InfoServer::getCGIProcessingTimeout(void) const {
+	std::map<std::string, std::string>::const_iterator it = _settings.find("cgi_processing_timeout");
+	if (it != _settings.end()) {
+		return atof(it->second.c_str());
+	}
+	return 15.0; // Default to 15 seconds if not specified
+}
+
 bool	InfoServer::isIPValid( std::string ip ) {
 	int	ndots = 0;
 	if (ip == "localhost")
