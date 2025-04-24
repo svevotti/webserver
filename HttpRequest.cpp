@@ -63,7 +63,12 @@ std::string HttpRequest::getQuery(void) const
 
 std::string HttpRequest::getContentType(void) const
 {
+	// std::map<std::string, std::string>::const_iterator it;
+	// it = this->headers.find("content-type");
+	// if (it != this->headers.end())
 	return findValue(this->headers, "content-type");
+	// std::cout << "here\n";
+	// return findValue(this->sectionInfo.myMap, "content-type");
 }
 
 std::string HttpRequest::getContentLength(void) const
@@ -453,6 +458,7 @@ void	HttpRequest::cleanProperties(void)
 	sectionInfo.body.clear();
 	sectionInfo.indexBinary = 0;
 	sectionInfo.myMap.clear();
+	body.clear();
 }
 
 std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
