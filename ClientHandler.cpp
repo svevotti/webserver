@@ -182,8 +182,11 @@ int ClientHandler::manageRequest(void)
 			}
 			// Logger::debug(this->raw_data);
 			Logger::info("Done receving request");
+			// Logger::debug(this->raw_data);
 			this->request.HttpParse(this->raw_data, this->totbytes);
 			Logger::info("Done parsing");
+			std::cout << this->request << std::endl;
+			Logger::info("Done reading the request parsed");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (route.uri.empty())
@@ -313,6 +316,7 @@ int ClientHandler::retrieveResponse(void)
 	this->raw_data.clear();
 	this->totbytes = 0;
 	this->request.cleanProperties();
+	std::cout << request << std::endl;
 	return 0;
 }
 
@@ -422,13 +426,25 @@ std::string ClientHandler::uploadFile(std::string path)
 	std::string binaryBody;
 	struct section sectionBody;
 	struct Route page;
+	std::string fileName;
 
 	sectionBody = request.getHttpSection();
 	headersBody = sectionBody.myMap;
 	binaryBody = sectionBody.body;
-
-	std::string fileName = getFileName(headersBody);
-	std::string fileType = getFileType(headersBody);
+	if (binaryBody.empty())
+	{
+		fileName = "file";
+		std::string type = this->request.getHttpHeaders()["content-type"];
+		size_t index = type.find("/");
+		type = type.substr(index + 1);
+		fileName += "." + type;
+		binaryBody = this->request.getBodyContent();
+	}
+	else
+	{
+		fileName = getFileName(headersBody);
+		std::string fileType = getFileType(headersBody);
+	}
 	if (checkNameFile(fileName, path) == 1)
 		throw ConflictException();
 	path += "/" + fileName;
@@ -443,7 +459,7 @@ std::string ClientHandler::uploadFile(std::string path)
 	}
 	close(file);
 	page = this->configInfo.getRoute()["/"];
-	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second); //need to take care
+	body = extractContent(page.path + "success_upload" + "/" + page.locSettings.find("index")->second);
 	return body;
 }
 
@@ -451,11 +467,14 @@ std::string      ClientHandler::deleteFile(std::string path)
 {
 	std::string body;
 	std::ifstream file(path.c_str());
+	struct Route page;
 
 	if (!(file.good()))
 		throw NotFoundException();
 	else
-		remove(path.c_str());
+		std::remove(path.c_str());
+	page = this->configInfo.getRoute()["/"];
+	body = extractContent(page.path + "success_delete" + "/" + page.locSettings.find("index")->second);
 	return body;
 }
 
