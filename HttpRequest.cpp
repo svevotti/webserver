@@ -514,11 +514,8 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     // Print the query
     output << "Query: " << request.getQuery() << std::endl;
 
-    // Print the body content
-    output << "Body Content: " << request.getBodyContent() << std::endl;
-
     // Print the content type
-    output << "Content Type: " << request.getContentType() << ";" << std::endl;
+    output << "Content Type: " << request.getContentType() << std::endl;
 
     // Print the content length
     output << "Content Length: " << request.getContentLength() << std::endl;
@@ -536,6 +533,9 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
         output << it->first << ": " << it->second << ";" << std::endl;
     }
+
+	// Print the body content
+    output << "Body Content: " << request.getBodyContent() << std::endl;
 
     return output;
 }
