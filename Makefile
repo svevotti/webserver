@@ -1,5 +1,5 @@
 GNU = c++
-FLAGS = -Wall -Wextra edr-Werror
+FLAGS = -Wall -Wextra -Werror
 C_98 = -std=c++98
 OBJ_DIR = obj
 CPP_FILES = ServerSockets.cpp main.cpp HttpResponse.cpp \
