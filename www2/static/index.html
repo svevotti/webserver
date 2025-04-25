@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webserv - Red 3D Stack</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #0036cc, #3369ff, #0a0099, #66adff);
+            background-size: 400% 400%;
+            animation: fadeBackground 10s ease-in-out infinite;
+            color: #ffcc00;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+            transform-style: preserve-3d;
+        }
+        h1 {
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-align: center;
+            animation: glow3D 2s infinite ease-in-out;
+            text-shadow: 0 0 20px #3369ff, 0 0 40px #66adff;
+            margin-top: 40px;
+            margin-bottom: 10px;
+            transform: translateZ(30px);
+            position: relative;
+            z-index: 2;
+        }
+        .zone {
+            background: rgba(255, 51, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ffcc00;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            transform: rotateY(10deg);
+            transition: transform 0.5s;
+        }
+        .zone:hover {
+            transform: rotateY(0deg) translateZ(50px);
+            box-shadow: 0 0 30px #3369ff;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #3369ff;
+        }
+        a, button, input[type="submit"] {
+            color: #ffcc00;
+            background: transparent;
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            display: inline-block; /* Ensure consistent inline-block behavior */
+            margin-right: 10px; /* Space between buttons */
+        }
+        a:hover, button:hover, input[type="submit"]:hover {
+            background: #ffcc00;
+            color: #0036cc;
+            transform: scale(1.1) rotateX(10deg);
+            box-shadow: 0 0 20px #ffcc00;
+        }
+        #success-msg {
+            display: none;
+            font-size: 16px;
+            color: #ffcc00;
+            text-shadow: 0 0 5px #3369ff;
+            margin-top: 10px;
+        }
+        .bg-anim {
+            position: absolute;
+            background: rgba(255, 51, 0, 0.5);
+            border-radius: 50%;
+            animation: float3D 6s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-anim:nth-child(1) { width: 100px; height: 100px; top: 5%; left: 10%; animation-delay: 0s; }
+        .bg-anim:nth-child(2) { width: 80px; height: 80px; top: 20%; right: 15%; animation-delay: 1s; }
+        .bg-anim:nth-child(3) { width: 120px; height: 120px; bottom: 30%; left: 25%; animation-delay: 2s; }
+        .bg-anim:nth-child(4) { width: 60px; height: 60px; bottom: 10%; right: 20%; animation-delay: 3s; }
+        .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
+        .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
+        @keyframes fadeBackground {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+        @keyframes glow3D {
+            0% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #3369ff, 0 0 40px #66adff; }
+            50% { transform: translateZ(50px) scale(1.05); text-shadow: 0 0 30px #3369ff, 0 0 60px #66adff; }
+            100% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #3369ff, 0 0 40px #66adff; }
+        }
+        @keyframes float3D {
+            0% { transform: translateZ(0) translate(0, 0); }
+            50% { transform: translateZ(100px) translate(50px, 50px); }
+            100% { transform: translateZ(0) translate(0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <h1>Webserv</h1>
+    <div class="container">
+        <p>Here to serve.</p>
+        <div class="zone">
+            <h2>Static Upload</h2>
+            <a href="/uploads/index.html">Go to Static Upload</a>
+        </div>
+        <div class="zone">
+            <h2>Dynamic Upload (CGI)</h2>
+            <button type="button" onclick="window.location.href='/dynamic-upload.html'">Choose File</button>
+            <button type="button" onclick="downloadCGI()">Download via CGI</button>
+            <p id="success-msg">Download Jammed Successfully!</p>
+        </div>
+        <div class="zone">
+            <h2>Fortune Cookie</h2>
+            <a href="/cgi-bin maresca/fortune.cgi">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <a href="/delete/index.html">Go and Delete</a>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/dowload/index.html">Go and Download</a>
+        </div>
+        <div class="zone">
+            <h2>Cookies</h2>
+            <a href="/cookies/index.html">Manage Cookies</a>
+        </div>
+        <div class="zone">
+            <h2>About Us</h2>
+            <a href="/about/index.html">About Us</a>
+        </div>
+    </div>
+
+    <script>
+        function downloadCGI() {
+            // Simulate CGI download action (replace with actual CGI logic)
+            setTimeout(() => {
+                document.getElementById('success-msg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('success-msg').style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }, 500); // Simulate delay
+        }
+    </script>
+</body>
+</html>

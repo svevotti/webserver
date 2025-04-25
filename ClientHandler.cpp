@@ -386,7 +386,7 @@ int checkNameFile(std::string str, std::string path)
 	folder = opendir(path.c_str());
 	std::string convStr;
 	if (folder == NULL)
-		throw ServiceUnavailabledException();
+		throw NotFoundException();
 	while ((data = readdir(folder)))
 	{
 		convStr = data->d_name;
@@ -461,6 +461,8 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	std::string method;
 	struct Route errorPage;
 
+	if (route.internal == true)
+		throw NotFoundException();
 	method = this->request.getHttpRequestLine()["method"];
 	if (method == "GET" && route.methods.count(method) > 0)
 	{

@@ -32,14 +32,13 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(405, "405 Method Not Allowed"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(409, "409 Conflict"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(413, "413 Payload Too Large"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(415, "415 Unsupported Media Type")); //ask Simona if she can make it :)
+	this->mapStatusCode.insert(std::pair<int, std::string>(415, "415 Unsupported Media Type"));
 
 	//5xx for server error
 	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(501, "501 Not Implemented"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(505, "505 HTTP Version Not Supported")); //ask Simona if she can make it :)
-	
+	this->mapStatusCode.insert(std::pair<int, std::string>(505, "505 HTTP Version Not Supported"));
 }
 
 //Setters and Getters
@@ -92,42 +91,66 @@ std::string HttpResponse::generateHttpHeaders(void)
 	headers += "Content-Length: " + length + "\r\n";
 	timeStamp = findTimeStamp() + "\r\n";
 	headers += "Date: " + timeStamp;
-	headers += "Cache-Control: no-cache\r\n";
+	headers += "Cache-Control: no-store\r\n";
 	headers += "Connection: keep-alive\r\n";
 	return headers;
 }
 
+int HttpResponse::findFileType(std::string str)
+{
+	if (str.size() >= 2 && (static_cast<unsigned char>(str[0]) == 0xFF &&
+						static_cast<unsigned char>(str[1]) == 0xD8))
+		return 0; // JPEG
+	if (str.size() >= 8 && (static_cast<unsigned char>(str[0]) == 0x89 && 
+						static_cast<unsigned char>(str[1]) == 0x50 && 
+						static_cast<unsigned char>(str[2]) == 0x4E && 
+						static_cast<unsigned char>(str[3]) == 0x47 &&
+						static_cast<unsigned char>(str[4]) == 0x0D && 
+						static_cast<unsigned char>(str[5]) == 0x0A && 
+						static_cast<unsigned char>(str[6]) == 0x1A && 
+						static_cast<unsigned char>(str[7]) == 0x0A))
+		return 1; // PNG
+	if (str.size() >= 4 && (static_cast<unsigned char>(str[0]) == 0x47 && 
+						static_cast<unsigned char>(str[1]) == 0x49 && 
+						static_cast<unsigned char>(str[2]) == 0x46 && 
+						static_cast<unsigned char>(str[3]) == 0x38))
+		return 2; // GIF
+	// if (str.size() >= 12 && (static_cast<unsigned char>(str[0]) == 0x52 && 
+	// 					 static_cast<unsigned char>(str[1]) == 0x49 && 
+	// 					 static_cast<unsigned char>(str[2]) == 0x46 && 
+	// 					 static_cast<unsigned char>(str[3]) == 0x46 &&
+	// 					 static_cast<unsigned char>(str[8]) == 0x57 && 
+	// 					 static_cast<unsigned char>(str[9]) == 0x45 && 
+	// 					 static_cast<unsigned char>(str[10]) == 0x42 && 
+	// 					 static_cast<unsigned char>(str[11]) == 0x50))
+	// 	return 3; // WEMP
+	if (str.size() >= 4 && (static_cast<unsigned char>(str[0]) == 0x00 && 
+						static_cast<unsigned char>(str[1]) == 0x00 && 
+						static_cast<unsigned char>(str[2]) == 0x01 && 
+						static_cast<unsigned char>(str[3]) == 0x00))
+		return 3; // ICO
+	return 4;
+}
+
 std::string HttpResponse::findType(std::string str)
 {
-	int i = 0;
+	int magicNumber;
+
 	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
 		return "text/html";
-	std::string	extensions[7] = {"jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"};
-	for (;i < 7; i++)
-	{
-		if (extensions[i] == this->extension)
-			break;
-	}
-	switch (i)
+	magicNumber = findFileType(str);
+	switch (magicNumber)
 	{
 		case 0:
 			return "image/jpg";
 		case 1:
-			return "image/jpeg";
-		case 2:
 			return "image/png";
-		case 3:
+		case 2:
 			return "image/gif";
-		case 4:
-			return "image/bmp";
-		case 5:
-			return "image/svg";
-		case 6:
-			return "image/webp";
-		default:
+		case 3:
 			return "image/x-icon";
 	}
-	return "";
+	return "text/plain";
 }
 
 std::string HttpResponse::findTimeStamp(void)
