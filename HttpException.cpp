@@ -2,6 +2,7 @@
 
 std::string HttpException::htmlRootPath;
 
+// Constructor
 HttpException::HttpException(int code, std::string message)
 {
 	this->code = code;
@@ -9,6 +10,8 @@ HttpException::HttpException(int code, std::string message)
 	this->message = message;
 	this->body = extractFile();
 }
+
+//Setters and Getters
 
 void HttpException::setHtmlRootPath(std::string uri)
 { 
@@ -30,15 +33,13 @@ const char *HttpException::what () const throw ()
 	return message.c_str();
 }
 
+// Main functions
 std::string HttpException::extractFile(void)
 {
 	std::ifstream inputFile(this->file.c_str(), std::ios::binary);
 
 	if (!inputFile)
-	{
-		// std::cerr << "Error opening file httpexception" << std::endl;
 		return "";
-	}
 	inputFile.seekg(0, std::ios::end);
 	std::streamsize size = inputFile.tellg();
 	inputFile.seekg(0, std::ios::beg);

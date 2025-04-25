@@ -33,7 +33,6 @@ class HttpRequest {
 		std::map<std::string, std::string>	getHttpRequestLine() const;
 		std::map<std::string, std::string>	getHttpUriQueryMap() const;
 		struct section						getHttpSection() const;
-
 		std::string 						getUri(void) const;
 		std::string 						getMethod(void) const;
 		std::string 						getQuery(void) const;
@@ -48,8 +47,7 @@ class HttpRequest {
 		// std::string							getScriptName(void) const;
 		// std::string							getServerPort(void)const;
 		// std::string							getServerProtocol(void) const;
-
-		std::string					findValue(std::map<std::string, std::string> map, std::string key) const;
+		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
 		void								parseRequestLine(std::string str);

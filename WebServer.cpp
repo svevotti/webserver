@@ -30,26 +30,6 @@ Webserver::~Webserver()
 	closeSockets();
 }
 
-// Setters and Getters
-
-void Webserver::checkTime(void)
-{
-	std::time_t currentTime = std::time(NULL);
-	std::vector<ClientHandler>::iterator clientIt;
-	std::vector<struct pollfd>::iterator it;
-	for (it = this->poll_sets.begin(); it < this->poll_sets.end(); it++)
-	{
-		clientIt = retrieveClient(it->fd);
-		if (clientIt != this->clientsList.end())
-		{
-			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
-			{
-				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
-				removeClient(it);
-			}
-		}
-	}
-}
 // Main functions
 
 int	Webserver::startServer()
@@ -186,6 +166,7 @@ InfoServer*	Webserver::matchFD( int fd ) {
 
 int Webserver::fdIsCGI(int fd)
 {
+	(void)fd;
 	return false;
 }
 
@@ -253,4 +234,23 @@ void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 	close(it->fd);
 	this->clientsList.erase(retrieveClient(it->fd));
 	this->poll_sets.erase(it);
+}
+
+void Webserver::checkTime(void)
+{
+	std::time_t currentTime = std::time(NULL);
+	std::vector<ClientHandler>::iterator clientIt;
+	std::vector<struct pollfd>::iterator it;
+	for (it = this->poll_sets.begin(); it < this->poll_sets.end(); it++)
+	{
+		clientIt = retrieveClient(it->fd);
+		if (clientIt != this->clientsList.end())
+		{
+			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
+			{
+				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
+				removeClient(it);
+			}
+		}
+	}
 }

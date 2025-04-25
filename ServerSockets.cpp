@@ -17,7 +17,7 @@
 
 #include "Logger.hpp"
 
-//Constructor and destructor
+//Constructor
 
 ServerSockets::ServerSockets(std::string ip, std::string port)
 {
@@ -25,7 +25,8 @@ ServerSockets::ServerSockets(std::string ip, std::string port)
 	this->port = port;
 	initSockets();
 }
-//Setter and getters
+
+//Setter and Getters
 
 int	ServerSockets::getServerSocket(void) const
 {

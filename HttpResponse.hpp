@@ -23,7 +23,6 @@ class HttpResponse {
 		HttpResponse(int code, std::string body);
 
 		void 		setUriLocation(std::string url);
-		void		setImageType(std::string str);
 		std::string composeRespone();
 		std::string generateStatusLine(int);
 		std::string generateHttpHeaders();
@@ -31,11 +30,11 @@ class HttpResponse {
 		std::string findTimeStamp();
 
 	private:
-		int			statusCode;
-		std::string body;
-		std::string redirectedUrl;
-		std::map<int, std::string> mapStatusCode;
-		std::string extension;
+		int							statusCode;
+		std::string 				body;
+		std::string 				redirectedUrl;
+		std::map<int, std::string>	mapStatusCode;
+		std::string					extension;
 		
 };
 

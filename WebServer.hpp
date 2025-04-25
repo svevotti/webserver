@@ -51,9 +51,9 @@ class Webserver {
         InfoServer*	matchFD( int fd );
 
     private:
-        std::vector<InfoServer*> configInfo;
+        std::vector<InfoServer*>    configInfo;
         std::vector<struct pollfd>  poll_sets;
-        int            serverFd;
+        int                         serverFd;
         std::vector<ClientHandler>  clientsList;
 
 };

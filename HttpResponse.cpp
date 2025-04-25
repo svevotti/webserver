@@ -11,7 +11,7 @@
 #include <ctime>
 #include <cstdio>
 
-// Constructor and destructor
+// Constructor
 HttpResponse::HttpResponse(int code, std::string str)
 {
 	this->statusCode = code;
@@ -46,11 +46,6 @@ HttpResponse::HttpResponse(int code, std::string str)
 void HttpResponse::setUriLocation(std::string url)
 {
 	this->redirectedUrl = url;
-}
-
-void HttpResponse::setImageType(std::string str)
-{
-	this->extension = str;
 }
 
 // Main functions

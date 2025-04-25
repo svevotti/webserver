@@ -7,7 +7,8 @@
 #include <sstream>
 #include <cstdio>
 
-// Constructor and Destructor
+// Constructor
+
 HttpRequest::HttpRequest(HttpRequest const &other)
 {
 	this->requestLine = other.requestLine;
@@ -16,7 +17,9 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->sectionInfo = other.sectionInfo;
 	this->body = other.body;
 }
-// Setters and getters
+
+// Setters and Getters
+
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
 {
 	return requestLine;
@@ -51,24 +54,15 @@ std::string HttpRequest::getMethod(void) const
 {
 	return findValue(this->requestLine, "method");
 }
+
 std::string HttpRequest::getQuery(void) const
 {
 	return findValue(this->requestLine, "query-string");
 }
 
-// std::string HttpRequest::getBodyContent(void) const
-// {
-// 	return this->sectionInfo.body;
-// }
-
 std::string HttpRequest::getContentType(void) const
 {
-	// std::map<std::string, std::string>::const_iterator it;
-	// it = this->headers.find("content-type");
-	// if (it != this->headers.end())
 	return findValue(this->headers, "content-type");
-	// std::cout << "here\n";
-	// return findValue(this->sectionInfo.myMap, "content-type");
 }
 
 std::string HttpRequest::getContentLength(void) const
@@ -163,7 +157,6 @@ void HttpRequest::parseRequestHttp(void)
     std::map<std::string, std::string>::iterator itTransfer;
 	std::map<std::string, std::string>::iterator itLength;
 	
-	Logger::debug("here");
 	parseRequestLine(inputString);
 	getline(request, line);
 	if (isspace(line[0]) != 0 || line.empty())
