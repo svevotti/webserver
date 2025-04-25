@@ -49,10 +49,10 @@ class HttpRequest {
 		// std::string							getServerPort(void)const;
 		// std::string							getServerProtocol(void) const;
 
-		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
+		std::string					findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
-		void								parseRequestLine(std::string);
+		void								parseRequestLine(std::string str);
 		void 								setCorrectHeaders(void);
 		void								parseOtherTypes(std::string buffer);
 		void 								unchunkData(void);
