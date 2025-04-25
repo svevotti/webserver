@@ -445,14 +445,11 @@ std::string      ClientHandler::deleteFile(std::string path)
 {
 	std::string body;
 	std::ifstream file(path.c_str());
-	struct Route page;
 
 	if (!(file.good()))
 		throw NotFoundException();
 	else
 		std::remove(path.c_str());
-	page = this->configInfo.getRoute()["/"];
-	body = extractContent(page.path + "success_delete" + "/" + page.locSettings.find("index")->second);
 	return body;
 }
 
