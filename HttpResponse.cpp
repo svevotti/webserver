@@ -11,7 +11,7 @@
 #include <ctime>
 #include <cstdio>
 
-// Constructor and destructor
+// Constructor
 HttpResponse::HttpResponse(int code, std::string str)
 {
 	this->statusCode = code;
@@ -27,7 +27,7 @@ HttpResponse::HttpResponse(int code, std::string str)
 
 	//4xxis for client error
 	this->mapStatusCode.insert(std::pair<int, std::string>(400, "400 Bad Request"));
-	this->mapStatusCode.insert(std::pair<int, std::string>(400, "403 Forbidden"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(403, "403 Forbidden"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(404, "404 Not Found"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(405, "405 Method Not Allowed"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(409, "409 Conflict"));
@@ -39,7 +39,6 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(501, "501 Not Implemented"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(505, "505 HTTP Version Not Supported"));
-	
 }
 
 //Setters and Getters
@@ -48,10 +47,6 @@ void HttpResponse::setUriLocation(std::string url)
 	this->redirectedUrl = url;
 }
 
-void HttpResponse::setImageType(std::string str)
-{
-	this->extension = str;
-}
 // Main functions
 std::string HttpResponse::composeRespone(void)
 {

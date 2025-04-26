@@ -7,15 +7,19 @@
 #include <sstream>
 #include <cstdio>
 
-// Constructor and Destructor
+// Constructor
+
 HttpRequest::HttpRequest(HttpRequest const &other)
 {
 	this->requestLine = other.requestLine;
 	this->query = other.query;
 	this->headers = other.headers;
 	this->sectionInfo = other.sectionInfo;
+	this->body = other.body;
 }
-// Setters and getters
+
+// Setters and Getters
+
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
 {
 	return requestLine;
@@ -50,24 +54,20 @@ std::string HttpRequest::getMethod(void) const
 {
 	return findValue(this->requestLine, "method");
 }
+
 std::string HttpRequest::getQuery(void) const
 {
 	return findValue(this->requestLine, "query-string");
 }
 
-std::string HttpRequest::getBodyContent(void) const
-{
-	return this->sectionInfo.body;
-}
-
 std::string HttpRequest::getContentType(void) const
 {
-	return findValue(this->sectionInfo.myMap, "content-type");
+	return findValue(this->headers, "content-type");
 }
 
 std::string HttpRequest::getContentLength(void) const
 {
-	return Utils::toString(this->sectionInfo.body.length());
+	return Utils::toString(this->body.length());
 }
 
 std::string HttpRequest::getHost(void) const
@@ -80,9 +80,9 @@ std::string HttpRequest::getProtocol(void) const
 	return findValue(this->requestLine, "protocol");
 }
 
-std::string HttpRequest::getRawBody(void) const
+std::string HttpRequest::getBodyContent(void) const
 {
-	return this->raw_body;
+	return this->body;
 }
 
 // Main functions
@@ -94,18 +94,79 @@ void HttpRequest::HttpParse(std::string str, int size)
     parseRequestHttp();
 }
 
+void HttpRequest::unchunkData(void)
+{
+	std::string body;
+
+	size_t index = this->str.find("\r\n\r\n");
+	std::string headers = this->str.substr(0, index);
+	std::string first_boundary;
+	body = this->str.substr(index + 4);
+	if (body.find("-") != std::string::npos)
+	{
+		size_t boundary = body.find_first_of("\r\n");
+		first_boundary = body.substr(0, boundary + 2);
+		body.erase(0, boundary + 2);
+	}
+	const char *chunked = body.c_str();
+	int chunkedLength = body.size();
+	std::string unchunked;
+	int pos = 0;
+	while(pos < chunkedLength)
+	{
+		const char *chunkEnd = static_cast<const char*>(Utils::ft_memchr(chunked + pos, '\r', chunkedLength - pos));
+		if (!chunkEnd)
+			break;
+		int chunkSizeLength = chunkEnd - (chunked + pos);
+		std::string HexNum(chunked + pos, chunkEnd);
+		size_t chunkSize = strtoul(HexNum.c_str(), nullptr, 16);
+		if (chunkSize == 0)
+			break;
+		pos += chunkSizeLength + 2;
+		unchunked.append(chunked + pos, chunkSize);
+		pos += chunkSize + 2;
+	}
+	if (pos < chunkedLength)
+		unchunked += body.substr(pos + 3, chunkedLength - pos - 2);
+	this->str.clear();
+	this->str = headers + "\r\n\r\n" + first_boundary + unchunked;
+}
+
+void HttpRequest::setCorrectHeaders(void)
+{
+	std::map<std::string, std::string>::iterator it;
+	it = this->headers.find("content-type");
+	if (it != this->headers.end())
+	{
+		it->second.clear();
+		it->second = findValue(this->sectionInfo.myMap, "content-type");
+	}
+	it = this->headers.find("content-length");
+	if (it != this->headers.end())
+	{
+		it->second.clear();
+		it->second = Utils::toString(this->sectionInfo.body.length());
+	}
+	this->body = this->sectionInfo.body;
+}
 void HttpRequest::parseRequestHttp(void)
 {
 	std::string inputString(this->str);
 	std::istringstream request(inputString);
 	std::string line;
-    std::map<std::string, std::string>::iterator it;
+    std::map<std::string, std::string>::iterator itTransfer;
+	std::map<std::string, std::string>::iterator itLength;
 	
 	parseRequestLine(inputString);
 	getline(request, line);
+	if (isspace(line[0]) != 0 || line.empty())
+		getline(request, line);
 	parseHeaders(request);
-    it = headers.find("content-length");
-	if (it != headers.end())
+	itTransfer = headers.find("transfer-encoding");
+	if (itTransfer != headers.end())
+		unchunkData();
+	itLength = headers.find("content-length");
+	if (itLength != headers.end() || itTransfer != headers.end())
 		parseBody(requestLine["method"], this->str, this->size);
 }
 
@@ -118,9 +179,12 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	if (method == "POST")
 	{	
 		if (contentType.find("multipart/form-data") != std::string::npos)
+		{
 			parseMultiPartBody(buffer, size);
+			setCorrectHeaders();
+		}
 		else
-			throw NotImplementedException();
+			parseOtherTypes(buffer);
 	}
 	else
 		throw BadRequestException();
@@ -135,7 +199,13 @@ void HttpRequest::parseRequestLine(std::string str)
 	size_t index;
 	std::string newUri;
 
-	//make also request line in lowercase
+	if (isspace(str[0]) != 0)
+	{
+		int i = 0;
+		while (isspace(str[i]) != 0)
+			i++;
+		str = str.substr(i);
+	}
 	index = str.find(" ");
 	if (index != std::string::npos)
 	{
@@ -144,7 +214,10 @@ void HttpRequest::parseRequestLine(std::string str)
 		this->requestLine["method"] = method;
 	}
 	else
+	{
+		Logger::error("no space after method");
 		throw BadRequestException();
+	}
 	str.erase(0, method.length()+1);
 	index = str.find(" ");
 	if (index != std::string::npos)
@@ -159,17 +232,32 @@ void HttpRequest::parseRequestLine(std::string str)
 		this->requestLine["request-uri"] = newUri;
 	}
 	else
+	{
+		Logger::error("no space after uri");
 		throw BadRequestException();
+	}
 	str.erase(0, uri.length()+1);
-	index = str.find("\r\n");
+	index = str.find(" ");
 	if (index != std::string::npos)
 	{
-		protocol = str.substr(0, index);
-		std::transform(method.begin(), method.end(), method.begin(), Utils::toUpperCase);
-		requestLine["protocol"] = protocol;
+		index = str.find("\r\n");
+		if (index != std::string::npos)
+		{
+			protocol = str.substr(0, index);
+			std::transform(method.begin(), method.end(), method.begin(), Utils::toUpperCase);
+			this->requestLine["protocol"] = protocol;
+		}
+		else
+		{
+			Logger::error("no \r\n protocol");
+			throw BadRequestException();
+		}
 	}
 	else
+	{
+		Logger::error("no space protocol");
 		throw BadRequestException();
+	}
 }
 
 void HttpRequest::parseHeaders(std::istringstream& str)
@@ -190,19 +278,41 @@ void HttpRequest::parseHeaders(std::istringstream& str)
 		{
 			key = line.substr(0, index);
 			if (line[line.find(":") + 1] != ' ')
+			{
+				Logger::error("no space after : in headers");
 				throw BadRequestException();
+			}
 			size_t indexEnd = line.find("\r");
 			if (indexEnd != std::string::npos)
 				value = line.substr(index + 2, indexEnd - index - 2);
 			else
+			{
+				Logger::error("no \r in headers");
 				throw BadRequestException();
+			}
 		}
 		else
+		{
+			Logger::error("line : " + line);
+			Logger::error("no : in headers");
 			throw BadRequestException();
+		}
 		std::transform(key.begin(), key.end(), key.begin(), Utils::toLowerChar);
 		std::transform(value.begin(), value.end(), value.begin(), Utils::toLowerChar);
 		this->headers[key] = value;
 	}
+}
+
+void	HttpRequest::parseOtherTypes(std::string buffer)
+{
+	std::string body;
+	size_t index;
+
+	index = buffer.find("\r\n\r\n");
+	if (index != std::string::npos)
+		this->body = buffer.substr(index + 4);
+	else
+		throw BadRequestException();
 }
 
 void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
@@ -227,7 +337,6 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 		throw NotImplementedException();
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
-	this->raw_body = buffer.c_str() + firstB + blen + 4;
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
 	delete b;
 }
@@ -379,6 +488,7 @@ void	HttpRequest::cleanProperties(void)
 	sectionInfo.body.clear();
 	sectionInfo.indexBinary = 0;
 	sectionInfo.myMap.clear();
+	body.clear();
 }
 
 std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
@@ -397,11 +507,8 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     // Print the query
     output << "Query: " << request.getQuery() << std::endl;
 
-    // Print the body content
-    output << "Body Content: " << request.getBodyContent() << std::endl;
-
     // Print the content type
-    output << "Content Type: " << request.getContentType() << ";" << std::endl;
+    output << "Content Type: " << request.getContentType() << std::endl;
 
     // Print the content length
     output << "Content Length: " << request.getContentLength() << std::endl;
@@ -412,8 +519,6 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     // Print the protocol
     output << "Protocol: " << request.getProtocol() << std::endl;
 
-	// Print the raw body
-	output << "Raw Body: " << request.getRawBody() << std::endl;
 
     // Print the headers
     output << "Headers:" << std::endl;
@@ -421,6 +526,9 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
         output << it->first << ": " << it->second << ";" << std::endl;
     }
+
+	// Print the body content
+    output << "Body Content: " << request.getBodyContent() << std::endl;
 
     return output;
 }

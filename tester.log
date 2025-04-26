@@ -1,0 +1,734 @@
+repos/Circle5/webserver ❯ ./tester http://localhost:8080
+Welcome in this little webserver tester.
+Passing the test here is the minimum before going to an evaluation.
+
+press enter to continue
+
+THIS TEST IS NOT MEANT TO BE THE ONLY TEST IN THE EVALUATION!!!
+
+press enter to continue
+
+Before starting please follow the next few steps (files content can be anything and will be shown to you by the test):
+- Download the cgi_test executable on the host
+- Create a directory YoupiBanane with:
+        -a file name youpi.bad_extension
+        -a file name youpi.bla
+        -a sub directory called nop
+                -a file name youpi.bad_extension in nop
+                -a file name other.pouic in nop
+        -a sub directory called Yeah
+                -a file name not_happy.bad_extension in Yeah
+press enter to continue
+
+Setup the configuration file as follow:
+- / must answer to GET request ONLY
+- /put_test/* must answer to PUT request and save files to a directory of your choice
+- any file with .bla as extension must answer to POST request by calling the cgi_test executable
+- /post_body must answer anything to POST request with a maxBody of 100
+- /directory/ must answer to GET request and the root of it would be the repository YoupiBanane and if no file are requested, it should search for youpi.bad_extension files
+
+press enter to continue
+
+Before starting please verify that the server is launched
+press enter to continue
+
+
+Test GET http://localhost:8080/
+content returned: <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webserv - Red 3D Stack</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #cc0000, #ff3333, #990000, #ff6666);
+            background-size: 400% 400%;
+            animation: fadeBackground 10s ease-in-out infinite;
+            color: #ffcc00;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+            transform-style: preserve-3d;
+        }
+        h1 {
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-align: center;
+            animation: glow3D 2s infinite ease-in-out;
+            text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666;
+            margin-top: 40px;
+            margin-bottom: 10px;
+            transform: translateZ(30px);
+            position: relative;
+            z-index: 2;
+        }
+        .zone {
+            background: rgba(255, 51, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ffcc00;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            transform: rotateY(10deg);
+            transition: transform 0.5s;
+        }
+        .zone:hover {
+            transform: rotateY(0deg) translateZ(50px);
+            box-shadow: 0 0 30px #ff3333;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #ff3333;
+        }
+        a, button, input[type="submit"] {
+            color: #ffcc00;
+            background: transparent;
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            display: inline-block; /* Ensure consistent inline-block behavior */
+            margin-right: 10px; /* Space between buttons */
+        }
+        a:hover, button:hover, input[type="submit"]:hover {
+            background: #ffcc00;
+            color: #cc0000;
+            transform: scale(1.1) rotateX(10deg);
+            box-shadow: 0 0 20px #ffcc00;
+        }
+        #success-msg {
+            display: none;
+            font-size: 16px;
+            color: #ffcc00;
+            text-shadow: 0 0 5px #ff3333;
+            margin-top: 10px;
+        }
+        .bg-anim {
+            position: absolute;
+            background: rgba(255, 51, 0, 0.5);
+            border-radius: 50%;
+            animation: float3D 6s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-anim:nth-child(1) { width: 100px; height: 100px; top: 5%; left: 10%; animation-delay: 0s; }
+        .bg-anim:nth-child(2) { width: 80px; height: 80px; top: 20%; right: 15%; animation-delay: 1s; }
+        .bg-anim:nth-child(3) { width: 120px; height: 120px; bottom: 30%; left: 25%; animation-delay: 2s; }
+        .bg-anim:nth-child(4) { width: 60px; height: 60px; bottom: 10%; right: 20%; animation-delay: 3s; }
+        .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
+        .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
+        @keyframes fadeBackground {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+        @keyframes glow3D {
+            0% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+            50% { transform: translateZ(50px) scale(1.05); text-shadow: 0 0 30px #ff3333, 0 0 60px #ff6666; }
+            100% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+        }
+        @keyframes float3D {
+            0% { transform: translateZ(0) translate(0, 0); }
+            50% { transform: translateZ(100px) translate(50px, 50px); }
+            100% { transform: translateZ(0) translate(0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <h1>Webserv</h1>
+    <div class="container">
+        <p>Here to serve.</p>
+        <div class="zone">
+            <h2>Static Upload</h2>
+            <a href="/uploads/index.html">Go to Static Upload</a>
+        </div>
+        <div class="zone">
+            <h2>Dynamic Upload (CGI)</h2>
+            <button type="button" onclick="window.location.href='/dynamic-upload.html'">Choose File</button>
+            <button type="button" onclick="downloadCGI()">Download via CGI</button>
+            <p id="success-msg">Download Jammed Successfully!</p>
+        </div>
+        <div class="zone">
+            <h2>Fortune Cookie</h2>
+            <a href="/cgi-bin maresca/fortune.cgi">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <a href="/delete/index.html">Go and Delete</a>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/dowload/index.html">Go and Download</a>
+        </div>
+        <div class="zone">
+            <h2>Cookies</h2>
+            <a href="/cookies/index.html">Manage Cookies</a>
+        </div>
+        <div class="zone">
+            <h2>About Us</h2>
+            <a href="/about/index.html">About Us</a>
+        </div>
+    </div>
+
+    <script>
+        function downloadCGI() {
+            // Simulate CGI download action (replace with actual CGI logic)
+            setTimeout(() => {
+                document.getElementById('success-msg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('success-msg').style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }, 500); // Simulate delay
+        }
+    </script>
+</body>
+</html>
+
+Test POST http://localhost:8080/ with a size of 0
+
+Test HEAD http://localhost:8080/
+
+Test GET http://localhost:8080/directory
+2025/04/12 14:45:37 Unsolicited response received on idle HTTP channel starting with "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Webserv - 405 Method Not Allowed</title>\n    <style>\n        body {\n            margin: 0;\n            font-family: 'Courier New', monospace;\n            background: linear-gradient(135deg, #cc0000, #ff3333, #990000, #ff6666, #cc0000);\n            background-size: 500% 500%;\n            animation: jazzBackground 8s ease-in-out infinite;\n            color: #ffcc00;\n            perspective: 1200px;\n            overflow-x: hidden;\n            position: relative;\n            min-height: 100vh; /* Full viewport height */\n        }\n        .container {\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            padding: 20px;\n            position: relative;\n            z-index: 1;\n            transform-style: preserve-3d;\n        }\n        h1 {\n            font-size: 72px;\n            text-transform: uppercase;\n            letter-spacing: 10px;\n            text-align: center;\n            animation: glowJazz 1.5s infinite alternate;\n            text-shadow: 0 0 25px #ff3333, 0 0 50px #ff6666, 0 0 75px #cc0000;\n            margin-top: 50px;\n            margin-bottom: 20px;\n            transform: translateZ(50px) rotateX(10deg);\n            position: relative;\n            z-index: 2;\n        }\n        .error-zone {\n            background: rgba(255, 51, 0, 0.85);\n            padding: 25px;\n            border: 4px solid #ffcc00;\n            border-radius: 25px;\n            width: 85%;\n            max-width: 700px;\n            margin-bottom: 30px;\n            transform: rotateY(-15deg) rotateX(-5deg);\n            transition: transform 0.6s, box-shadow 0.6s;\n            box-shadow: 0 0 20px rgba(255, 204, 0, 0.7);\n        }\n        .error-zone:hover {\n            transform: rotateY(0deg) rotateX(0deg) translateZ(80px);\n            box-shadow: 0 0 40px #ff3333, 0 0 60px #ff6666;\n        }\n        h2 {\n            font-size: 28px;\n            margin-bottom: 20px;\n            text-shadow: 0 0 15px #ff3333, 0 0 30px #ff6666;\n            animation: pulseText 2s infinite;\n        }\n        p {\n            font-size: 18px;\n            line-height: 1.6;\n            text-shadow: 0 0 10px #ff3333;\n            animation: textPulse 2s infinite ease-in-out;\n        }\n        a {\n            color: #ffcc00;\n            background: rgba(0, 0, 0, 0.5);\n            border: 3px solid #ffcc00;\n            padding: 12px 25px;\n            border-radius: 15px;\n            text-decoration: none;\n            font-weight: bold;\n            cursor: pointer;\n            transition: all 0.4s;\n            display: inline-block;\n            text-align: center;\n            margin: 10px;\n            font-size: 18px;\n            transform: translateZ(20px);\n        }\n        a:hover {\n            background: #ff3333;\n            color: #ffcc00;\n            transform: scale(1.15) rotateX(15deg) translateZ(40px);\n            box-shadow: 0 0 25px #ffcc00, 0 0 50px #ff6666;\n        }\n        .bg-anim {\n            position: absolute;\n            background: rgba(255, 51, 0, 0.7);\n            border-radius: 50%;\n            animation: floatJazz 5s infinite ease-in-out;\n            z-index: 0;\n            box-shadow: 0 0 20px #ffcc00;\n        }\n        .bg-anim:nth-child(1) { width: 120px; height: 120px; top: 15%; left: 10%; animation-delay: 0s; }\n        .bg-anim:nth-child(2) { width: 90px; height: 90px; top: 30%; right: 15%; animation-delay: 1s; }\n        .bg-anim:nth-child(3) { width: 140px; height: 140px; bottom: 25%; left: 20%; animation-delay: 2s; }\n        .bg-anim:nth-child(4) { width: 80px; height: 80px; bottom: 10%; right: 20%; animation-delay: 3s; }\n        .bg-anim:nth-child(5) { width: 110px; height: 110px; top: 40%; left: 45%; animation-delay: 4s; }\n        @keyframes jazzBackground {\n            0% { background-position: 0% 0%; }\n            25% { background-position: 50% 5"; err=<nil>
+content returned: <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webserv - Red 3D Stack</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #cc0000, #ff3333, #990000, #ff6666);
+            background-size: 400% 400%;
+            animation: fadeBackground 10s ease-in-out infinite;
+            color: #ffcc00;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+            transform-style: preserve-3d;
+        }
+        h1 {
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-align: center;
+            animation: glow3D 2s infinite ease-in-out;
+            text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666;
+            margin-top: 40px;
+            margin-bottom: 10px;
+            transform: translateZ(30px);
+            position: relative;
+            z-index: 2;
+        }
+        .zone {
+            background: rgba(255, 51, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ffcc00;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            transform: rotateY(10deg);
+            transition: transform 0.5s;
+        }
+        .zone:hover {
+            transform: rotateY(0deg) translateZ(50px);
+            box-shadow: 0 0 30px #ff3333;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #ff3333;
+        }
+        a, button, input[type="submit"] {
+            color: #ffcc00;
+            background: transparent;
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            display: inline-block; /* Ensure consistent inline-block behavior */
+            margin-right: 10px; /* Space between buttons */
+        }
+        a:hover, button:hover, input[type="submit"]:hover {
+            background: #ffcc00;
+            color: #cc0000;
+            transform: scale(1.1) rotateX(10deg);
+            box-shadow: 0 0 20px #ffcc00;
+        }
+        #success-msg {
+            display: none;
+            font-size: 16px;
+            color: #ffcc00;
+            text-shadow: 0 0 5px #ff3333;
+            margin-top: 10px;
+        }
+        .bg-anim {
+            position: absolute;
+            background: rgba(255, 51, 0, 0.5);
+            border-radius: 50%;
+            animation: float3D 6s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-anim:nth-child(1) { width: 100px; height: 100px; top: 5%; left: 10%; animation-delay: 0s; }
+        .bg-anim:nth-child(2) { width: 80px; height: 80px; top: 20%; right: 15%; animation-delay: 1s; }
+        .bg-anim:nth-child(3) { width: 120px; height: 120px; bottom: 30%; left: 25%; animation-delay: 2s; }
+        .bg-anim:nth-child(4) { width: 60px; height: 60px; bottom: 10%; right: 20%; animation-delay: 3s; }
+        .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
+        .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
+        @keyframes fadeBackground {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+        @keyframes glow3D {
+            0% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+            50% { transform: translateZ(50px) scale(1.05); text-shadow: 0 0 30px #ff3333, 0 0 60px #ff6666; }
+            100% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+        }
+        @keyframes float3D {
+            0% { transform: translateZ(0) translate(0, 0); }
+            50% { transform: translateZ(100px) translate(50px, 50px); }
+            100% { transform: translateZ(0) translate(0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <h1>Webserv</h1>
+    <div class="container">
+        <p>Here to serve.</p>
+        <div class="zone">
+            <h2>Static Upload</h2>
+            <a href="/uploads/index.html">Go to Static Upload</a>
+        </div>
+        <div class="zone">
+            <h2>Dynamic Upload (CGI)</h2>
+            <button type="button" onclick="window.location.href='/dynamic-upload.html'">Choose File</button>
+            <button type="button" onclick="downloadCGI()">Download via CGI</button>
+            <p id="success-msg">Download Jammed Successfully!</p>
+        </div>
+        <div class="zone">
+            <h2>Fortune Cookie</h2>
+            <a href="/cgi-bin maresca/fortune.cgi">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <a href="/delete/index.html">Go and Delete</a>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/dowload/index.html">Go and Download</a>
+        </div>
+        <div class="zone">
+            <h2>Cookies</h2>
+            <a href="/cookies/index.html">Manage Cookies</a>
+        </div>
+        <div class="zone">
+            <h2>About Us</h2>
+            <a href="/about/index.html">About Us</a>
+        </div>
+    </div>
+
+    <script>
+        function downloadCGI() {
+            // Simulate CGI download action (replace with actual CGI logic)
+            setTimeout(() => {
+                document.getElementById('success-msg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('success-msg').style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }, 500); // Simulate delay
+        }
+    </script>
+</body>
+</html>
+
+Test GET http://localhost:8080/directory/youpi.bad_extension
+content returned: <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webserv - Red 3D Stack</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #cc0000, #ff3333, #990000, #ff6666);
+            background-size: 400% 400%;
+            animation: fadeBackground 10s ease-in-out infinite;
+            color: #ffcc00;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+            transform-style: preserve-3d;
+        }
+        h1 {
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-align: center;
+            animation: glow3D 2s infinite ease-in-out;
+            text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666;
+            margin-top: 40px;
+            margin-bottom: 10px;
+            transform: translateZ(30px);
+            position: relative;
+            z-index: 2;
+        }
+        .zone {
+            background: rgba(255, 51, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ffcc00;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            transform: rotateY(10deg);
+            transition: transform 0.5s;
+        }
+        .zone:hover {
+            transform: rotateY(0deg) translateZ(50px);
+            box-shadow: 0 0 30px #ff3333;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #ff3333;
+        }
+        a, button, input[type="submit"] {
+            color: #ffcc00;
+            background: transparent;
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            display: inline-block; /* Ensure consistent inline-block behavior */
+            margin-right: 10px; /* Space between buttons */
+        }
+        a:hover, button:hover, input[type="submit"]:hover {
+            background: #ffcc00;
+            color: #cc0000;
+            transform: scale(1.1) rotateX(10deg);
+            box-shadow: 0 0 20px #ffcc00;
+        }
+        #success-msg {
+            display: none;
+            font-size: 16px;
+            color: #ffcc00;
+            text-shadow: 0 0 5px #ff3333;
+            margin-top: 10px;
+        }
+        .bg-anim {
+            position: absolute;
+            background: rgba(255, 51, 0, 0.5);
+            border-radius: 50%;
+            animation: float3D 6s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-anim:nth-child(1) { width: 100px; height: 100px; top: 5%; left: 10%; animation-delay: 0s; }
+        .bg-anim:nth-child(2) { width: 80px; height: 80px; top: 20%; right: 15%; animation-delay: 1s; }
+        .bg-anim:nth-child(3) { width: 120px; height: 120px; bottom: 30%; left: 25%; animation-delay: 2s; }
+        .bg-anim:nth-child(4) { width: 60px; height: 60px; bottom: 10%; right: 20%; animation-delay: 3s; }
+        .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
+        .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
+        @keyframes fadeBackground {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+        @keyframes glow3D {
+            0% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+            50% { transform: translateZ(50px) scale(1.05); text-shadow: 0 0 30px #ff3333, 0 0 60px #ff6666; }
+            100% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+        }
+        @keyframes float3D {
+            0% { transform: translateZ(0) translate(0, 0); }
+            50% { transform: translateZ(100px) translate(50px, 50px); }
+            100% { transform: translateZ(0) translate(0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <h1>Webserv</h1>
+    <div class="container">
+        <p>Here to serve.</p>
+        <div class="zone">
+            <h2>Static Upload</h2>
+            <a href="/uploads/index.html">Go to Static Upload</a>
+        </div>
+        <div class="zone">
+            <h2>Dynamic Upload (CGI)</h2>
+            <button type="button" onclick="window.location.href='/dynamic-upload.html'">Choose File</button>
+            <button type="button" onclick="downloadCGI()">Download via CGI</button>
+            <p id="success-msg">Download Jammed Successfully!</p>
+        </div>
+        <div class="zone">
+            <h2>Fortune Cookie</h2>
+            <a href="/cgi-bin maresca/fortune.cgi">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <a href="/delete/index.html">Go and Delete</a>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/dowload/index.html">Go and Download</a>
+        </div>
+        <div class="zone">
+            <h2>Cookies</h2>
+            <a href="/cookies/index.html">Manage Cookies</a>
+        </div>
+        <div class="zone">
+            <h2>About Us</h2>
+            <a href="/about/index.html">About Us</a>
+        </div>
+    </div>
+
+    <script>
+        function downloadCGI() {
+            // Simulate CGI download action (replace with actual CGI logic)
+            setTimeout(() => {
+                document.getElementById('success-msg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('success-msg').style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }, 500); // Simulate delay
+        }
+    </script>
+</body>
+</html>
+
+Test GET http://localhost:8080/directory/youpi.bla
+content returned: <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webserv - Red 3D Stack</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(45deg, #cc0000, #ff3333, #990000, #ff6666);
+            background-size: 400% 400%;
+            animation: fadeBackground 10s ease-in-out infinite;
+            color: #ffcc00;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 20px 20px 20px;
+            position: relative;
+            z-index: 1;
+            transform-style: preserve-3d;
+        }
+        h1 {
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-align: center;
+            animation: glow3D 2s infinite ease-in-out;
+            text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666;
+            margin-top: 40px;
+            margin-bottom: 10px;
+            transform: translateZ(30px);
+            position: relative;
+            z-index: 2;
+        }
+        .zone {
+            background: rgba(255, 51, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ffcc00;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            transform: rotateY(10deg);
+            transition: transform 0.5s;
+        }
+        .zone:hover {
+            transform: rotateY(0deg) translateZ(50px);
+            box-shadow: 0 0 30px #ff3333;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #ff3333;
+        }
+        a, button, input[type="submit"] {
+            color: #ffcc00;
+            background: transparent;
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            display: inline-block; /* Ensure consistent inline-block behavior */
+            margin-right: 10px; /* Space between buttons */
+        }
+        a:hover, button:hover, input[type="submit"]:hover {
+            background: #ffcc00;
+            color: #cc0000;
+            transform: scale(1.1) rotateX(10deg);
+            box-shadow: 0 0 20px #ffcc00;
+        }
+        #success-msg {
+            display: none;
+            font-size: 16px;
+            color: #ffcc00;
+            text-shadow: 0 0 5px #ff3333;
+            margin-top: 10px;
+        }
+        .bg-anim {
+            position: absolute;
+            background: rgba(255, 51, 0, 0.5);
+            border-radius: 50%;
+            animation: float3D 6s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-anim:nth-child(1) { width: 100px; height: 100px; top: 5%; left: 10%; animation-delay: 0s; }
+        .bg-anim:nth-child(2) { width: 80px; height: 80px; top: 20%; right: 15%; animation-delay: 1s; }
+        .bg-anim:nth-child(3) { width: 120px; height: 120px; bottom: 30%; left: 25%; animation-delay: 2s; }
+        .bg-anim:nth-child(4) { width: 60px; height: 60px; bottom: 10%; right: 20%; animation-delay: 3s; }
+        .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
+        .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
+        @keyframes fadeBackground {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+        @keyframes glow3D {
+            0% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+            50% { transform: translateZ(50px) scale(1.05); text-shadow: 0 0 30px #ff3333, 0 0 60px #ff6666; }
+            100% { transform: translateZ(30px) scale(1); text-shadow: 0 0 20px #ff3333, 0 0 40px #ff6666; }
+        }
+        @keyframes float3D {
+            0% { transform: translateZ(0) translate(0, 0); }
+            50% { transform: translateZ(100px) translate(50px, 50px); }
+            100% { transform: translateZ(0) translate(0, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <div class="bg-anim"></div>
+    <h1>Webserv</h1>
+    <div class="container">
+        <p>Here to serve.</p>
+        <div class="zone">
+            <h2>Static Upload</h2>
+            <a href="/uploads/index.html">Go to Static Upload</a>
+        </div>
+        <div class="zone">
+            <h2>Dynamic Upload (CGI)</h2>
+            <button type="button" onclick="window.location.href='/dynamic-upload.html'">Choose File</button>
+            <button type="button" onclick="downloadCGI()">Download via CGI</button>
+            <p id="success-msg">Download Jammed Successfully!</p>
+        </div>
+        <div class="zone">
+            <h2>Fortune Cookie</h2>
+            <a href="/cgi-bin maresca/fortune.cgi">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <a href="/delete/index.html">Go and Delete</a>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/dowload/index.html">Go and Download</a>
+        </div>
+        <div class="zone">
+            <h2>Cookies</h2>
+            <a href="/cookies/index.html">Manage Cookies</a>
+        </div>
+        <div class="zone">
+            <h2>About Us</h2>
+            <a href="/about/index.html">About Us</a>
+        </div>
+    </div>
+
+    <script>
+        function downloadCGI() {
+            // Simulate CGI download action (replace with actual CGI logic)
+            setTimeout(() => {
+                document.getElementById('success-msg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('success-msg').style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }, 500); // Simulate delay
+        }
+    </script>
+</body>
+</html>
+
+Test GET Expected 404 on http://localhost:8080/directory/oulalala
+FATAL ERROR ON LAST TEST: bad status code

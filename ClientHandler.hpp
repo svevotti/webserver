@@ -31,13 +31,11 @@
 class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
-
 		int 		getFd(void) const;
 		double 		getTime(void) const;
 		double 		getTimeOut(void) const;
 		HttpRequest	getRequest(void) const;
 		std::string getResponse(void) const;
-
 		int 		manageRequest(void);
 		int 		readData(int fd, std::string &str, int &bytes);
 		std::string findDirectory(std::string uri);

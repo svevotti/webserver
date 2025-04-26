@@ -17,7 +17,7 @@
 
 #include "Logger.hpp"
 
-//Constructor and destructor
+//Constructor
 
 ServerSockets::ServerSockets(std::string ip, std::string port)
 {
@@ -25,7 +25,8 @@ ServerSockets::ServerSockets(std::string ip, std::string port)
 	this->port = port;
 	initSockets();
 }
-//Setter and getters
+
+//Setter and Getters
 
 int	ServerSockets::getServerSocket(void) const
 {
@@ -58,7 +59,7 @@ int ServerSockets::createSocket(void)
 	error = getaddrinfo(this->ip.c_str(), this->port.c_str(), &hints, &serverInfo);
 	if (error < 0)
 		Logger::error("Failed getaddrinfo: " + std::string(gai_strerror(errno)));
-	fd = socket(serverInfo->ai_family, hints.ai_socktype | SOCK_NONBLOCK, 0);
+	fd = socket(serverInfo->ai_family, hints.ai_socktype, 0);
 	if (fd == -1)
 	{
 		Logger::error("Failed socket: " + std::string(strerror(errno)));
