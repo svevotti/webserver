@@ -8,7 +8,9 @@
 #include "HttpException.hpp"
 #include "ClientHandler.hpp"
 #include "Config.hpp"
+#include "CGIHandler.hpp" // NEW: Simona
 
+#include <sys/time.h> // NEW: Simona - For gettimeofday (which we now use for microsecond precision; helpful for CGI)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,6 +57,7 @@ class Webserver {
         std::vector<struct pollfd>  poll_sets;
         int            serverFd;
         std::vector<ClientHandler>  clientsList;
+        CGIHandler cgiHandler; // Added by Simona (processClient uses it)
 
 };
 #endif

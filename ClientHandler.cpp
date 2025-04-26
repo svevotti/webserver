@@ -1,5 +1,7 @@
 #include "ClientHandler.hpp"
 #include "PrintFunction.hpp"
+#include <sys/time.h> // NEW: For gettimeofday
+#include <cstring> // For std::strerror
 
 //Constructor and Destructor
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
@@ -7,11 +9,86 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 	this->fd = fd;
 	this->totbytes = 0;
 	this->configInfo = configInfo;
-	this->startingTime = time(NULL);
-	this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
-	std::string errorPath = this->configInfo.getSetting()["error_path"];
+
+	//this->startingTime = time(NULL); // Sveva original 
+	// CHANGED: Simona - CGI Integration: Ensure microsecond precision with gettimeofday
+	struct timeval tv; // new: Simona
+	gettimeofday(&tv, NULL); // new: Simona
+	this->startingTime = tv.tv_sec + tv.tv_usec / 1000000.0; // new: Simona
+
+	// Simona's logging - for debugging
+	std::map<std::string, std::string> settings = configInfo.getSetting();
+    Logger::debug("Settings size: " + Utils::toString(settings.size()) + " for FD " + Utils::toString(fd));
+	
+	//this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
+	// Simona's - for debugging
+
+	// Set keepalive_timeout
+	std::map<std::string, std::string>::const_iterator it = settings.find("keepalive_timeout");
+	if (it == settings.end()) 
+	{
+        Logger::warn("No keepalive_timeout in settings for FD " + Utils::toString(fd) + ", using default 75");
+        this->timeoutTime = 75.0;
+    } 
+	else 
+	{
+        this->timeoutTime = atof(it->second.c_str());
+        Logger::debug("Set timeoutTime to " + Utils::toString(this->timeoutTime) + " for FD " + Utils::toString(fd));
+    }
+
+	//*** */ NEW: Simona / CGI INTEGRATION / 
+	// Set cgi_processing_timeout
+	this->cgiProcessingTimeout = configInfo.getCGIProcessingTimeout();
+	Logger::debug("Set cgiProcessingTimeout to " + Utils::toString(this->cgiProcessingTimeout) + 
+              " for FD " + Utils::toString(fd) + " on server " + configInfo.getIP() + ":" + configInfo.getPort());
+
+
+	it = settings.find("error_path");
+    std::string errorPath = it != settings.end() ? it->second : "";
+    Logger::debug("Error path: " + errorPath + " for FD " + Utils::toString(fd));
+	//
+	//std::string errorPath = this->configInfo.getSetting()["error_path"];
 	HttpException::setHtmlRootPath(errorPath);
+	Logger::debug("ClientHandler constructed for FD " + Utils::toString(fd));
+	//SIMONA - for debugging
+
+	Logger::debug("Creating ClientHandler for server " + configInfo.getIP() + ":" + configInfo.getPort() +
+	" with settings: keepalive_timeout=" + Utils::toString(this->timeoutTime) +
+	", cgi_processing_timeout=" + Utils::toString(this->cgiProcessingTimeout));
 }
+
+//*** Simona's addition (leaks debugging) 
+// Copy Constructor 
+ClientHandler::ClientHandler(const ClientHandler& other) 
+	: fd(other.fd), totbytes(other.totbytes), raw_data(other.raw_data), 
+	startingTime(other.startingTime), timeoutTime(other.timeoutTime), 
+	cgiProcessingTimeout(other.cgiProcessingTimeout), configInfo(other.configInfo), 
+	request(other.request), response(other.response) 
+{
+    Logger::debug("Copying ClientHandler for FD " + Utils::toString(fd));
+}
+
+// Simona addition (leaks debugging)
+// Copy Assignment Operator // to be rechecked 
+ClientHandler& ClientHandler::operator=(const ClientHandler& other) 
+{
+	if (this != &other) 
+	{
+		fd = other.fd;
+		totbytes = other.totbytes;
+		raw_data = other.raw_data;
+		startingTime = other.startingTime;
+		timeoutTime = other.timeoutTime;
+		cgiProcessingTimeout = other.cgiProcessingTimeout;
+		configInfo = other.configInfo;
+		request = other.request;
+		response = other.response;
+		Logger::debug("Assigning ClientHandler for FD " + Utils::toString(fd));
+	}
+	return *this;
+}
+
+
 
 //Setters and Getters
 int ClientHandler::getFd(void) const
@@ -38,11 +115,43 @@ double ClientHandler::getTimeOut(void) const
 {
 	return this->timeoutTime;
 }
+
+// NEW - SIMONA - Getter for cgi_processing_timeout CGI Integration */
+double ClientHandler::getCGIProcessingTimeout(void) const 
+{
+    return configInfo.getCGIProcessingTimeout();
+}
+
+//NEW - SIMONA - Setter for Response / CGI Integration */
+void ClientHandler::setResponse(const std::string& resp) 
+{
+    this->response = resp;
+}
+
+
 //Main functions
 
 void ClientHandler::validateHttpHeaders(struct Route route)
 {
 	std::string uri = this->request.getHttpRequestLine()["request-uri"];
+
+	std::string method = this->request.getHttpRequestLine()["method"]; // Simona debug 
+	Logger::debug("Validating HTTP method: " + this->request.getHttpRequestLine()["method"] + " for URI: " + uri); // Simona debug 
+
+	// Simona / cgi integraton / Making sure method is a valid HTTP method (not a boundary marker)
+    if (method != "GET" && method != "POST" && method != "DELETE" && method != "PUT") 
+	{
+        Logger::error("Invalid HTTP method: " + method);
+        throw BadRequestException();
+    }
+    
+	// Simona - CGI integration -  Check if method is allowed for this route
+    if (route.methods.count(method) == 0) 
+	{
+        Logger::error("Method " + method + " not allowed for URI " + uri);
+        throw MethodNotAllowedException();
+    }
+
 	route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
@@ -66,7 +175,7 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 			else
 				type = it->second;
 			std::map<std::string, std::string>::iterator itC;
-			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); it++)
+			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); itC++) // Simona bug fixed (itC++ instead)
 			{
 				if (itC->first == "content_type")
 				{
@@ -141,10 +250,13 @@ std::string ClientHandler::createPath(struct Route route, std::string uri)
 
 int ClientHandler::manageRequest(void)
 {
+	//Logger::debug("Processing request for FD " + Utils::toString(fd));
+	Logger::debug("Processing request for FD " + Utils::toString(fd) + ", raw_data size: " + Utils::toString(raw_data.size())); // Simona's
 	int result;
 	std::string uri;
 	struct Route route;
 	result = readData(this->fd, this->raw_data, this->totbytes);
+	Logger::debug("readData result: " + Utils::toString(result) + ", totbytes: " + Utils::toString(totbytes)); // Simona's log
 	if (result == 0 || result == 1)
 		return 1;
 	else
@@ -153,21 +265,48 @@ int ClientHandler::manageRequest(void)
 		std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
 		try
 		{
+			// Check for 413 - Sveva's Original
+			/// if (stringLowerCases.find("content-length") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
+			/// {
+			/// 	int start = stringLowerCases.find("content-length") + 16;
+			/// 	int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
+			/// 	int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+			// 	if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
+			// 		throw PayLoadTooLargeException();
+			// 	if (this->totbytes < bytes_expected)
+			// 		return 0;
+			// }
+			
+			// Check for 413 - Version with very minor changes by Simona-- minimal changes to extend to CGI
 			if (stringLowerCases.find("content-length") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
 			{
 				int start = stringLowerCases.find("content-length") + 16;
 				int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
 				int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-				if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]) * 1000000)
+				size_t maxSize = 10 * 1024 * 1024; // Default 10MB // added just for safety (optional)
+				std::map<std::string, std::string> settings = this->configInfo.getSetting(); // Simona> I broke it down in 2 steps just because i was getting trouble tracking but same code
+				if (settings.find("client_max_body_size") != settings.end()) 
+					maxSize = Utils::toInt(settings["client_max_body_size"]);// I kept it in bytes because H said that's how it is in conf -- everything works 
+				if (static_cast<size_t>(bytes_expected) > maxSize)
+				{
+					Logger::error("413 - Payload Too Large: Request body size " + Utils::toString(bytes_expected) + " exceeds client_max_body_size " + Utils::toString(maxSize));
 					throw PayLoadTooLargeException();
+				}
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}
+			
 			Logger::info("Done receving request");
+			Logger::debug("Parsing request for FD " + Utils::toString(fd));
 			this->request.HttpParse(this->raw_data, this->totbytes);
-			Logger::info("Done parsing");
+			Logger::info("Done parsing");	
+
 			uri = this->request.getHttpRequestLine()["request-uri"];
-			route = configInfo.getRoute()[uri];
+        	std::string method = this->request.getMethod(); //NEW - CGI Integration
+
+			// Find the appropriate route
+			std::string routeKey = findDirectory(uri); // do I need it? Was it here?
+			route = configInfo.getRoute()[uri]; // OR route = configInfo.getRoute()[routeKey];
 			if (route.uri.empty())
 			{
 				std::string locationPath;
@@ -181,13 +320,24 @@ int ClientHandler::manageRequest(void)
 				route.path = newPath;
 			}
 			Logger::info("Got route");
+
+			// Check for 405 - Method Validation - Simona - New block - check here for CGI integration (does not compromise static)
+			if (route.methods.count(method) == 0)
+			{
+				Logger::error("405 - Method Not Allowed: " + method + " for URI " + uri);
+				throw MethodNotAllowedException();
+			}
+
 			validateHttpHeaders(route);
 			Logger::info("Validate http request");
+
+			// Handle CGI
 			if (isCgi(uri) == true)
 			{
-				Logger::info("Set up CGI");
-				return 0;
+				Logger::info("Set up CGI for URI: " + uri + " on Server " + configInfo.getIP() + ":" + configInfo.getPort());
+				return 3;
 			}
+			// Handle static content
 			if (route.locSettings.find("redirect") != route.locSettings.end())
 			{
 				struct Route redirectRoute;
@@ -218,6 +368,7 @@ int ClientHandler::manageRequest(void)
 		}
 		catch (const HttpException &e)
 		{
+			Logger::error("Exception in manageRequest for FD " + Utils::toString(fd) + ": " + Utils::toString(e.getCode()) + " " + e.what()); // Simona
 			HttpResponse http(e.getCode(), e.getBody());
 			this->response = http.composeRespone();
 			Logger::error(Utils::toString(e.getCode()) + " " + e.what());
@@ -236,7 +387,8 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 
 	while (1)
 	{
-		Utils::ft_memset(buffer, 0, sizeof(buffer));
+		//Utils::ft_memset(buffer, 0, sizeof(buffer));
+		std::memset(buffer, 0, sizeof(buffer));
 		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
 		if (res <= 0)
 			break;
@@ -260,11 +412,6 @@ int ClientHandler::retrieveResponse(void)
 	this->totbytes = 0;
 	this->request.cleanProperties();
 	return 0;
-}
-
-int ClientHandler::isCgi(std::string str)
-{
-	return false;
 }
 
 std::string ClientHandler::extractContent(std::string path)
@@ -336,6 +483,7 @@ std::string getFileName(std::map<std::string, std::string> headers)
 	return name;
 }
 
+// Simona - changes to avoid memory leak
 int checkNameFile(std::string str, std::string path)
 {
 	DIR *folder;
@@ -349,7 +497,10 @@ int checkNameFile(std::string str, std::string path)
 	{
 		convStr = data->d_name;
 		if (convStr == str)
+		{
+			closedir(folder); // Simona - close the directory stream to avoid memory leak
 			return (1);
+		}
 	}
 	closedir(folder);
 	return (0);
@@ -372,6 +523,7 @@ std::string ClientHandler::uploadFile(std::string path)
 	if (checkNameFile(fileName, path) == 1)
 		throw ConflictException();
 	path += "/" + fileName;
+	Logger::debug("Uploading file: " + fileName + " of type: " + fileType + " to path: " + path); // Simona debug
 	int file = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (file < 0)
 		throw BadRequestException();
@@ -435,3 +587,42 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	response = http.composeRespone();
 	return response;
 }
+
+// IN PROGRESS - Simona's
+int ClientHandler::isCgi(std::string str)
+{
+	std::map<std::string, Route> routes = configInfo.getRoute();
+    Route cgiRoute = configInfo.getCGI();
+	// New today
+	std::string routeKey = findDirectory(str);
+    std::map<std::string, Route>::const_iterator routeIt = routes.find(routeKey);
+
+	// Check route-specific CGI settings
+	if (routeIt != routes.end() && routeIt->second.locSettings.find("cgi") != routeIt->second.locSettings.end())
+    {
+        std::string cgiExt = routeIt->second.locSettings.find("cgi")->second;
+        if (str.find(cgiExt) != std::string::npos)
+        {
+            Logger::debug("CGI detected via route settings for URI: " + str);
+            return true;
+        }
+    }
+
+	// Check global CGI route
+	if (!cgiRoute.uri.empty() && str.find(cgiRoute.uri) == 0)
+	{
+		Logger::debug("CGI detected via global CGI route for URI: " + str);
+    	return true;
+	}
+
+	// Check for script extensions
+	if (str.find(".py") != std::string::npos || 
+		str.find(".php") != std::string::npos)
+	{
+		Logger::debug("CGI detected via file extension for URI: " + str);
+		return true;
+	}
+    return false;
+}
+// END OF SIMONA'S BIT *//
+

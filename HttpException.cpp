@@ -10,6 +10,15 @@ HttpException::HttpException(int code, std::string message)
 	this->body = extractFile();
 }
 
+// Simona - New constructor for custom body - Simona's - used for CGI error handling integration
+HttpException::HttpException(int code, std::string message, std::string customBody)
+{
+    this->code = code;
+    this->file = "";
+    this->message = message;
+    this->body = customBody;
+}
+
 void HttpException::setHtmlRootPath(std::string uri)
 { 
 	htmlRootPath = uri;

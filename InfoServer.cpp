@@ -1,16 +1,17 @@
 #include "InfoServer.hpp"
+#include "Utils.hpp"
+#include "Logger.hpp"
 
 //default constructor (only for orthodox form)
-InfoServer::InfoServer( void ) {
-}
+// Simona / debugging leaks - add initialization to -1
+InfoServer::InfoServer() : _fd(-1) {}
 
-// //Copy constructor
+// Copy constructor
 InfoServer::InfoServer( const InfoServer& copy) {
 	*this = copy;
 }
 
-//Equal operator
-
+// Assignment operator // siMONA CHANGES CHASING LEAKS
 InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 	if (this != &copy)
 	{
@@ -21,17 +22,20 @@ InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 		_cgi = copy.getCGI();
 		_settings = copy.getSetting();
 		_routes = copy.getRoute();
+		_fd = -1; // Simona / debugging leaks - add initialization to -1
 	}
-
 	return (*this);
 }
 
 //Deconstructor
 InfoServer::~InfoServer() {
 }
+// Constructor with parameters 
+InfoServer::InfoServer(std::string port, std::string ip, std::string root, std::string index) 
+    : _port(port), _ip(ip), _root(root), _index(index), _fd(-1) { // CHANGED: Added _fd(-1) initialization
+}
 
-InfoServer::InfoServer(std::string port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index) {}
-
+// Setters 
 void	InfoServer::setPort( std::string port ) {
 	this->_port = port;
 }
@@ -42,9 +46,11 @@ void	InfoServer::setIP( std::string ip ) {
 	else
 		this->_ip = ip;
 }
+
 void	InfoServer::setRoot( std::string root ) {
 	this->_root = root;
 }
+
 void	InfoServer::setIndex( std::string index ) {
 	this->_index = index;
 }
@@ -65,6 +71,7 @@ void	InfoServer::setFD( int fd ) {
 	this->_fd = fd;
 }
 
+// Getters
 std::string	InfoServer::getPort( void ) const {
 	return (_port);
 }
@@ -97,7 +104,24 @@ int	InfoServer::getFD ( void ) const {
 	return (_fd);
 }
 
-bool	InfoServer::isIPValid( std::string ip ) {
+// Simona: Added getter for cgi_processing_timeout
+// Explanation: this function retrieves the CGI processing timeout from the settings map.
+// If not found, it returns a default value of 15 seconds.
+double InfoServer::getCGIProcessingTimeout(void) const 
+{
+    std::map<std::string, std::string>::const_iterator it = _settings.find("cgi_processing_timeout");
+    if (it != _settings.end()) 
+	{
+		double value = atof(it->second.c_str());
+		return value;
+	}	
+	Logger::debug("cgi_processing_timeout not found in settings, using default: 45.0");
+    return 15.0; // Default to 15 seconds if not specified
+}
+
+// IP validation
+bool	InfoServer::isIPValid( std::string ip ) 
+{
 	int	ndots = 0;
 	if (ip == "localhost")
 		return true;

@@ -266,6 +266,7 @@
                         return response.text().then(text => ({ status: response.status, text, contentType: response.headers.get('Content-Type') }));
                     })
                     .then(data => {
+                        console.log('Raw response text:', data.text);
                         const successMsg = document.getElementById('success-msg');
                         if (data.contentType === 'application/json') {
                             const bodyStart = data.text.indexOf('\r\n\r\n') !== -1 ? data.text.indexOf('\r\n\r\n') + 4 : data.text.indexOf('\n\n') !== -1 ? data.text.indexOf('\n\n') + 2 : 0;
@@ -285,7 +286,7 @@
                                 successMsg.style.display = 'block';
                                 setTimeout(() => successMsg.style.display = 'none', 3000);
                             } else if (data.status === 409 && jsonData.status === 'conflict') {
-                                console.log('Conflict case: 409 Conflict detected in CGI');
+                                console.log('Conflict case: 409 Conflict detected');
                                 successMsg.textContent = jsonData.message;
                                 successMsg.style.display = 'block';
                                 setTimeout(() => successMsg.style.display = 'none', 3000);

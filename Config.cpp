@@ -1,4 +1,5 @@
 #include "Config.hpp"
+#include "Logger.hpp"
 
 //default constructor (only for orthodox form)
 //Copy constructor
@@ -6,38 +7,85 @@
 // 	*this = copy;
 // }
 
-//Equal operator
-Config&	Config::operator=( const Config& copy) {
-	if (this != &copy)
-	{
-		_servcount = copy.getServCount();
-		std::vector<InfoServer*> server;
-		server = copy.getServList();
-		std::vector<InfoServer*>::iterator				servIt;
-		for (servIt = server.begin(); servIt != server.end(); servIt++)
-		{
-			InfoServer *new_server= new InfoServer[_servcount];
-			new_server = (*servIt);
-			_servlist.push_back(new_server);
-		}
-	}
- 	return (*this);
+// Added by Simona - leaks debub
+
+//Constructor with configFile as argument
+Config::Config(const std::string& configFile) {
+    parseConfigFile(configFile);
 }
+
+// Copy constructor
+Config::Config(const Config& copy) : _servcount(copy._servcount) {
+    std::vector<InfoServer*> server = copy.getServList();
+    for (std::vector<InfoServer*>::const_iterator servIt = server.begin(); servIt != server.end(); ++servIt) {
+        InfoServer* new_server = new InfoServer(**servIt);
+        _servlist.push_back(new_server);
+    }
+}
+// End of added bit
+
+
+//Equal operator
+//Replaced by Simona - leaks debug
+// Assignment operator
+Config& Config::operator=(const Config& copy) 
+{
+    if (this != &copy) {
+        for (std::vector<InfoServer*>::iterator servIt = _servlist.begin(); servIt != _servlist.end(); ++servIt) {
+            delete *servIt;
+        }
+        _servlist.clear();
+        _servcount = copy.getServCount();
+        std::vector<InfoServer*> server = copy.getServList();
+        for (std::vector<InfoServer*>::const_iterator servIt = server.begin(); servIt != server.end(); ++servIt) {
+            InfoServer* new_server = new InfoServer(**servIt);
+            _servlist.push_back(new_server);
+        }
+    }
+    return *this;
+}
+
+
+// - REPLACED DEBUGGING LEAKS
+// Config&	Config::operator=( const Config& copy) {
+// 	if (this != &copy)
+// 	{
+// 		_servcount = copy.getServCount();
+// 		std::vector<InfoServer*> server;
+// 		server = copy.getServList();
+// 		std::vector<InfoServer*>::iterator				servIt;
+// 		for (servIt = server.begin(); servIt != server.end(); servIt++)
+// 		{
+// 			InfoServer *new_server= new InfoServer[_servcount];
+// 			new_server = (*servIt);
+// 			_servlist.push_back(new_server);
+// 		}
+// 	}
+//  	return (*this);
+// }
 
 //Deconstructor
-Config::~Config() {
-	std::vector<InfoServer*>::iterator	servIt;
+Config::~Config() 
+{
+	//std::vector<InfoServer*>::iterator	servIt; // this is unused (Simona)
 
-	for(servIt = _servlist.begin(); servIt != _servlist.end(); servIt++)
-		delete (*servIt);
+	// for(servIt = _servlist.begin(); servIt != _servlist.end(); servIt++)
+	// 	delete (*servIt);
+
+	// REPLACED BY SIMONA - LEAKS DEBUG
+	for (std::vector<InfoServer*>::iterator servIt = _servlist.begin(); servIt != _servlist.end(); ++servIt) {
+        delete *servIt;
+	}
+	Logger::debug("Config destructor called, cleaned up server list."); // Simona - added debug message
 }
+// Moved up to the top of the file
+// //Constructor that takes a configFile as argument
+// Config::Config(const std::string& configFile) {
+// 	parseConfigFile(configFile);
+// 	//Handle return from parseConfigFile
+// }
 
-//Constructor that takes a configFile as argument
-Config::Config( const std::string& configFile) {
-	parseConfigFile(configFile);
-	//Handle return from parseConfigFile
-}
-
+// Setters and Getters 
 void	Config::setServerList( const std::vector<InfoServer*> servlist ) {
 	_servlist = servlist;
 }
@@ -67,28 +115,37 @@ int	Config::getServCount( void ) const {
 
 bool	Config::ft_validServer( void )
 {
-	std::vector<InfoServer*>::iterator					servIt;
-	std::vector<InfoServer*>							server;
+	//std::vector<InfoServer*>::iterator					servIt;
+	std::vector<InfoServer*> server = getServList();
+	//std::vector<InfoServer*>							server;
 	std::set<std::string>								s_port;
 	std::pair<std::set<std::string>::iterator, bool>	inserted;
 	std::string											name_port;
 
-	server = (*this).getServList();
+	//server = (*this).getServList();
 	if (server.empty())
 	{
 		std::cout << "Error! No server was properly parsed!" << std::endl;
 		return false;
 	}
-	for(servIt = server.begin(); servIt != server.end(); servIt++)
-	{
-		name_port = (*servIt)->getIP() + (*servIt)->getPort();
-		inserted = s_port.insert(name_port);
-		if (!inserted.second)
-		{
-			std::cout << "Error, two servers have the same port!" << std::endl;
-			return false;
-		}
-	}
+	// for(servIt = server.begin(); servIt != server.end(); servIt++)
+	// {
+	// 	name_port = (*servIt)->getIP() + (*servIt)->getPort();
+	// 	inserted = s_port.insert(name_port);
+	// 	if (!inserted.second)
+	// 	{
+	// 		std::cout << "Error, two servers have the same port!" << std::endl;
+	// 		return false;
+	// 	}
+	// }
+	for (std::vector<InfoServer*>::iterator servIt = server.begin(); servIt != server.end(); ++servIt) {
+        std::string name_port = (*servIt)->getIP() + (*servIt)->getPort();
+        inserted = s_port.insert(name_port);
+        if (!inserted.second) {
+            std::cout << "Error, two servers have the same port!" << std::endl;
+            return false;
+        }
+    }
 	if ((int) s_port.size() != _servcount)
 	{
 		std::cout << "Error, not all servers were parsed!" << std::endl;
@@ -148,7 +205,7 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				if (route.internal)
 					route.path =("." + settingMap["error_path"] + route.uri);
 				else
-				route.path =("." + settingMap["root"] + route.uri);
+					route.path =("." + settingMap["root"] + route.uri);
 			}
 			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
 			{
@@ -185,91 +242,225 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 }
 
 //Parses a block of code that starts with "server"
-bool	Config::parseServer(std::istream &conf)
+// bool	Config::parseServer(std::istream &conf)
+// {
+// 	std::string	line;
+// 	std::string	key;
+// 	std::string	value;
+// 	bool		location_ok = false;
+// 	InfoServer	*server = new InfoServer;
+
+// 	while (std::getline(conf, line))
+// 	{
+// 		if (!trimLine(line))
+// 			continue;
+
+// 		if (line == "}") //When we get to the end of the block, we exit
+// 		{
+// 			if(!server->getPort().empty() && !server->getIP().empty() && !server->getRoot().empty() && server->isIPValid(server->getIP())) //Checks for minimal info, can be made an external checker function
+// 			{
+// 				_servlist.push_back(server);
+// 				return true;
+// 			}
+// 			delete server;
+// 			return false; //Check if memory is lost and I need to add a delete here
+// 		}
+// 		else if (line.find("location ") != std::string::npos) //If we find a location block, we need to parse it
+// 		{
+// 			line = line.substr(line.find("location ") + 9); //Remove the "location " bit of the line
+// 			size_t n = line.find(" ");
+// 			std::string	location = line.substr(0, n);
+// 			//Remove last slash
+// 			if (location != "/" && location[location.size() - 1] == '/')
+// 				location = location.substr(0, location.size() - 1);
+// 			location_ok = parseLocation(conf, server, location);
+// 			if (location_ok == false)
+// 				std::cerr << "Error in location block!" << std::endl;
+// 			location_ok = false;
+// 		}
+// 		else //It's a line that we need to split into key and value
+// 		{
+// 			size_t pos = line.find('\t'); //We look for the tab(s) that split the key and value
+// 			key = line.substr(0, pos);
+// 			value = line.substr(pos + 1, line.length() - key.length()); //To avoid the ; in the end
+// 			//Trim again
+// 			key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
+// 			//value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
+// 			// Simona: Adding check to prevent out-of-range substr
+//             size_t start = value.find_first_not_of(" \t");
+//             size_t end = value.find_last_not_of(" \t;");
+//             if (start != std::string::npos && end != std::string::npos && end >= start) {
+//                 value = value.substr(start, end - start + 1);
+//             } else {
+//                 value = ""; // Handle empty or whitespace-only value
+//             }
+
+// 			server->setSetting(key, value); //server->setSetting(key, value); // Store all settings, including cgi_processing_timeout
+// 			if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
+// 			{
+// 				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
+// 					server->setPort(value); //Saved as string, change to int?
+// 				else
+// 					std::cerr << "Incorrect port value: " << value << std::endl;
+// 			}
+// 			if (key == "server_name") //host?
+// 			{
+// 				if (server->isIPValid(value))
+// 					server->setIP(value); //Saved as string
+// 				else
+// 					std::cerr << "Incorrect IP: " << value << std::endl;
+// 			}
+// 			if (key == "root")
+// 				server->setRoot(value);
+// 			if (key == "index")
+// 				server->setIndex(value);
+// 			if (key.find("cgi") != std::string::npos || key.find("CGI") != std::string::npos) 
+// 			{
+// 				Logger::debug("Config: Setting server key '" + key + "' to value '" + value + "'");
+// 			}
+// 			//Expand if we need more variables
+// 		}
+// 	}
+// 	std::cout << "This should not have happened (parseServer)" << std::endl;
+// 	delete server;
+// 	return false; //We should never get here, so if we do, something is messed up somewhere
+// }
+
+// NEW VERSION - Simona -- leaks issue
+
+bool Config::parseServer(std::istream &conf)
 {
-	std::string	line;
-	std::string	key;
-	std::string	value;
-	bool		location_ok = false;
-	InfoServer	*server = new InfoServer;
+    std::string line;
+    std::string key;
+    std::string value;
+    bool location_ok = false;
+    InfoServer *server = new InfoServer;
 
-	while (std::getline(conf, line))
-	{
-		if (!trimLine(line))
-			continue;
+    while (std::getline(conf, line))
+    {
+        if (!trimLine(line))
+            continue;
 
-		if (line == "}") //When we get to the end of the block, we exit
-		{
-			if(!server->getPort().empty() && !server->getIP().empty() && !server->getRoot().empty() && server->isIPValid(server->getIP())) //Checks for minimal info, can be made an external checker function
-			{
-				_servlist.push_back(server);
-				return true;
-			}
-			delete server;
-			return false; //Check if memory is lost and I need to add a delete here
-		}
-		else if (line.find("location ") != std::string::npos) //If we find a location block, we need to parse it
-		{
-			line = line.substr(line.find("location ") + 9); //Remove the "location " bit of the line
-			size_t n = line.find(" ");
-			std::string	location = line.substr(0, n);
-			//Remove last slash
-			if (location != "/" && location[location.size() - 1] == '/')
-				location = location.substr(0, location.size() - 1);
-			location_ok = parseLocation(conf, server, location);
-			if (location_ok == false)
-				std::cerr << "Error in location block!" << std::endl;
-			location_ok = false;
-		}
-		else //It's a line that we need to split into key and value
-		{
-			size_t pos = line.find('\t'); //We look for the tab(s) that split the key and value
-			key = line.substr(0, pos);
-			value = line.substr(pos + 1, line.length() - key.length()); //To avoid the ; in the end
-			//Trim again
-			key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
-			value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
+        if (line == "}") // End of block
+        {
+            if (!server->getPort().empty() && !server->getIP().empty() && !server->getRoot().empty() && server->isIPValid(server->getIP()))
+            {
+                _servlist.push_back(server);
+                return true;
+            }
+            delete server;
+            return false;
+        }
+        else if (line.find("location ") != std::string::npos) // Location block
+        {
+            line = line.substr(line.find("location ") + 9);
+            size_t n = line.find(" ");
+            std::string location = line.substr(0, n);
+            if (location != "/" && location[location.size() - 1] == '/')
+                location = location.substr(0, location.size() - 1);
+            location_ok = parseLocation(conf, server, location);
+            if (!location_ok)
+                std::cerr << "Error in location block!" << std::endl;
+            location_ok = false;
+        }
+        else // Key-value pair
+        {
+            size_t pos = line.find('\t'); // NEW
+            if (pos == std::string::npos) // NEW
+            {
+                Logger::warn("Invalid config line (missing tab): " + line); // NEW
+                continue; // NEW
+            } // NEW
+            key = line.substr(0, pos); // NEW
+            value = line.substr(pos + 1); // NEW
+            key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1); // NEW
+            size_t semiPos = value.find(';'); // NEW
+            if (semiPos != std::string::npos) // NEW
+                value = value.substr(0, semiPos); // NEW
+            size_t start = value.find_first_not_of(" \t"); // NEW
+            size_t end = value.find_last_not_of(" \t"); // NEW
+            if (start != std::string::npos && end != std::string::npos && end >= start) // NEW
+                value = value.substr(start, end - start + 1); // NEW
+            else // NEW
+                value = ""; // NEW
+            
+            if (key.empty() || value.empty()) // NEW
+            {
+                Logger::warn("Invalid key-value pair: key='" + key + "', value='" + value + "'"); // NEW
+                continue; // NEW
+            } // NEW
 
-			server->setSetting(key, value);
-			if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
-			{
-				if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
-					server->setPort(value); //Saved as string, change to int?
-				else
-					std::cerr << "Incorrect port value: " << value << std::endl;
-			}
-			if (key == "server_name") //host?
-			{
-				if (server->isIPValid(value))
-					server->setIP(value); //Saved as string
-				else
-					std::cerr << "Incorrect IP: " << value << std::endl;
-			}
-			if (key == "root")
-				server->setRoot(value);
-			if (key == "index")
-				server->setIndex(value);
-			//Expand if we need more variables
-		}
-	}
-	std::cout << "This should not have happened (parseServer)" << std::endl;
-	delete server;
-	return false; //We should never get here, so if we do, something is messed up somewhere
+            std::map<std::string, std::string> settings = server->getSetting(); // NEW
+            if (settings.find(key) != settings.end()) // NEW
+                Logger::warn("Duplicate key '" + key + "' in server block, overwriting with value '" + value + "'"); // NEW
+
+            Logger::debug("Config: Setting server key '" + key + "' to value '" + value + "'"); // NEW
+            server->setSetting(key, value);
+            if (key == "port")
+            {
+                if (atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && value.find_first_not_of("0123456789") == std::string::npos)
+                    server->setPort(value);
+                else
+                    std::cerr << "Incorrect port value: " << value << std::endl;
+            }
+            if (key == "server_name")
+            {
+                if (server->isIPValid(value))
+                    server->setIP(value);
+                else
+                    std::cerr << "Incorrect IP: " << value << std::endl;
+            }
+            if (key == "root")
+                server->setRoot(value);
+            if (key == "index")
+                server->setIndex(value);
+            if (key.find("cgi") != std::string::npos || key.find("CGI") != std::string::npos)
+            {
+                Logger::debug("Config: Setting server key '" + key + "' to value '" + value + "'");
+            }
+        }
+    }
+    std::cout << "This should not have happened (parseServer)" << std::endl;
+    delete server;
+    return false;
 }
 
-
 // Removes spaces and tabs at the beginning and end of a line, checks if the line is empty or is a comment. Returns false if the line is not valid (and therefore needs to be skipped) and true if the line is trimmed.
-bool	Config::trimLine(std::string& line)
+// bool	Config::trimLine(std::string& line)
+// {
+// 	//Trim lines and get rid of empty ones
+// 	size_t	start = line.find_first_not_of(" \t");
+// 	size_t	end = line.find_last_not_of(" \t");
+// 	if (start == std::string::npos || end == std::string::npos)
+// 		return (false);
+// 	line = line.substr(start, end - start + 1);
+// 	if (line.empty() || line[0] == '#')
+// 		return (false);
+// 	return (true);
+// }
+
+//SIMONA: we have some leaks going back to this part.
+// I recommend changing to this: 
+bool Config::trimLine(std::string& line)
 {
-	//Trim lines and get rid of empty ones
-	size_t	start = line.find_first_not_of(" \t");
-	size_t	end = line.find_last_not_of(" \t");
-	if (start == std::string::npos || end == std::string::npos)
-		return (false);
-	line = line.substr(start, end - start + 1);
-	if (line.empty() || line[0] == '#')
-		return (false);
-	return (true);
+    // Trim leading/trailing whitespace
+    size_t start = line.find_first_not_of(" \t");
+    size_t end = line.find_last_not_of(" \t");
+    if (start == std::string::npos || end == std::string::npos)
+        return false;
+    line = line.substr(start, end - start + 1);
+    if (line.empty() || line[0] == '#')
+        return false;
+   // Strip inline comments
+   size_t commentPos = line.find('#');
+   if (commentPos != std::string::npos)
+       line = line.substr(0, commentPos);
+   // Trim again after removing comment
+   start = line.find_first_not_of(" \t");
+   end = line.find_last_not_of(" \t");
+   if (start != std::string::npos && end != std::string::npos)
+       line = line.substr(start, end - start + 1);
+   return !line.empty();
 }
 
 //Parses the config file and populates all the attributes of the Config class

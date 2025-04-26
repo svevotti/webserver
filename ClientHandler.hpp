@@ -28,9 +28,14 @@
 
 #define BUFFER 1024
 
+class Webserver; // Added by Simona - Forward declaration for friend - needed for confinginfo-passing to CGI
+
 class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
+		ClientHandler(const ClientHandler& other); // NEW - Simona - Copy constructor for debugging
+		ClientHandler& operator=(const ClientHandler& other); // NEW - Simona - Copy assignment operator for debugging
+		~ClientHandler() { Logger::debug("ClientHandler destructor for FD " + Utils::toString(fd)); } // NEW - Simona - Destructor
 
 		int 		getFd(void) const;
 		double 		getTime(void) const;
@@ -50,16 +55,21 @@ class ClientHandler {
 		std::string prepareResponse(struct Route route);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
+		void 		setResponse(const std::string& resp); // NEW - Simona - CGI integration
+		double      getCGIProcessingTimeout(void) const; // NEW - Simona: for cgi_processing_timeout
 
 	private:
-	int 		fd;
-	int 		totbytes;
-	std::string raw_data;
-	double		startingTime;
-	double		timeoutTime;
-	InfoServer	configInfo;
-	HttpRequest request;
-	std::string response;
+		int 		fd;
+		int 		totbytes;
+		std::string raw_data;
+		double		startingTime;
+		double		timeoutTime;
+		double      cgiProcessingTimeout; // NEW - Simona: cgi_processing_timeout
+		InfoServer	configInfo;
+		HttpRequest request;
+		std::string response;
+	
+	friend class Webserver; // NEW - Simona - for confinginfo passing to CGI
 };
 
 #endif

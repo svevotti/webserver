@@ -15,6 +15,23 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->headers = other.headers;
 	this->sectionInfo = other.sectionInfo;
 }
+
+// Simona - Destructor is missing in this code 
+
+// Simona // debugging leaks
+// Copy assignment operator 
+HttpRequest& HttpRequest::operator=(const HttpRequest& other) 
+{
+    if (this != &other) 
+    {
+        this->requestLine = other.requestLine;
+        this->query = other.query;
+        this->headers = other.headers;
+        this->sectionInfo = other.sectionInfo;
+    }
+    return *this;
+}
+
 // Setters and getters
 std::map<std::string, std::string> HttpRequest::getHttpRequestLine(void) const
 {
@@ -57,6 +74,16 @@ std::string HttpRequest::getQuery(void) const
 
 std::string HttpRequest::getBodyContent(void) const
 {
+	// Simona -- added for CGI compatibility
+	// If the request is multipart, reconstruct the body for CGI scripts like upload.py.
+    // Otherwise, return the raw body as before to maintain compatibility with other scripts.
+    if (requestLine.find("method")->second == "POST" &&
+        headers.find("content-type") != headers.end() &&
+        headers.find("content-type")->second.find("multipart/form-data") != std::string::npos)
+    {
+        return reconstructMultipartBody();
+    }
+	// END OF SIMONA'S BIT
 	return this->sectionInfo.body;
 }
 
@@ -140,6 +167,15 @@ void HttpRequest::parseRequestLine(std::string str)
 	size_t index;
 	std::string newUri;
 
+	Logger::debug("Parsing request line: [" + str.substr(0, std::min<size_t>(str.size(), 100)) + "]"); // Simona debug
+
+	// Simona - added for debugging
+	// Ensure the string is not empty and contains at least one space
+    if (str.empty() || str.find(" ") == std::string::npos) {
+        Logger::error("Invalid request line: empty or missing space");
+        throw BadRequestException();
+    }
+	//Extract method
 	//make also request line in lowercase
 	index = str.find(" ");
 	if (index != std::string::npos)
@@ -151,6 +187,8 @@ void HttpRequest::parseRequestLine(std::string str)
 	else
 		throw BadRequestException();
 	str.erase(0, method.length()+1);
+
+	// Extract uri
 	index = str.find(" ");
 	if (index != std::string::npos)
 	{
@@ -229,7 +267,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
-	delete b;
+	delete [] b; // should this be 'delete [] b' not 'delete b' 
 }
 
 struct section HttpRequest::extractSections(std::string buffer, int firstB, int secondB, std::string b)
@@ -343,6 +381,10 @@ char *HttpRequest::getBoundary(const char *buffer)
 {
 	char *b;
 	const char *result = strstr(buffer, "boundary");
+	if (!result) { // Simona - added for leaks protection
+        Logger::error("No boundary found in Content-Type header");
+        throw BadRequestException();
+    }
 	result += 9;
 	int index_start = result - buffer;
 	int count = 0;
@@ -416,4 +458,36 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     }
 
     return output;
+}
+
+//  Simona - added for CGI compatibility
+// Purpose: Reconstructs multipart/form-data body for CGI scripts like upload.py that expect
+// a properly formatted multipart body with boundaries and headers (as per CGI standards).
+// Specifically, this function ensures compatibility with Python's cgi.FieldStorage 
+// without altering CGI class logic.
+std::string HttpRequest::reconstructMultipartBody() const
+{
+    if (headers.find("content-type") == headers.end() || 
+        headers.find("content-type")->second.find("multipart/form-data") == std::string::npos)
+    {
+        return sectionInfo.body; // Return raw body if not multipart
+    }
+
+    std::string content_type = headers.find("content-type")->second;
+    std::string boundary = "--" + content_type.substr(content_type.find("boundary=") + 9);
+    std::string reconstructed_body;
+
+    // Rebuild multipart structure using parsed sectionInfo
+    reconstructed_body += boundary + "\r\n";
+    for (std::map<std::string, std::string>::const_iterator it = sectionInfo.myMap.begin();
+         it != sectionInfo.myMap.end(); ++it)
+    {
+        reconstructed_body += it->first + ": " + it->second + "\r\n";
+    }
+    reconstructed_body += "\r\n"; // Empty line before body
+    reconstructed_body += sectionInfo.body;
+    reconstructed_body += "\r\n" + boundary + "--\r\n";
+
+    Logger::debug("Reconstructed multipart body size: " + Utils::toString(reconstructed_body.size()));
+    return reconstructed_body;
 }

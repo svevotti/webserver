@@ -72,24 +72,6 @@
             display: inline-block;
             margin-right: 10px;
         }
-        #content a {
-            margin: 0 0 20px 0 !important;
-        }
-        #content a:last-child {
-            margin-bottom: 0 !important;
-        }
-        #content p {
-            font-family: 'Courier New', 'Courier', monospace !important;
-            font-size: 20px !important;
-            font-weight: bold !important;
-            -webkit-text-stroke: 0.5px #ffcc00;
-            letter-spacing: 0.5px;
-            text-shadow: 0 0 25px #ff3333;
-            margin: 20px !important;
-        }
-        .fortune-link {
-            margin-right: 10px;
-        }
         a:hover, button:hover {
             background: #ffcc00;
             color: #cc0000;
@@ -117,7 +99,7 @@
         .bg-anim:nth-child(5) { width: 90px; height: 90px; top: 40%; left: 40%; animation-delay: 4s; }
         .bg-anim:nth-child(6) { width: 110px; height: 110px; bottom: 20%; right: 35%; animation-delay: 5s; }
         .bg-anim:nth-child(7) { width: 70px; height: 70px; top: 15%; left: 60%; animation-delay: 0.5s; }
-        .bg-anim:nth-child(8) { width: 130px; height: 110px; bottom: 40%; right: 10%; animation-delay: 1.5s; }
+        .bg-anim:nth-child(8) { width: 130px; height: 130px; bottom: 40%; right: 10%; animation-delay: 1.5s; }
         .bg-anim:nth-child(9) { width: 85px; height: 85px; top: 50%; left: 20%; animation-delay: 2.5s; }
         .bg-anim:nth-child(10) { width: 95px; height: 95px; bottom: 5%; left: 45%; animation-delay: 3.5s; }
         @keyframes fadeBackground {
@@ -211,14 +193,14 @@
     <div class="bg-anim"></div>
     <div class="bg-anim"></div>
     <h1>Webserv</h1>
-    <div class="container" id="content">
+    <div class="container">
         <p>Here to serve.</p>
         <div class="zone">
             <h2>Static Upload</h2>
             <a href="/uploads/index.html">Go to Static Upload</a>
         </div>
         <div class="zone">
-            <h2>Dynamic Upload</h2>
+            <h2>Dynamic Upload (CGI)</h2>
             <form action="/cgi-bin/upload.py" method="post" enctype="multipart/form-data" class="upload-form" id="upload-form">
                 <div class="custom-file-input">
                     <input type="file" name="file" id="file-input">
@@ -228,9 +210,17 @@
             </form>
             <p id="success-msg">Upload Grooved to Perfection, Baby!</p>
         </div>
-        <div class="zone" id="fortune-zone">
+        <div class="zone">
             <h2>Fortune Cookie</h2>
-            <a href="/cgi-bin/fortune.php" class="fortune-link">Get Your Fortune</a>
+            <a href="/cgi-bin/fortune.php">Get Your Fortune</a>
+        </div>
+        <div class="zone">
+            <h2>Delete Zone</h2>
+            <a href="/delete/index.html">Go and Delete</a>
+        </div>
+        <div class="zone">
+            <h2>Download Zone</h2>
+            <a href="/dowload/index.html">Go and Download</a>
         </div>
         <div class="zone">
             <h2>Cookies</h2>
@@ -242,84 +232,49 @@
         </div>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM fully loaded');
-
-            // Upload form handler
-            const form = document.getElementById('upload-form');
-            if (!form) {
-                console.error('Upload form not found');
-            } else {
-                console.log('Form found, attaching submit listener');
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    console.log('Form submission prevented, starting fetch');
-                    
-                    const formData = new FormData(this);
-                    fetch('/cgi-bin/upload.py', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        console.log('Fetch response status:', response.status);
-                        console.log('Fetch response headers:', response.headers.get('Content-Type'));
-                        return response.text().then(text => ({ status: response.status, text, contentType: response.headers.get('Content-Type') }));
-                    })
-                    .then(data => {
-                        const successMsg = document.getElementById('success-msg');
-                        if (data.contentType === 'application/json') {
-                            const bodyStart = data.text.indexOf('\r\n\r\n') !== -1 ? data.text.indexOf('\r\n\r\n') + 4 : data.text.indexOf('\n\n') !== -1 ? data.text.indexOf('\n\n') + 2 : 0;
-                            const jsonText = bodyStart > 0 ? data.text.substring(bodyStart).trim() : data.text.trim();
-                            console.log('Extracted JSON text:', jsonText);
-                            let jsonData;
-                            try {
-                                jsonData = JSON.parse(jsonText);
-                                console.log('Parsed JSON:', jsonData);
-                            } catch (e) {
-                                console.error('JSON parsing failed:', e);
-                                throw new Error('Invalid JSON response: ' + jsonText);
-                            }
-                            if (data.status === 200 && jsonData.status === 'ok') {
-                                console.log('Success case: 200 OK');
-                                successMsg.textContent = jsonData.message;
-                                successMsg.style.display = 'block';
-                                setTimeout(() => successMsg.style.display = 'none', 3000);
-                            } else if (data.status === 409 && jsonData.status === 'conflict') {
-                                console.log('Conflict case: 409 Conflict detected in CGI');
-                                successMsg.textContent = jsonData.message;
-                                successMsg.style.display = 'block';
-                                setTimeout(() => successMsg.style.display = 'none', 3000);
-                            } else {
-                                console.log('Unexpected JSON status:', data.status, 'with jsonData.status:', jsonData.status);
-                                throw new Error('Unexpected JSON response status: ' + data.status);
-                            }
-                        } else if (data.contentType === 'text/html') {
-                            console.log(`Error case: ${data.status}`);
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(data.text, 'text/html');
-                            const message = doc.querySelector('p')?.textContent || `Error ${data.status}`;
-                            successMsg.textContent = message;
-                            successMsg.style.display = 'block';
-                            setTimeout(() => successMsg.style.display = 'none', 3000);
-                        } else if (data.contentType == 'text/plain') {
-                            console.log(`Plain text error case: ${data.status}`);
-                            successMsg.textContent = data.text;
-                            successMsg.style.display = 'block';
-                            setTimeout(() => successMsg.style.display = 'none', 3000);
-                        } else {
-                            console.log('Unexpected content type:', data.contentType);
-                            throw new Error('Unexpected content type: ' + data.contentType);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Fetch or processing error:', error);
-                        const successMsg = document.getElementById('success-msg');
-                        successMsg.textContent = 'Upload Failed, Try Again!';
-                        successMsg.style.display = 'block';
-                        setTimeout(() => successMsg.style.display = 'none', 3000);
-                    });
-                });
-            }
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+    
+            const formData = new FormData(this);
+            fetch('/cgi-bin/upload.py', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers.get('Content-Type'));
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw response text:', text);
+                // Extract JSON after headers
+                const bodyStart = text.indexOf('\r\n\r\n');
+                let jsonText = bodyStart !== -1 ? text.substring(bodyStart + 4) : text;
+                jsonText = jsonText.trim();
+                let jsonData;
+                try {
+                    jsonData = JSON.parse(jsonText);
+                    console.log('Parsed JSON:', JSON.stringify(jsonData));
+                } catch (e) {
+                    throw new Error('Invalid JSON: ' + jsonText);
+                }
+                if (jsonData.status === 'success') {
+                    console.log('Success block reached');
+                    const successMsg = document.getElementById('success-msg');
+                    successMsg.textContent = jsonData.message;
+                    successMsg.style.display = 'block';
+                    setTimeout(() => successMsg.style.display = 'none', 3000);
+                } else {
+                    throw new Error('Unexpected response: ' + JSON.stringify(jsonData));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const successMsg = document.getElementById('success-msg');
+                successMsg.textContent = 'Upload Failed, Try Again!';
+                successMsg.style.display = 'block';
+                setTimeout(() => successMsg.style.display = 'none', 3000);
+            });
         });
     </script>
 </body>

@@ -27,3 +27,86 @@ http://localhost:8080 and then click on the pages (only the one we know provides
 siege -c255 -t1m http://localhost:8080 --> availability 99.4++ and failure possibly zero
 255 is the max to test with siege by default. it can increase in the siege configuration file\
 while doing siege, you should try to perform other requests.
+
+//***************************************************************
+
+//////////////////////////
+// COMMANDS TO TEST CGI //
+//////////////////////////
+
+// TEST FORTUNE SCRIPT (GET)
+curl -v http://127.0.0.1:8080/cgi-bin/fortune.php
+
+// TEST UPLOAD STATIC 
+curl -X POST http://127.0.0.1:8080/upload -F "file=@image.jpg" -v
+
+// TEST UPLOAD DYNAMIC (POST)
+curl -X POST -F "file=@image.jpg" http://localhost:8080/cgi-bin/upload.py
+
+// TEST INFINITE LOOP
+curl -v http://127.0.0.1:8080/cgi-bin/loop.py
+
+// TEST 405 on CGI UPLOADS
+curl -X GET http://127.0.0.1:8080/cgi-bin/upload.py
+
+// TEST 400 on CGI UPLOADS -- no file 
+curl -X POST -F "file=" http://localhost:8080/cgi-bin/upload.py
+
+// TEST 415 ON CGI UPLOADS -- no file with name
+curl -X POST http://127.0.0.1:8080/cgi-bin/upload.py
+
+// TEST 504 on CGI UPLOADS
+python3 ./www/cgi-bin/upload.py ./www/upload timeout
+
+// TEST 405 on CGI GET FORTUNE 
+curl -v -X POST http://127.0.0.1:8080/cgi-bin/fortune.php
+
+// TEST 505 on CGI GET FORTUNE (curl does not give page in this case but it works fine)
+curl -v -H "Host: localhost" --http1.0 http://localhost:8080/cgi-bin/fortune.php
+
+// MULTIPLE TEST ON CGI FORTUNE
+for i in {1..5}; do curl http://localhost:8080/cgi-bin/fortune.php; done
+
+// STRESS TEST FORTUNE SCRIPT (GET) // failing but not important (what is important is fixing leaks)
+siege -c 50 -t 60S -b http://localhost:8080/cgi-bin/fortune.php
+
+////////////////////////////////////////////////////////////////////////////////////
+//// TEST LEAKS -- Failing so far (valgrind worse than fsanitize but both fail)  //
+//////////////////////////////////////////////////////////////////////////////////////
+
+1. make clean && make CFLAGS="-g -O0 -std=c++98"
+    OR
+    make clean && make
+    (depending on what flags on makefile)
+2. valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes ./webserver default.conf
+
+
+// Test fortune script with valgrind (disable fsanitize in makefile first)
+1. make clean && make CFLAGS="-g -O0 -std=c++98"
+2. valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all ./webserver default.conf
+3. curl http://localhost:8080/cgi-bin/fortune.php
+4. Press Ctrl+C after response
+
+// CHECK MEMORY USAGE (eg. while doing siege on static part)
+ pgrep webserv
+ top -p <PID> (check memory usage)
+// if the memory usage is increasing, it means there is a leak somewhere
+
+
+// CHECK FDS
+ps aux | grep ./webserver
+lsof -p <PID> | grep -E 'TCP|PIPE'
+
+
+
+// TO MAKE SURE VALGRIND OUTPUT IS CAPTURED
+valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./webserver default.conf > valgrind_output.txt 2>&1
+
+// CHECKING CHILDREN TRACES FLAG ON VALGRIND
+valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --trace-children=yes ./webserver default.conf > valgrind_output_with_children.txt 2>&1
+
+curl http://localhost:8080/cgi-bin/fortune.php
+
+
+// IF LOGGING INTO A FILE, CHECK LOGS
+tail -f log_file 

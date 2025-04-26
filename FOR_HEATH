@@ -1,0 +1,16 @@
+I have handled signals. 
+
+I have also caught many leaks but there are still some.
+
+Two I am aware of:
+
+1. In ServerSocket (missing destructor, missing freeaddressinfo on socket failuers, missing close fds )
+
+2. A cgi related issue: In either checkTime or checkCGITimeout // there is an edge case I still have to catch 
+// the issue comes up when you run the infinite loop script in terminal and try to do a cgi request on browser at the same time
+// and boils down to something going wrong in one of the check time functions in these cases
+
+3. Something around multi-part requests and boundaries in HttpRequest causes leaks 
+..this issue cones up when for instance you try to upload (dynamically) a file named Note_Apr12
+
+Feel free to touch the code as you see fit. Just save a copy to be safe. 

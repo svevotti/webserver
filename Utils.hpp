@@ -64,6 +64,9 @@ class Utils {
 		{
 			return std::toupper(static_cast<unsigned char>(c));
 		}
+
+		static std::string getCurrentTimeStamp();
+		
 	private:
 		Utils();		
 };

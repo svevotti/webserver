@@ -18,7 +18,25 @@ struct Route
 	std::set<std::string>				methods;
 	std::map<std::string, std::string>	locSettings;
 	bool								internal;
+
+	// Added by Simona - debugging leaks
+	Route() : internal(false) {}
+    Route(const Route& copy) : uri(copy.uri), path(copy.path), methods(copy.methods),
+                              locSettings(copy.locSettings), internal(copy.internal) {}
+    Route& operator=(const Route& copy) {
+        if (this != &copy) {
+            uri = copy.uri;
+            path = copy.path;
+            methods = copy.methods;
+            locSettings = copy.locSettings;
+            internal = copy.internal;
+        }
+        return *this;
+    }
+	// end of added bit
 };
+//Simona chasing leaks
+// Defining an explicit Route:= operator to ensure proper copying 
 
 
 class InfoServer {
@@ -57,6 +75,7 @@ class InfoServer {
 		std::map<std::string, Route>		getRoute ( void ) const;
 		Route								getCGI( void ) const;
 		int									getFD( void ) const;
+		double getCGIProcessingTimeout(void) const; // New: Getter for cgi_processing_timeout
 
 		bool	isIPValid( std::string ip );
 };

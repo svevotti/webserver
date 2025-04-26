@@ -13,6 +13,7 @@
 class HttpException : public std::exception {
 	public:
 		HttpException(int code, std::string message);
+		HttpException(int code, std::string message, std::string customBody); // Simona - added for CGI error handling integration
 		virtual ~HttpException() throw () {}
 		virtual const char * what () const throw ();
 		int getCode(void) const;
@@ -78,6 +79,11 @@ class ServiceUnavailabledException : public HttpException {
 	public:
 		ServiceUnavailabledException() : HttpException(503, "Service Unavailabled") {}
 };
+
+class GateawayTimeoutException : public HttpException { 
+	public:
+		GateawayTimeoutException() : HttpException(504, "Gateaway Timeout") {}
+}; // Note by Simona: typo: 'gateway'
 
 class HttpVersionNotSupported : public HttpException {
 	public:

@@ -266,6 +266,7 @@
                         return response.text().then(text => ({ status: response.status, text, contentType: response.headers.get('Content-Type') }));
                     })
                     .then(data => {
+                        console.log('Raw response text:', data.text);
                         const successMsg = document.getElementById('success-msg');
                         if (data.contentType === 'application/json') {
                             const bodyStart = data.text.indexOf('\r\n\r\n') !== -1 ? data.text.indexOf('\r\n\r\n') + 4 : data.text.indexOf('\n\n') !== -1 ? data.text.indexOf('\n\n') + 2 : 0;
@@ -285,7 +286,7 @@
                                 successMsg.style.display = 'block';
                                 setTimeout(() => successMsg.style.display = 'none', 3000);
                             } else if (data.status === 409 && jsonData.status === 'conflict') {
-                                console.log('Conflict case: 409 Conflict detected in CGI');
+                                console.log('Conflict case: 409 Conflict detected');
                                 successMsg.textContent = jsonData.message;
                                 successMsg.style.display = 'block';
                                 setTimeout(() => successMsg.style.display = 'none', 3000);
@@ -320,6 +321,79 @@
                     });
                 });
             }
+
+                    // Fortune.php handler with event delegation
+                    document.addEventListener('click', async function(e) {
+                const target = e.target.closest('a[href="/cgi-bin/fortune.php"]');
+                if (target) {
+                    e.preventDefault();
+                    console.log('Fortune link clicked, starting fetch');
+                    try {
+                        const response = await fetch('/cgi-bin/fortune.php', {
+                            method: 'GET'
+                        });
+                        console.log('Fetch response status:', response.status);
+                        console.log('Fetch response headers:', response.headers.get('Content-Type'));
+                        const text = await response.text();
+                        console.log('Raw response text:', text.substring(0, 100) + '...');
+
+                        // Parse the response to extract the content
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(text, 'text/html');
+                        const contentDiv = document.getElementById('content');
+                        
+                        if (!contentDiv) {
+                            console.error('Content div not found');
+                            return;
+                        }
+
+                        if (response.status === 200) {
+                            // For 200 responses, expect a .container div (fortune message)
+                            const container = doc.querySelector('.container');
+                            if (container) {
+                                contentDiv.innerHTML = container.innerHTML;
+                                // Remove inline margin styles from fortune.php buttons
+                                const links = contentDiv.querySelectorAll('a');
+                                links.forEach(link => {
+                                    link.style.removeProperty('margin');
+                                });
+                                console.log('Updated content div with fortune response');
+                            } else {
+                                console.error('Container not found in 200 response');
+                                return;
+                            }
+                        } else if (response.status === 418) {
+                            // For 418 responses, expect a <div> inside <body> (error message)
+                            console.log('Teapot case: 418 I\'m a Teapot detected');
+                            const errorDiv = doc.querySelector('body > div');
+                            if (errorDiv) {
+                                contentDiv.innerHTML = errorDiv.innerHTML;
+                                // Apply consistent styling to the error message
+                                const links = contentDiv.querySelectorAll('a');
+                                links.forEach(link => {
+                                    link.style.removeProperty('margin');
+                                    link.classList.add('fortune-link');
+                                });
+                                console.log('Updated content div with 418 error response');
+                            } else {
+                                console.error('Error div not found in 418 response');
+                                return;
+                            }
+                        } else {
+                            console.log('Error case:', response.status);
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                        const successMsg = document.getElementById('success-msg');
+                        if (successMsg) {
+                            successMsg.textContent = 'Failed to fetch fortune!';
+                            successMsg.style.display = 'block';
+                            setTimeout(() => successMsg.style.display = 'none', 3000);
+                        }
+                    }
+                }
+            }, { capture: true });
         });
     </script>
 </body>

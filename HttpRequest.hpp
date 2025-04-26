@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <cstring>
-#include <fcntl.h>
+#include <fcntl.h> 
 #include <netdb.h>
 #include <poll.h>
 #include <map>
@@ -28,6 +28,9 @@ class HttpRequest {
 	public:
 		HttpRequest() {};
 		HttpRequest(HttpRequest const &other);
+		HttpRequest &operator=(const HttpRequest &other);
+		~HttpRequest() { Logger::debug("HttpRequest destructor"); } // Simona - added for debugging
+
 
 		std::map<std::string, std::string>	getHttpHeaders() const;
 		std::map<std::string, std::string>	getHttpRequestLine() const;
@@ -55,6 +58,8 @@ class HttpRequest {
 		char								*getBoundary(const char *);
 		struct section						extractSections(std::string, int firstB, int secondB, std::string b);
 		void								cleanProperties(void);
+		// Added by Simona for CGI compatibility with upload.py (requires multipart/form-data reconstruction)
+		std::string                        reconstructMultipartBody() const; // New helper for CGI scripts
 
 	private:
 		int									size;
