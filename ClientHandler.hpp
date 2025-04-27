@@ -15,8 +15,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dirent.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/stat.h>
+//NEW: +2 lines
+#include <sys/time.h>
+#include <cstring>
 
 #include <cstdio>
 #include <vector>
@@ -28,9 +31,17 @@
 
 #define BUFFER 1024
 
+//NEW: +2 lines
+//Added by Simona, forward declaration for CGI
+class Webserver;
+
 class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
+		//NEW: +3 lines
+		ClientHandler(const ClientHandler& other);
+		ClientHandler& operator=(const ClientHandler& other);
+		~ClientHandler() { Logger::debug("ClientHandler destructor for FD " + Utils::toString(fd)); }
 
 		int 		getFd(void) const;
 		double 		getTime(void) const;
@@ -50,6 +61,9 @@ class ClientHandler {
 		std::string prepareResponse(struct Route route);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
+		//NEW: +2 lines
+		void 		setResponse(const std::string& resp);
+		double		getCGIProcessingTimeout(void) const;
 
 	private:
 	int 		fd;
@@ -60,6 +74,10 @@ class ClientHandler {
 	InfoServer	configInfo;
 	HttpRequest request;
 	std::string response;
+	//NEW: + 3 lines
+	double		cgiProcessingTimeout;
+
+	friend class	Webserver;
 };
 
 #endif

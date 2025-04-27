@@ -3,7 +3,7 @@
 
 #include <sys/socket.h>
 #include <iostream>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -28,6 +28,9 @@ class HttpRequest {
 	public:
 		HttpRequest() {};
 		HttpRequest(HttpRequest const &other);
+		//NEW: +2 lines
+		HttpRequest &operator=(const HttpRequest &other);
+		~HttpRequest() { Logger::debug("HttpRequest destructor"); } //For debugging - remove message?
 
 		std::map<std::string, std::string>	getHttpHeaders() const;
 		std::map<std::string, std::string>	getHttpRequestLine() const;
@@ -42,12 +45,14 @@ class HttpRequest {
 		std::string 						getContentLength(void) const;
 		std::string 						getHost(void) const;
 		std::string 						getProtocol(void) const;
-		std::string							getRawBody(void) const;
 
 		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
 		void								HttpParse(std::string, int);
 		void								parseRequestHttp();
 		void								parseRequestLine(std::string);
+		void 								setCorrectHeaders(void);
+		void								parseOtherTypes(std::string buffer);
+		void 								unchunkData(void);
 		void								exractQuery(std::string);
 		std::string							decodeQuery(std::string str);
 		void								parseHeaders(std::istringstream&);
@@ -56,6 +61,8 @@ class HttpRequest {
 		char								*getBoundary(const char *);
 		struct section						extractSections(std::string, int firstB, int secondB, std::string b);
 		void								cleanProperties(void);
+		//NEW: +1 line, util needed for CGI scripts
+		std::string							reconstructMultipartBody() const;
 
 	private:
 		int									size;
@@ -64,7 +71,7 @@ class HttpRequest {
 		std::map<std::string, std::string>	query;
 		std::map<std::string, std::string>	headers;
 		struct section						sectionInfo;
-		std::string							raw_body;
+		std::string							body;
 };
 
 std::ostream &operator<<(std::ostream &output, HttpRequest const &request);

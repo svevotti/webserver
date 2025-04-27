@@ -10,8 +10,17 @@ HttpException::HttpException(int code, std::string message)
 	this->body = extractFile();
 }
 
+//NEW: Function (Simona needs it for CGI error handling)
+HttpException::HttpException(int code, std::string message, std::string customBody)
+{
+	this->code = code;
+	this->file = "";
+	this->message = message;
+	this->body = customBody;
+}
+
 void HttpException::setHtmlRootPath(std::string uri)
-{ 
+{
 	htmlRootPath = uri;
 }
 
@@ -42,7 +51,7 @@ std::string HttpException::extractFile(void)
 	inputFile.seekg(0, std::ios::end);
 	std::streamsize size = inputFile.tellg();
 	inputFile.seekg(0, std::ios::beg);
-	std::string html; 
+	std::string html;
 	html.resize(size);
 	if (!(inputFile.read(&html[0], size)))
 		return"";

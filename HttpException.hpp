@@ -13,6 +13,8 @@
 class HttpException : public std::exception {
 	public:
 		HttpException(int code, std::string message);
+		//NEW: +1 line
+		HttpException(int code, std::string message, std::string customBody);
 		virtual ~HttpException() throw () {}
 		virtual const char * what () const throw ();
 		int getCode(void) const;
@@ -74,9 +76,15 @@ class NotImplementedException : public HttpException {
 		NotImplementedException() : HttpException(501, "Not Implemented") {}
 };
 
-class ServiceUnavailabledException : public HttpException {
+class ServiceUnavailableException : public HttpException {
 	public:
-		ServiceUnavailabledException() : HttpException(503, "Service Unavailable") {}
+		ServiceUnavailableException() : HttpException(503, "Service Unavailable") {}
+};
+
+//NEW: Class
+class GateawayTimeoutException : public HttpException {
+	public:
+		GateawayTimeoutException() : HttpException(504, "Gateaway Timeout") {}
 };
 
 class HttpVersionNotSupported : public HttpException {
