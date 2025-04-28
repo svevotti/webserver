@@ -1,13 +1,9 @@
 #include <stdio.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <vector>
 #include <map>
-#include "ServerSockets.hpp"
 #include <iostream>
 #include <fstream>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -15,9 +11,10 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "ServerSockets.hpp"
 #include "Logger.hpp"
 
-//Constructor and destructor
+//Constructor
 
 ServerSockets::ServerSockets(std::string ip, std::string port)
 {
@@ -58,7 +55,7 @@ int ServerSockets::createSocket(void)
 	error = getaddrinfo(this->ip.c_str(), this->port.c_str(), &hints, &serverInfo);
 	if (error < 0)
 		Logger::error("Failed getaddrinfo: " + std::string(gai_strerror(errno)));
-	fd = socket(serverInfo->ai_family, hints.ai_socktype | SOCK_NONBLOCK, 0);
+	fd = socket(serverInfo->ai_family, hints.ai_socktype, 0); //Do we need "hints.ai_socktype or SOCK_NONBLOCK"?
 	if (fd == -1)
 	{
 		Logger::error("Failed socket: " + std::string(strerror(errno)));

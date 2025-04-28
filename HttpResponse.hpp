@@ -6,7 +6,7 @@
 
 #include <sys/socket.h>
 #include <iostream>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -23,13 +23,18 @@ class HttpResponse {
 		HttpResponse(int code, std::string body);
 
 		void 		setUriLocation(std::string url);
-		void		setImageType(std::string str);
-		std::string composeRespone();
+		//void		setImageType(std::string str);
+		//NEW: +1 line
+		void		setHeader(std::string key, std::string value);
+		std::string composeResponse();
 		std::string generateStatusLine(int);
 		std::string generateHttpHeaders();
 		std::string findType(std::string);
 		std::string findTimeStamp();
 		int			findFileType(std::string str);
+		//NEW: +2 lines
+		std::string	getBody() const { return body; }
+		std::string	getHeader(std::string key) const;
 
 	private:
 		int			statusCode;
@@ -37,7 +42,9 @@ class HttpResponse {
 		std::string redirectedUrl;
 		std::map<int, std::string> mapStatusCode;
 		std::string extension;
-		
+		//NEW: +1 line
+		std::map<std::string, std::string> cgi_headers;
+
 };
 
 #endif
