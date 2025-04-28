@@ -299,7 +299,7 @@ int ClientHandler::manageRequest(void)
 						throw PayLoadTooLargeException();
 				}
 			}
-			Logger::info("Done receving request");
+			Logger::info("Done receiving request");
 			//For debugging - remove?
 			Logger::debug("Parsing request for FD " + Utils::toString(fd));
 			this->request.HttpParse(this->raw_data, this->totbytes);
