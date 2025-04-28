@@ -261,9 +261,42 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
-	status = clientIt->manageRequest();
+	{
+		status = clientIt->manageRequest();
+		//NEW: +30 lines. For CGI
+		if (status == 3 && clientIt->isCgi(clientIt->getRequest().getHttpRequestLine()["request-uri"]))
+		{
+			Logger::info("Starting CGI read for FD " + Utils::toString(fd) + " on Server " + clientIt->configInfo.getIP() + ":" + clientIt->configInfo.getPort());
+			cgiHandler.startCGI(*clientIt, clientIt->configInfo, poll_sets);
+			return 0;
+		}
+		if (status == DISCONNECTED)
+		{
+			char buffer[1];
+			int result = recv(fd, buffer, 1, MSG_PEEK | MSG_DONTWAIT);
+			if (result == 0) // Client disconnected
+			{
+				Logger::info("Client FD " + Utils::toString(fd) + " disconnected (detected in processClient)");
+				for (std::vector<struct pollfd>::iterator it = poll_sets.begin(); it != poll_sets.end(); ++it)
+				{
+					if (it->fd == fd)
+					{
+						removeClient(it);
+						break;
+					}
+				}
+				return DISCONNECTED;
+			}
+			else
+			{
+				//For debugging - remove?
+				Logger::debug("Disconnect check for FD " + Utils::toString(fd) + " returned non-zero");
+				return 0; // Client still connected
+			}
+		}
+	}
 	else
-	status = clientIt->retrieveResponse();
+		status = clientIt->retrieveResponse();
 	return status;
 }
 
@@ -275,7 +308,7 @@ int Webserver::fdIsServerSocket(int fd)
 	for (int i = 0; i < sizeList; i++)
 	{
 		if (this->configInfo[i]->getFD() == fd)
-		return true;
+			return true;
 	}
 	return false;
 }
@@ -287,13 +320,22 @@ InfoServer*	Webserver::matchFD( int fd ) {
 	for(servIt = (*this).configInfo.begin(); servIt != (*this).configInfo.end(); servIt++)
 	{
 		if ((*servIt)->getFD() == fd)
-		return (*servIt);
+			return (*servIt);
 	}
 	return NULL;
 }
 
+//NEW: function
 int Webserver::fdIsCGI(int fd)
 {
+	std::vector<CGITracker>::iterator it;
+
+	for (it = cgiHandler.getCGIQueue().begin(); it != cgiHandler.getCGIQueue().end(); ++it)
+	{
+		if (it->pipeFd == fd || it->cgi->getInPipeWriteFd() == fd ||
+		it->cgi->getOutPipeReadFd() == fd || it->cgi->getErrPipeReadFd() == fd)
+			return true;
+	}
 	return false;
 }
 
@@ -322,11 +364,28 @@ void Webserver::createNewClient(int fd)
 		Logger::error("Failed to create new client (accept): " + std::string(strerror(errno)));
 		return;
 	}
+	//NEW: +8 lines
+	//In some cases it could return 0, e.g. if stdin is closed and the system assigns FD 0
+	if (clientFd <= 0)
+	{
+		Logger::error("Invalid client FD " + Utils::toString(clientFd) + " from accept");
+		if (clientFd == 0)
+			close(clientFd);
+		return;
+	}
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
 	this->poll_sets.push_back(clientPoll);
 	std::vector<pollfd> newSet = poll_sets;
 	InfoServer *server = matchFD(fd);
+	//NEW: +7 lines
+	//Add checks in case server is null (no match found)
+	if (server == NULL)
+	{
+		Logger::error("No matching server found for FD " + Utils::toString(fd));
+		close(clientFd);
+		return;
+	}
 	ClientHandler newClient(clientFd, *server);
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
@@ -340,7 +399,7 @@ std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
 	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
 	{
 		if (iterClient->getFd() == fd)
-		return iterClient;
+			return iterClient;
 	}
 	return endClient;
 }
@@ -351,35 +410,262 @@ void Webserver::closeSockets()
 	for (int i = 0; i < size; i++)
 	{
 		if(this->poll_sets[i].fd >= 0)
-		close(this->poll_sets[i].fd);
+			close(this->poll_sets[i].fd);
 	}
 }
 
 void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
-	close(it->fd);
-	this->clientsList.erase(retrieveClient(it->fd));
-	this->poll_sets.erase(it);
+	//NEW: +38 lines
+	int fd = it->fd;
+	//close(it->fd);
+	//this->clientsList.erase(retrieveClient(it->fd));
+	//this->poll_sets.erase(it);
+	std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
+	if (clientIt == clientsList.end())
+	{
+		Logger::warn("No client found for FD " + Utils::toString(it->fd) + " during removal");
+		//close(it->fd);
+		//poll_sets.erase(it); // CAUSES LEAK
+		// NEW TRY
+		close(fd);
+		// Safely remove from poll_sets using index, not iterator
+		for (std::vector<struct pollfd>::iterator pIt = poll_sets.begin(); pIt != poll_sets.end(); ++pIt)
+		{
+			if (pIt->fd == fd)
+			{
+				poll_sets.erase(pIt);
+				break;
+			}
+		}
+		return;
+	}
+	Logger::debug("Initiating CGI cleanup for client FD " + Utils::toString(it->fd));
+	// Simona - Kill any CGI processes associated with this client before closing the FD
+	cgiHandler.killCGIForClient(fd, poll_sets); // Simona - CGI integration
+	close(fd);
+	clientsList.erase(clientIt);
+	//this->poll_sets.erase(it);
+	//Simona leak debug Erase using a fresh iterator to avoid invalidation issues
+	for (std::vector<struct pollfd>::iterator pIt = poll_sets.begin(); pIt != poll_sets.end(); ++pIt)
+	{
+		if (pIt->fd == fd)
+		{
+			poll_sets.erase(pIt);
+			break;
+		}
+	}
 }
 
 // Setters and Getters
 
+//SVEVA version
+// void Webserver::checkTime(void)
+// {
+// 	std::time_t currentTime = std::time(NULL);
+// 	std::vector<ClientHandler>::iterator clientIt;
+// 	std::vector<struct pollfd>::iterator it;
+// 	for (it = this->poll_sets.begin(); it < this->poll_sets.end(); it++)
+// 	{
+// 		clientIt = retrieveClient(it->fd);
+// 		if (clientIt != this->clientsList.end())
+// 		{
+// 			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
+// 			{
+// 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
+// 				removeClient(it);
+// 			}
+// 		}
+// 	}
+// }
+
+//SIMONA version
+// MODIFIED VERSION OF checkTime - Simona - CGI integration
+// Microsecond precision timing - useful for CGI processing timeout
+// CGI timeout checking (separate timeout handling for CGI clients)
+// Inactive CGI trackers cleanup
+// Skip webserver timeout check for CGI clients
+// Cleanup stale CGI FDs to prevent memory leaks
+// While instead of loop (to track better)
+// Added logs and cgi_processing_timeout for CGI clients
 void Webserver::checkTime(void)
 {
-	std::time_t currentTime = std::time(NULL);
-	std::vector<ClientHandler>::iterator clientIt;
-	std::vector<struct pollfd>::iterator it;
-	for (it = this->poll_sets.begin(); it < this->poll_sets.end(); it++)
+	Logger::debug("Starting checkTime, poll_sets size: " + Utils::toString(poll_sets.size()) + ", clientsList size: " + Utils::toString(clientsList.size()));
+	// Simona - Changed to use gettimeofday for microsecond precision
+	// Explanation: This is important for CGI processing timeout (CGI scripts need more precise timing than standard clients)
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	double currentTime = tv.tv_sec + tv.tv_usec / 1000000.0;
+
+	// Simona -- addition
+	// Handle CGI-specific timeouts first
+	// EXPLANATION: Must check CGI timeouts separately since they have different timeout rules
+	cgiHandler.checkCGITimeout(poll_sets, clientsList, static_cast<time_t>(currentTime));
+
+	// Simona - Clean up inactive CGI trackers that no longer have active clients
+	// EXPLANATION: Prevent memory leaks from orphaned CGI trackers
+	std::vector<CGITracker>& cgiQueue = cgiHandler.getCGIQueue();
+	for (std::vector<CGITracker>::iterator cgiIt = cgiQueue.begin(); cgiIt != cgiQueue.end(); )
 	{
-		clientIt = retrieveClient(it->fd);
-		if (clientIt != this->clientsList.end())
+		if (!cgiIt->isActive)
 		{
-			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
+			// Check if the client still exists
+			bool clientExists = false;
+			for (std::vector<ClientHandler>::iterator clientIt = clientsList.begin(); clientIt != clientsList.end(); ++clientIt)
 			{
-				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
-				removeClient(it);
+				if (clientIt->getFd() == cgiIt->clientFd)
+				{
+					clientExists = true;
+					break;
+				}
+			}
+			// Remove CGI tracker if client is gone
+			if (!clientExists)
+			{
+				Logger::debug("Removing inactive CGI tracker for clientFd=" + Utils::toString(cgiIt->clientFd));
+				cgiIt = cgiQueue.erase(cgiIt);
+				continue;
 			}
 		}
+		++cgiIt;
 	}
+	Logger::debug("Finished cleaning up inactive CGI trackers, remaining: " + Utils::toString(cgiQueue.size()));
+
+	// Iterate through poll_sets to check for timeouts
+	for (size_t i = 0; i < poll_sets.size(); ++i)
+	{
+		std::vector<struct pollfd>::iterator it = poll_sets.begin() + i;
+		// Simona - debug for CGI integration -- was getting invalid fds issue this fixes it
+		Logger::debug("Checking FD: " + Utils::toString(it->fd));
+
+		// Simona - Skip invalid FDs
+		if (it->fd <= 0)
+		{
+			Logger::debug("Removing invalid FD " + Utils::toString(it->fd) + " from poll_sets");
+			poll_sets.erase(it);
+			--i;
+			continue;
+		}
+
+		// Check for CGI and server socket FDs
+		bool isCGI = fdIsCGI(it->fd);
+		bool isServerSocket = fdIsServerSocket(it->fd);
+		if (isCGI)
+		{
+			Logger::debug("FD " + Utils::toString(it->fd) + " is a CGI FD, skipping timeout check");
+			continue;
+		}
+		if (isServerSocket)
+		{
+			Logger::debug("FD " + Utils::toString(it->fd) + " is a server socket, skipping timeout check");
+			continue;
+		}
+
+		std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
+		if (clientIt != clientsList.end())
+		{
+			// Simona - check for CGI active state
+			// EXPLANATION: This is to determine if the client is currently processing a CGI request
+			bool isCGIActive = false;
+			std::vector<CGITracker>::iterator cgiIt;
+			for (cgiIt = cgiQueue.begin(); cgiIt != cgiQueue.end(); ++cgiIt)
+			{
+				if (cgiIt->clientFd == it->fd && cgiIt->isActive)
+				{
+					isCGIActive = true;
+					Logger::debug("CGI active for FD " + Utils::toString(it->fd));
+					break;
+				}
+			}
+
+			// Check for disconnected client, including CGI-active clients after response
+			bool checkDisconnect = !isCGIActive || (isCGIActive && it->events == POLLOUT);
+			if (checkDisconnect)
+			{
+				char buffer[1];
+				int result = recv(it->fd, buffer, 1, MSG_PEEK | MSG_DONTWAIT);
+				if (result == 0) // Client disconnected
+				{
+					Logger::info("Client FD " + Utils::toString(it->fd) + " disconnected (detected in checkTime)");
+					cgiHandler.killCGIForClient(it->fd, poll_sets);
+					close(it->fd);
+					clientsList.erase(clientIt);
+					poll_sets.erase(it);
+					--i;
+					continue;
+				}
+				else
+					Logger::debug("Disconnect check for FD " + Utils::toString(it->fd) + " returned non-zero, events: " + (it->events == POLLOUT ? "POLLOUT" : "NOT POLLOUT"));
+			}
+
+			// Use appropriate timeout for CGI or non-CGI clients
+			double timeoutToCheck = isCGIActive ? clientIt->getCGIProcessingTimeout() : clientIt->getTimeOut();
+			double elapsed = currentTime - clientIt->getTime();
+			if (elapsed >= timeoutToCheck)
+			{
+				Logger::error("FD: " + Utils::toString(it->fd) + (isCGIActive ? " CGI processing timeout" : " keepalive timeout"));
+				if (isCGIActive)
+				{
+					Logger::debug("CGI active for FD " + Utils::toString(it->fd));
+					cgiIt->cgi->killIfTimedOut();
+					cgiIt->cgi->setOutputDone();
+					cgiIt->cgi->closePipes();
+					std::string response = cgiHandler.generateServerTimeoutResponse(cgiIt);
+					clientIt->setResponse(response);
+					if (write(it->fd, response.c_str(), response.length()) < 0)
+					{
+						Logger::error("Failed to write 503 response to FD " + Utils::toString(it->fd));
+					}
+					else
+					{
+						Logger::debug("Wrote " + Utils::toString(response.length()) + " bytes of 503 response to FD " + Utils::toString(it->fd));
+					}
+					cgiHandler.setClientToPollout(it->fd, poll_sets);
+					int fdsToClose[3];
+					cgiHandler.initializeFDsToClose(cgiIt, fdsToClose);
+					cgiHandler.removeCGIFDsFromPollSets(poll_sets, fdsToClose);
+					cgiHandler.closeCGIFDs(fdsToClose, cgiIt);
+					cgiHandler.removeCGI(cgiIt);
+					Logger::info("Disconnected client FD " + Utils::toString(it->fd) + " after CGI processing timeout");
+					close(it->fd);
+					clientsList.erase(clientIt);
+					poll_sets.erase(it);
+					--i;
+				}
+				else //Use simpler non-CGI timeout handling
+				{
+					if (!clientIt->getResponse().empty())
+					{
+						std::string responseStr = clientIt->getResponse();
+						if (write(it->fd, responseStr.c_str(), responseStr.length()) < 0)
+							Logger::error("Failed to write response to FD " + Utils::toString(it->fd));
+						else
+							Logger::debug("Wrote " + Utils::toString(responseStr.length()) + " bytes of response to FD " + Utils::toString(it->fd));
+					}
+					Logger::info("Client " + Utils::toString(it->fd) + " disconnected due to timeout");
+					cgiHandler.killCGIForClient(it->fd, poll_sets); // Ensure CGI cleanup
+					close(it->fd);
+					clientsList.erase(clientIt);
+					poll_sets.erase(it);
+					--i;
+				}
+			}
+			else
+			{
+				Logger::debug("FD: " + Utils::toString(it->fd) + " not timed out, elapsed: " + Utils::toString(elapsed) + ", timeout: " + Utils::toString(timeoutToCheck));
+			}
+		}
+		else //Remove unexpected FDs
+		{
+			Logger::warn("Unexpected FD " + Utils::toString(it->fd) + " in poll_sets, removing");
+			poll_sets.erase(it);
+			--i;
+		}
+	}
+
+	// Simona - Clean up inactive CGI FDs
+	// EXPLANATION: This is a separate cleanup for CGI FDs that are no longer active
+	//cgiHandler.cleanupInactiveCGIFDs(poll_sets);
+	Logger::debug("Finished checkTime");
 }

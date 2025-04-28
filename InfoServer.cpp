@@ -1,7 +1,7 @@
 #include "InfoServer.hpp"
 
 //default constructor (only for orthodox form)
-InfoServer::InfoServer( void ) {
+InfoServer::InfoServer( void ) : _fd(-1) {
 }
 
 // //Copy constructor
@@ -21,6 +21,7 @@ InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 		_cgi = copy.getCGI();
 		_settings = copy.getSetting();
 		_routes = copy.getRoute();
+		_fd = copy.getFD();
 	}
 
 	return (*this);
@@ -30,7 +31,7 @@ InfoServer&	InfoServer::operator=( const InfoServer& copy) {
 InfoServer::~InfoServer() {
 }
 
-InfoServer::InfoServer(std::string port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index) {}
+InfoServer::InfoServer(std::string port, std::string ip, std::string root, std::string index) : _port(port), _ip(ip), _root(root), _index(index), _fd(-1) {}
 
 void	InfoServer::setPort( std::string port ) {
 	this->_port = port;
@@ -99,8 +100,10 @@ int	InfoServer::getFD ( void ) const {
 
 double InfoServer::getCGIProcessingTimeout(void) const {
 	std::map<std::string, std::string>::const_iterator it = _settings.find("cgi_processing_timeout");
-	if (it != _settings.end()) {
-		return atof(it->second.c_str());
+	if (it != _settings.end())
+	{
+		double value = atof(it->second.c_str());
+		return value;
 	}
 	return 15.0; // Default to 15 seconds if not specified
 }

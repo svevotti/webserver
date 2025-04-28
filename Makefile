@@ -12,7 +12,7 @@ CPP_OBJ = $(OBJ_DIR)/ServerSockets.o $(OBJ_DIR)/main.o \
 		  $(OBJ_DIR)/WebServer.o $(OBJ_DIR)/HttpRequest.o \
 		  $(OBJ_DIR)/ClientHandler.o  $(OBJ_DIR)/Config.o \
 		  $(OBJ_DIR)/InfoServer.o $(OBJ_DIR)/HttpException.o \
-		  $(OBJ_DIR)/CGI.o $(OBJ_DIR)/CGIHander.o
+		  $(OBJ_DIR)/CGI.o $(OBJ_DIR)/CGIHandler.o
 
 NAME = webserver
 

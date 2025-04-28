@@ -9,7 +9,7 @@ class Utils {
 		static std::string toString(int number)
 		{
 			std::ostringstream oss;
-   			oss << number;
+			oss << number;
 			return oss.str();
 		}
 
@@ -43,9 +43,9 @@ class Utils {
 		{
 			unsigned char	*temp;
 			int				i;
-		
+
 			i = 0;
-			temp = (unsigned char *)s; 
+			temp = (unsigned char *)s;
 			while (len > 0)
 			{
 				temp[i] = c;
@@ -54,6 +54,23 @@ class Utils {
 			}
 			return (temp);
 		}
+
+		static void	*ft_memchr(const void *s, int c, size_t n)
+		{
+			char	ch;
+			char	*ptr;
+
+			ch = c;
+			ptr = (char *)s;
+			while (n > 0)
+			{
+				if (*ptr == ch)
+					return (ptr);
+				ptr++;
+				n--;
+			}
+			return (NULL);
+		};
 
 		static char toLowerChar(char c)
 		{
@@ -65,7 +82,7 @@ class Utils {
 			return std::toupper(static_cast<unsigned char>(c));
 		}
 	private:
-		Utils();		
+		Utils();
 };
 
 #endif

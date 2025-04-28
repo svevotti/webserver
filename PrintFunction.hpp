@@ -6,26 +6,26 @@
 
 void printRoute(const Route& route)
 {
-    std::cout << "Route Information:" << std::endl;
-    std::cout << "URI: " << route.uri << std::endl;
-    std::cout << "Path: " << route.path << std::endl;
+	std::cout << "Route Information:" << std::endl;
+	std::cout << "URI: " << route.uri << std::endl;
+	std::cout << "Path: " << route.path << std::endl;
 
-    std::cout << "Methods: ";
-    if (route.methods.empty()) {
-        std::cout << "None";
-    } else {
-        for (std::set<std::string>::const_iterator it = route.methods.begin(); it != route.methods.end(); ++it) {
-            std::cout << *it << " ";
-        }
-    }
-    std::cout << std::endl;
+	std::cout << "Methods: ";
+	if (route.methods.empty()) {
+		std::cout << "None";
+	} else {
+		for (std::set<std::string>::const_iterator it = route.methods.begin(); it != route.methods.end(); ++it) {
+			std::cout << *it << " ";
+		}
+	}
+	std::cout << std::endl;
 
 	std::cout << "Location Settings:" << std::endl;
-    for (std::map<std::string, std::string>::const_iterator it = route.locSettings.begin(); it != route.locSettings.end(); ++it) {
-        std::cout << "  " << it->first << ": " << it->second << std::endl;
-    }
+	for (std::map<std::string, std::string>::const_iterator it = route.locSettings.begin(); it != route.locSettings.end(); ++it) {
+		std::cout << "  " << it->first << ": " << it->second << std::endl;
+	}
 
-    std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
+	std::cout << "Internal: " << (route.internal ? "true" : "false") << std::endl;
 }
 
 void printServInfo(InfoServer *server)

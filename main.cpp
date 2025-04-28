@@ -95,20 +95,50 @@ bool	test(Config &conf)
 	return true;
 }
 
+Webserver* g_server = NULL;
+
+void signal_handler(int sig)
+{
+	if (g_server)
+	{
+		Logger::info("Received signal " + Utils::toString(sig) + ", shutting down server");
+		g_server = NULL;
+	}
+	exit(0);
+}
+
 int main(void)
 {
-	Config	configuration("default.conf");
+	signal(SIGINT, signal_handler);
+	signal(SIGTERM, signal_handler);
 
-	if (configuration.ft_validServer())
+	try
 	{
-		Webserver 	server(configuration);
+		Config configuration("default.conf");
+		if (!configuration.ft_validServer())
+		{
+			Logger::error("Parsing configuration file");
+			return 1;
+		}
+
+		Webserver server(configuration);
+		g_server = &server;
+
 		if (server.startServer() == -1)
 		{
 			Logger::error("Could not start the server");
+			g_server = NULL;
 			return 1;
 		}
+
+		g_server = NULL;
 	}
-	else
-		Logger::error("Parsing configuration file");
-	return (0);
+	catch (const std::exception& e)
+	{
+		Logger::error("Exception in main: " + std::string(e.what()));
+		g_server = NULL;
+		return 1;
+	}
+
+	return 0;
 }

@@ -18,6 +18,22 @@ struct Route
 	std::set<std::string>				methods;
 	std::map<std::string, std::string>	locSettings;
 	bool								internal;
+
+	Route() : internal(false) {}
+
+	Route(const Route& copy) : uri(copy.uri), path(copy.path), methods(copy.methods),
+							locSettings(copy.locSettings), internal(copy.internal) {}
+
+	Route& operator=(const Route& copy) {
+		if (this != &copy) {
+			uri = copy.uri;
+			path = copy.path;
+			methods = copy.methods;
+			locSettings = copy.locSettings;
+			internal = copy.internal;
+		}
+		return *this;
+	}
 };
 
 

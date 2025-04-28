@@ -55,9 +55,9 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 // Copy Constructor
 ClientHandler::ClientHandler(const ClientHandler& other)
 	: fd(other.fd), totbytes(other.totbytes), raw_data(other.raw_data),
-	startingTime(other.startingTime), timeoutTime(other.timeoutTime),
-	cgiProcessingTimeout(other.cgiProcessingTimeout), configInfo(other.configInfo),
-	request(other.request), response(other.response)
+	startingTime(other.startingTime), timeoutTime(other.timeoutTime), configInfo(other.configInfo),
+	request(other.request), response(other.response),
+	cgiProcessingTimeout(other.cgiProcessingTimeout)
 {
 	Logger::debug("Copying ClientHandler for FD " + Utils::toString(fd));
 }
@@ -124,10 +124,9 @@ void ClientHandler::setResponse(const std::string& resp)
 void ClientHandler::validateHttpHeaders(struct Route route)
 {
 	std::string uri = this->request.getHttpRequestLine()["request-uri"];
-	route = this->configInfo.getRoute()[uri];
 
 	//NEW: +17 lines
-	//TEST: This part is needed for CGI, checks that the method is valid and throws an exception if not. Note: originally this was before route = this->configInfo.getRoute()[uri]; does it make sense to have it here instead? Need to doublecheck
+	//TEST: This part is needed for CGI, checks that the method is valid and throws an exception if not.
 	std::string method = this->request.getHttpRequestLine()["method"];
 	//For debugging - remove?
 	Logger::debug("Validating HTTP method: " + this->request.getHttpRequestLine()["method"] + " for URI: " + uri); // Simona debug
@@ -145,6 +144,7 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 		throw MethodNotAllowedException();
 	}
 
+	route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
 	for (it = headers.begin(); it != headers.end(); it++)
@@ -388,7 +388,7 @@ int ClientHandler::manageRequest(void)
 				route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
 				HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
 				http.setUriLocation(redirectRoute.uri);
-				this->response = http.composeRespone();
+				this->response = http.composeResponse();
 			}
 			else
 				this->response = prepareResponse(route);
@@ -400,7 +400,7 @@ int ClientHandler::manageRequest(void)
 			//NEW: +1 line
 			Logger::error("Exception in manageRequest for FD " + Utils::toString(fd) + ": " + Utils::toString(e.getCode()) + " " + e.what());
 			HttpResponse http(e.getCode(), e.getBody());
-			this->response = http.composeRespone();
+			this->response = http.composeResponse();
 			Logger::error(Utils::toString(e.getCode()) + " " + e.what());
 		}
 		this->totbytes = 0;
@@ -669,12 +669,12 @@ std::string ClientHandler::prepareResponse(struct Route route)
 		throw MethodNotAllowedException();
 	HttpResponse http(code, body);
 	//NEW: +6 lines - Is this old code? It was in Simona's, but I think we don't use anymore
-	if (route.uri.find("/images") != std::string::npos)
-	{
-		std::string file;
-		file = route.path.substr(route.path.find_last_of(".") + 1);
-		http.setImageType(file);
-	}
-	response = http.composeRespone();
+	// if (route.uri.find("/images") != std::string::npos)
+	// {
+	// 	std::string file;
+	// 	file = route.path.substr(route.path.find_last_of(".") + 1);
+	// 	http.setImageType(file);
+	// }
+	response = http.composeResponse();
 	return response;
 }

@@ -415,6 +415,39 @@ struct section HttpRequest::extractSections(std::string buffer, int firstB, int 
 	return data;
 }
 
+//NEW: Function
+//  Simona - added for CGI compatibility
+// Purpose: Reconstructs multipart/form-data body for CGI scripts like upload.py that expect
+// a properly formatted multipart body with boundaries and headers (as per CGI standards).
+// Specifically, this function ensures compatibility with Python's cgi.FieldStorage
+// without altering CGI class logic.
+std::string HttpRequest::reconstructMultipartBody() const
+{
+	if (headers.find("content-type") == headers.end() ||
+		headers.find("content-type")->second.find("multipart/form-data") == std::string::npos)
+	{
+		return sectionInfo.body; // Return raw body if not multipart
+	}
+
+	std::string content_type = headers.find("content-type")->second;
+	std::string boundary = "--" + content_type.substr(content_type.find("boundary=") + 9);
+	std::string reconstructed_body;
+
+	// Rebuild multipart structure using parsed sectionInfo
+	reconstructed_body += boundary + "\r\n";
+	for (std::map<std::string, std::string>::const_iterator it = sectionInfo.myMap.begin();
+		it != sectionInfo.myMap.end(); ++it)
+	{
+		reconstructed_body += it->first + ": " + it->second + "\r\n";
+	}
+	reconstructed_body += "\r\n"; // Empty line before body
+	reconstructed_body += sectionInfo.body;
+	reconstructed_body += "\r\n" + boundary + "--\r\n";
+
+	Logger::debug("Reconstructed multipart body size: " + Utils::toString(reconstructed_body.size()));
+	return reconstructed_body;
+}
+
 // Utils
 
 std::string HttpRequest::decodeQuery(std::string str)
