@@ -1,4 +1,8 @@
 GNU = c++
+
+#flags for debugging
+#FLAGS = -Wall -Wextra -Werror -Wunused-function -fsanitize=address
+#Normal flags
 FLAGS = -Wall -Wextra -Werror -Wunused-function -ggdb3
 C_98 = -std=c++98
 OBJ_DIR = obj
@@ -20,6 +24,8 @@ all: $(NAME)
 
 $(NAME): $(OBJ_DIR) $(CPP_OBJ)
 	$(GNU) $(CPP_OBJ) -o $(NAME)
+# when compiling with the -fsanitize flag replace the line above with this one
+ 	$(GNU) $(CPP_OBJ) -fsanitize=address -o $(NAME)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
