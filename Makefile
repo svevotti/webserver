@@ -25,7 +25,7 @@ all: $(NAME)
 $(NAME): $(OBJ_DIR) $(CPP_OBJ)
 	$(GNU) $(CPP_OBJ) -o $(NAME)
 # when compiling with the -fsanitize flag replace the line above with this one
- 	$(GNU) $(CPP_OBJ) -fsanitize=address -o $(NAME)
+ 	# $(GNU) $(CPP_OBJ) -fsanitize=address -o $(NAME)
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
