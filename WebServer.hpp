@@ -35,6 +35,7 @@
 
 class Webserver {
     public:
+        pid_t pid;
         Webserver(Config &file);
         ~Webserver();
         int                                     startServer(void);

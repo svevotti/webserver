@@ -1,9 +1,16 @@
 #include "WebServer.hpp"
 #include <ctime>
+#include <signal.h>
 #define BUFFER 1024
 #define MAX 1024
 
 // Constructor and Destructor
+typedef struct m_pid
+{
+	int cgi_fd;
+	int clent_fd;
+} t_pid;
+std::map<pid_t, t_pid> childProcesses;
 
 Webserver::Webserver(Config& file)
 {
@@ -31,6 +38,50 @@ Webserver::~Webserver()
 }
 
 // Main functions
+// int checkChildProcesses() {
+// 	std::cout << "check child process\n";
+//     for (std::map<pid_t, t_pid>::iterator it = childProcesses.begin(); it != childProcesses.end();) {
+// 		Logger::debug("fd cgi: " + Utils::toString(it->second.cgi_fd));
+// 		Logger::debug("fd client: " + Utils::toString(it->second.clent_fd));
+// 		Logger::debug("pid: " + Utils::toString(it->first));
+//         int status;
+//         pid_t result = waitpid(it->first, &status, WNOHANG); // Non-blocking wait
+
+//         if (result == 0) {
+//             // Child is still running
+//             ++it; // Move to the next child
+//         } else if (result == -1) {
+//             // Error occurred
+//             perror("waitpid failed");
+//             it = childProcesses.erase(it); // Remove from the map
+//         } else {
+//             // Child has exited
+//             std::string response_process = "HTTP/1.1 200 OK\r\n";
+//             response_process += "Content-Type: text/html\r\n";
+//             response_process += "Connection: keep-alive\r\n";
+//             response_process += "\r\n"; // End of headers
+//             response_process += "<!DOCTYPE html>\n";
+//             response_process += "<html>\n";
+//             response_process += "<head><title>Bye Child</title></head>\n";
+//             response_process += "<body>\n";
+//             response_process += "<h1>Bye Child</h1>\n";
+//             response_process += "<form action=\"/submit\" method=\"post\">\n";
+//             response_process += "  <input type=\"text\" name=\"message\" placeholder=\"Type your message here\">\n";
+//             response_process += "  <input type=\"submit\" value=\"Send\">\n";
+//             response_process += "</form>\n";
+//             response_process += "</body>\n";
+//             response_process += "</html>\n";
+//             Logger::error("Bye child");
+// 			// Logger::debug("fd: " + Utils::toString(it->second));
+// 			// int fd = it->second;
+// 			// Logger::debug("pid: " + Utils::toString(it->first));
+//             send(it->second.clent_fd, response_process.c_str(), response_process.size(), 0); // Send response
+//             it = childProcesses.erase(it); // Remove from the map
+// 			return 0;
+//         }
+//     }
+// 	return -1;
+// }
 
 int	Webserver::startServer()
 {
@@ -57,7 +108,9 @@ int	Webserver::startServer()
 			Logger::debug("Poll timeout: no events");
 		else
 			dispatchEvents();
+		std::cout << "exit dispatch\n";
 		checkTime();
+		std::cout << "after timecheck\n";
 	}
 	return 0;
 }
@@ -78,6 +131,40 @@ void Webserver::dispatchEvents()
 			else if (fdIsCGI(it->fd) == true)
 			{
 				Logger::info("Start CGI logic here");
+				std::string response_process = "HTTP/1.1 200 OK\r\n";
+				response_process += "Content-Type: text/html\r\n";
+				response_process += "Connection: keep-alive\r\n";
+				response_process += "\r\n\r\n"; // End of headers
+				char buffer[1024];
+				ssize_t bytesRead = read(it->fd, buffer, sizeof(buffer) - 1);
+				if (bytesRead > 0)
+				{
+					buffer[bytesRead] = '\0'; // Null-terminate the buffer
+					Logger::debug(buffer);
+					std::string str(buffer);
+					response_process += str;
+		
+					// Get the client fd associated with this CGI process
+					int clientFd = childProcesses[this->pid].clent_fd; // Ensure you are accessing the correct client fd
+					send(clientFd, response_process.c_str(), response_process.size(), 0); // Send response
+				}
+				else if (bytesRead == 0)
+				{
+					// Handle the case where the child process has finished
+					removeClient(it);
+				}
+				else
+				{
+					// Handle error in recv
+					perror("recv failed");
+					removeClient(it);
+				}
+				// close(it->fd);
+				// poll_sets.erase(it);
+				// childProcesses.clear();
+				exit(0);
+				// removeClient(it);
+				// exit(0);
 			}
 			else
 			{
@@ -89,6 +176,46 @@ void Webserver::dispatchEvents()
 				}
 				else if (result == 2)
 					it->events = POLLOUT;
+				else if (result == 3)
+				{
+					int fd[2];
+					pipe(fd);
+					std::cout << "fd[0]: " << fd[0];
+					std::cout << ", fd[1]: " << fd[1] << std::endl;
+					this->pid = fork();
+					struct Route route;
+					if (this->pid == 0 ) //child
+					{
+						Logger::debug("child process on fd: " + Utils::toString(it->fd));
+						Logger::debug("child pid: " + Utils::toString(getpid()));
+						// route.path = "./"
+						// this->response = retrievePage(route);
+						close(fd[0]); // Close reading
+						dup2(fd[1], STDOUT_FILENO); //redirect stdout to the writing end
+						close(fd[1]);
+						const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
+						if (execve(args[0], (char *const *)args, NULL) == -1) {
+							perror("execv failed"); // Print error if execv fails
+							return ;
+						}
+					}
+					else if (this->pid > 0)// Parent process
+					{
+							// Store the child PID and its corresponding file descriptor
+							close(fd[1]); // Close write
+							struct pollfd CGIPoll;
+
+							CGIPoll.fd = fd[0];
+							CGIPoll.events = POLLIN;
+							poll_sets.push_back(CGIPoll);
+							Logger::debug("parent pushed to poll");
+							std::cout << it->fd << std::endl;
+							childProcesses[this->pid].cgi_fd = fd[0];
+							childProcesses[this->pid].clent_fd = it->fd;
+							it->events = POLLOUT;
+						return ;
+					}
+				}
 			}
         }
 		else if (it->revents & POLLOUT)
@@ -166,7 +293,17 @@ InfoServer*	Webserver::matchFD( int fd ) {
 
 int Webserver::fdIsCGI(int fd)
 {
-	(void)fd;
+	std::cout << fd << std::endl;
+	std::cout << childProcesses.size() << std::endl;
+	for (std::map<pid_t, t_pid>::iterator it = childProcesses.begin(); it != childProcesses.end(); it++)
+	{
+		std::cout << "fd cgi: " << fd << " : " << "it->second : " << it->second.cgi_fd << std::endl;
+		if (fd == it->second.cgi_fd)
+		{
+			std::cout << "found\n";
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -234,6 +371,7 @@ void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 	close(it->fd);
 	this->clientsList.erase(retrieveClient(it->fd));
 	this->poll_sets.erase(it);
+	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 }
 
 void Webserver::checkTime(void)
@@ -249,6 +387,26 @@ void Webserver::checkTime(void)
 			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
+				// child_done = true;
+				kill(this->pid, SIGKILL);
+				std::string response_process = "HTTP/1.1 200 OK\r\n";
+				response_process += "Content-Type: text/html\r\n";
+				response_process += "Connection: keep alive\r\n";
+				response_process += "\r\n"; // End of headers
+				response_process += "<!DOCTYPE html>\n";
+				response_process += "<html>\n";
+				response_process += "<head><title>Bye Child</title></head>\n";
+				response_process += "<body>\n";
+				response_process += "<h1>Bye Child</h1>\n";
+				response_process += "<form action=\"/submit\" method=\"post\">\n";
+				response_process += "  <input type=\"text\" name=\"message\" placeholder=\"Type your message here\">\n";
+				response_process += "  <input type=\"submit\" value=\"Send\">\n";
+				response_process += "</form>\n";
+				response_process += "</body>\n";
+				response_process += "</html>\n";
+				send(it->fd, response_process.c_str(), response_process.size(), 0);
+				Logger::debug("fd: " + Utils::toString(this->pid));
+				Logger::debug("pid: " + Utils::toString(it->fd));
 				removeClient(it);
 			}
 		}

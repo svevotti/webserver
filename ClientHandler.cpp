@@ -219,10 +219,11 @@ int ClientHandler::manageRequest(void)
 			Logger::info("Got route");
 			validateHttpHeaders(route);
 			Logger::info("Validate http request");
+			std::cout << uri << std::endl;
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
-				return 0;
+				return 3;
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())
 			{
@@ -295,12 +296,14 @@ int ClientHandler::retrieveResponse(void)
 	this->raw_data.clear();
 	this->totbytes = 0;
 	this->request.cleanProperties();
+	this->startingTime = time(NULL);
 	return 0;
 }
 
 int ClientHandler::isCgi(std::string str)
 {
-	(void)str;
+	if (str == "/cgi-bin")
+		return true;
 	return false;
 }
 
