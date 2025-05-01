@@ -120,7 +120,7 @@ void Webserver::dispatchEvents()
 	std::vector<struct pollfd>::iterator it;
 	int result;
 
-    for (it = poll_sets.begin(); it != poll_sets.end();) 
+    for (it = poll_sets.begin(); it != poll_sets.end();)
     {
 		Logger::debug("Client: " + Utils::toString(it->fd));
 		result = 0;
@@ -143,7 +143,7 @@ void Webserver::dispatchEvents()
 					Logger::debug(buffer);
 					std::string str(buffer);
 					response_process += str;
-		
+
 					// Get the client fd associated with this CGI process
 					int clientFd = childProcesses[this->pid].clent_fd; // Ensure you are accessing the correct client fd
 					send(clientFd, response_process.c_str(), response_process.size(), 0); // Send response
@@ -178,43 +178,43 @@ void Webserver::dispatchEvents()
 					it->events = POLLOUT;
 				else if (result == 3)
 				{
-					int fd[2];
-					pipe(fd);
-					std::cout << "fd[0]: " << fd[0];
-					std::cout << ", fd[1]: " << fd[1] << std::endl;
-					this->pid = fork();
-					struct Route route;
-					if (this->pid == 0 ) //child
-					{
-						Logger::debug("child process on fd: " + Utils::toString(it->fd));
-						Logger::debug("child pid: " + Utils::toString(getpid()));
-						// route.path = "./"
-						// this->response = retrievePage(route);
-						close(fd[0]); // Close reading
-						dup2(fd[1], STDOUT_FILENO); //redirect stdout to the writing end
-						close(fd[1]);
-						const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
-						if (execve(args[0], (char *const *)args, NULL) == -1) {
-							perror("execv failed"); // Print error if execv fails
-							return ;
-						}
-					}
-					else if (this->pid > 0)// Parent process
-					{
-							// Store the child PID and its corresponding file descriptor
-							close(fd[1]); // Close write
-							struct pollfd CGIPoll;
+					// int fd[2];
+					// pipe(fd);
+					// std::cout << "fd[0]: " << fd[0];
+					// std::cout << ", fd[1]: " << fd[1] << std::endl;
+					// this->pid = fork();
+					// struct Route route;
+					// if (this->pid == 0 ) //child
+					// {
+					// 	Logger::debug("child process on fd: " + Utils::toString(it->fd));
+					// 	Logger::debug("child pid: " + Utils::toString(getpid()));
+					// 	// route.path = "./"
+					// 	// this->response = retrievePage(route);
+					// 	close(fd[0]); // Close reading
+					// 	dup2(fd[1], STDOUT_FILENO); //redirect stdout to the writing end
+					// 	close(fd[1]);
+					// 	const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
+					// 	if (execve(args[0], (char *const *)args, NULL) == -1) {
+					// 		perror("execv failed"); // Print error if execv fails
+					// 		return ;
+					// 	}
+					// }
+					// else if (this->pid > 0)// Parent process
+					// {
+					// 		// Store the child PID and its corresponding file descriptor
+					// 		close(fd[1]); // Close write
+					// 		struct pollfd CGIPoll;
 
-							CGIPoll.fd = fd[0];
-							CGIPoll.events = POLLIN;
-							poll_sets.push_back(CGIPoll);
-							Logger::debug("parent pushed to poll");
-							std::cout << it->fd << std::endl;
-							childProcesses[this->pid].cgi_fd = fd[0];
-							childProcesses[this->pid].clent_fd = it->fd;
-							it->events = POLLOUT;
-						return ;
-					}
+					// 		CGIPoll.fd = fd[0];
+					// 		CGIPoll.events = POLLIN;
+					// 		poll_sets.push_back(CGIPoll);
+					// 		Logger::debug("parent pushed to poll");
+					// 		std::cout << it->fd << std::endl;
+					// 		childProcesses[this->pid].cgi_fd = fd[0];
+					// 		childProcesses[this->pid].clent_fd = it->fd;
+					// 		it->events = POLLOUT;
+					// 	return ;
+					// }
 				}
 			}
         }
@@ -260,7 +260,7 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
-		status = clientIt->manageRequest();
+		status = clientIt->manageRequest(poll_sets);
 	else
 		status = clientIt->retrieveResponse();
 	return status;

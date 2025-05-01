@@ -133,7 +133,7 @@ std::string ClientHandler::createPath(struct Route route, std::string uri)
 	return path;
 }
 
-int ClientHandler::manageRequest(void)
+int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 {
 	int result;
 	std::string uri;
@@ -223,6 +223,48 @@ int ClientHandler::manageRequest(void)
 			if (isCgi(uri) == true)
 			{
 				Logger::info("Set up CGI");
+				if (access(route.path.c_str(), F_OK) != 0)
+					throw NotFoundException();
+				//Create CGI class PathToScript= route.path;
+				int fd_cgi[2];
+					pipe(fd_cgi);
+					std::cout << "fd[0]: " << fd_cgi[0];
+					std::cout << ", fd[1]: " << fd_cgi[1] << std::endl;
+					this->pid = fork();
+					struct Route route;
+					if (this->pid == 0 ) //child
+					{
+						Logger::debug("child process on fd: " + Utils::toString(fd));
+						Logger::debug("child pid: " + Utils::toString(getpid()));
+						// route.path = "./"
+						// this->response = retrievePage(route);
+						close(fd_cgi[0]); // Close reading
+						dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end
+						close(fd_cgi[1]);
+						//Currently hardcoded, need to -find which script to run; -create env for the script; -ensure that the file ext is allowed by conf_file; -check if script exist, etc.
+						const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
+						if (execve(args[0], (char *const *)args, NULL) == -1) {
+							perror("execv failed"); // Print error if execv fails
+							return ;
+						}
+					}
+					else if (this->pid > 0)// Parent process
+					{
+							// Store the child PID and its corresponding file descriptor
+							close(fd_cgi[1]); // Close write
+							struct pollfd CGIPoll;
+
+							CGIPoll.fd = fd_cgi[0];
+							CGIPoll.events = POLLIN;
+							poll_sets.push_back(CGIPoll);
+							Logger::debug("parent pushed to poll");
+							std::cout << fd << std::endl;
+							CGI_fd.push_back(fd_cgi[0]);
+							//We need to find which event is this and assign the POLLOUT event
+							//poll_sets[""]
+							// events = POLLOUT;
+						return ;
+					}
 				return 3;
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())

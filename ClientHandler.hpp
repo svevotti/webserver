@@ -15,7 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dirent.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include <cstdio>
@@ -36,7 +36,7 @@ class ClientHandler {
 		double 		getTimeOut(void) const;
 		HttpRequest	getRequest(void) const;
 		std::string getResponse(void) const;
-		int 		manageRequest(void);
+		int 		manageRequest(std::vector<pollfd> poll_sets);
 		int 		readData(int fd, std::string &str, int &bytes);
 		std::string findDirectory(std::string uri);
 		std::string createPath(struct Route route, std::string uri);
@@ -58,6 +58,8 @@ class ClientHandler {
 	InfoServer	configInfo;
 	HttpRequest request;
 	std::string response;
+	int			pid;
+	std::vector<int>			CGI_fd;
 };
 
 #endif
