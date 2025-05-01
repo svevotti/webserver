@@ -16,7 +16,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dirent.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include <cstdio>
@@ -41,12 +41,13 @@ class Webserver {
         int                                     startServer(void);
         void                                    addServerSocketsToPoll(int fd);
         int                                     fdIsServerSocket(int fd);
-        int                                     fdIsCGI(int fd);
+        bool                                     fdIsCGI(int fd);
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
         int                                     processClient(int fd, int event);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
+        std::vector<ClientHandler>::iterator    retrieveClientCGI(int fd);
         void                                    removeClient(std::vector<struct pollfd>::iterator it);
         void checkTime(void);
         InfoServer*	matchFD( int fd );

@@ -23,17 +23,16 @@ class CGI {
 
 	private:
 		std::string _request_method;
-		std::string _upload_to;
 		std::string _cgi_path;
 		std::string _processed_body;
 		std::string _output;
 		char** _av;
 		char** _env;
-		int fd;
+		int _fd;
 		pid_t _pid;
+		std::string	_uri;
 		const InfoServer& _serverInfo;
 		std::map<std::string, std::string> _env_map;
-		std::string	_uri;
 		// size_t _bytes_written;
 		// bool _input_done;
 		// bool _output_done;
@@ -43,7 +42,7 @@ class CGI {
 		// bool _timed_out; // Track timeout state
 		// std::string _timeout_response; // Store timeout response
 
-		void createAv(const std::string& cgi_path, const std::string& upload_to);
+		void createAv();
 		void createEnv(const HttpRequest& request);
 		void createAvAndEnv(const HttpRequest& request);
 		void populateEnvVariables(const HttpRequest& request);
@@ -55,10 +54,10 @@ class CGI {
 		// static const std::string SCRIPT_BASE_DIR;
 		// static const int TIMEOUT_SECONDS;
 
-		CGI(const HttpRequest& request, const std::string& upload_to, const InfoServer& info);
+		CGI(const HttpRequest& request, const std::string& PathToScript, const InfoServer& info);
 		~CGI();
 
-		int getFD() const { return fd; }
+		int getFD() const { return _fd; }
 		pid_t getPid() const { return _pid; }
 		std::string getOutput() const { return _output; }
 

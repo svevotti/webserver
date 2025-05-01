@@ -119,7 +119,7 @@ void HttpRequest::unchunkData(void)
 			break;
 		int chunkSizeLength = chunkEnd - (chunked + pos);
 		std::string HexNum(chunked + pos, chunkEnd);
-		size_t chunkSize = strtoul(HexNum.c_str(), nullptr, 16);
+		size_t chunkSize = strtoul(HexNum.c_str(), NULL, 16);
 		if (chunkSize == 0)
 			break;
 		pos += chunkSizeLength + 2;
@@ -156,7 +156,7 @@ void HttpRequest::parseRequestHttp(void)
 	std::string line;
     std::map<std::string, std::string>::iterator itTransfer;
 	std::map<std::string, std::string>::iterator itLength;
-	
+
 	parseRequestLine(inputString);
 	getline(request, line);
 	if (isspace(line[0]) != 0 || line.empty())
@@ -177,7 +177,7 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	std::map<std::string, std::string>::iterator it;
 
 	if (method == "POST")
-	{	
+	{
 		if (contentType.find("multipart/form-data") != std::string::npos)
 		{
 			parseMultiPartBody(buffer, size);

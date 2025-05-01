@@ -32,6 +32,7 @@ class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
 		int 		getFd(void) const;
+		int 		getCGI_Fd(void) const;
 		double 		getTime(void) const;
 		double 		getTimeOut(void) const;
 		HttpRequest	getRequest(void) const;
@@ -58,8 +59,7 @@ class ClientHandler {
 	InfoServer	configInfo;
 	HttpRequest request;
 	std::string response;
-	int			pid;
-	std::vector<int>			CGI_fd;
+	int			cgi_fd;
 };
 
 #endif

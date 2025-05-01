@@ -10,7 +10,6 @@ typedef struct m_pid
 	int cgi_fd;
 	int clent_fd;
 } t_pid;
-std::map<pid_t, t_pid> childProcesses;
 
 Webserver::Webserver(Config& file)
 {
@@ -140,12 +139,12 @@ void Webserver::dispatchEvents()
 				if (bytesRead > 0)
 				{
 					buffer[bytesRead] = '\0'; // Null-terminate the buffer
-					Logger::debug(buffer);
 					std::string str(buffer);
+					Logger::debug("Bytes read: " + str);
 					response_process += str;
 
 					// Get the client fd associated with this CGI process
-					int clientFd = childProcesses[this->pid].clent_fd; // Ensure you are accessing the correct client fd
+					int clientFd = retrieveClientCGI(it->fd)->getFd(); // Ensure you are accessing the correct client fd
 					send(clientFd, response_process.c_str(), response_process.size(), 0); // Send response
 				}
 				else if (bytesRead == 0)
@@ -178,43 +177,15 @@ void Webserver::dispatchEvents()
 					it->events = POLLOUT;
 				else if (result == 3)
 				{
-					// int fd[2];
-					// pipe(fd);
-					// std::cout << "fd[0]: " << fd[0];
-					// std::cout << ", fd[1]: " << fd[1] << std::endl;
-					// this->pid = fork();
-					// struct Route route;
-					// if (this->pid == 0 ) //child
-					// {
-					// 	Logger::debug("child process on fd: " + Utils::toString(it->fd));
-					// 	Logger::debug("child pid: " + Utils::toString(getpid()));
-					// 	// route.path = "./"
-					// 	// this->response = retrievePage(route);
-					// 	close(fd[0]); // Close reading
-					// 	dup2(fd[1], STDOUT_FILENO); //redirect stdout to the writing end
-					// 	close(fd[1]);
-					// 	const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
-					// 	if (execve(args[0], (char *const *)args, NULL) == -1) {
-					// 		perror("execv failed"); // Print error if execv fails
-					// 		return ;
-					// 	}
-					// }
-					// else if (this->pid > 0)// Parent process
-					// {
-					// 		// Store the child PID and its corresponding file descriptor
-					// 		close(fd[1]); // Close write
-					// 		struct pollfd CGIPoll;
+					struct pollfd CGIPoll;
 
-					// 		CGIPoll.fd = fd[0];
-					// 		CGIPoll.events = POLLIN;
-					// 		poll_sets.push_back(CGIPoll);
-					// 		Logger::debug("parent pushed to poll");
-					// 		std::cout << it->fd << std::endl;
-					// 		childProcesses[this->pid].cgi_fd = fd[0];
-					// 		childProcesses[this->pid].clent_fd = it->fd;
-					// 		it->events = POLLOUT;
-					// 	return ;
-					// }
+					CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
+					CGIPoll.events = POLLIN;
+					poll_sets.push_back(CGIPoll);
+					Logger::info("CGI set up");
+					Logger::debug("Client fd after setting up CGI: " + Utils::toString(it->fd));
+					Logger::debug("CGI fd after setting up CGI: " + Utils::toString(retrieveClient(it->fd)->getCGI_Fd()));
+					return ;
 				}
 			}
         }
@@ -291,16 +262,18 @@ InfoServer*	Webserver::matchFD( int fd ) {
 	return NULL;
 }
 
-int Webserver::fdIsCGI(int fd)
+bool Webserver::fdIsCGI(int fd)
 {
 	std::cout << fd << std::endl;
-	std::cout << childProcesses.size() << std::endl;
-	for (std::map<pid_t, t_pid>::iterator it = childProcesses.begin(); it != childProcesses.end(); it++)
+	std::vector<ClientHandler>::iterator iterClient;
+	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
+
+	Logger::debug("Checking if it's CGI for fd " + Utils::toString(fd));
+	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
 	{
-		std::cout << "fd cgi: " << fd << " : " << "it->second : " << it->second.cgi_fd << std::endl;
-		if (fd == it->second.cgi_fd)
+		if (iterClient->getCGI_Fd() == fd)
 		{
-			std::cout << "found\n";
+			Logger::debug("FD " + Utils::toString(fd) + "is CGI");
 			return true;
 		}
 	}
@@ -350,6 +323,19 @@ std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
 	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
 	{
 		if (iterClient->getFd() == fd)
+			return iterClient;
+	}
+	return endClient;
+}
+
+std::vector<ClientHandler>::iterator Webserver::retrieveClientCGI(int fd)
+{
+	std::vector<ClientHandler>::iterator iterClient;
+	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
+
+	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
+	{
+		if (iterClient->getCGI_Fd() == fd)
 			return iterClient;
 	}
 	return endClient;

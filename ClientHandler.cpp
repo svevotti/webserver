@@ -1,5 +1,6 @@
 #include "ClientHandler.hpp"
 #include "PrintFunction.hpp"
+#include "CGI.hpp"
 
 //Constructor
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
@@ -18,6 +19,11 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 int ClientHandler::getFd(void) const
 {
 	return this->fd;
+}
+
+int ClientHandler::getCGI_Fd(void) const
+{
+	return this->cgi_fd;
 }
 
 HttpRequest ClientHandler::getRequest() const
@@ -219,52 +225,16 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 			Logger::info("Got route");
 			validateHttpHeaders(route);
 			Logger::info("Validate http request");
-			std::cout << uri << std::endl;
-			if (isCgi(uri) == true)
+			//std::cout << request << std::endl;
+			//std::cout << uri << std::endl;
+			printRoute(route);
+			if (isCgi(route.uri) == true)
 			{
 				Logger::info("Set up CGI");
 				if (access(route.path.c_str(), F_OK) != 0)
 					throw NotFoundException();
-				//Create CGI class PathToScript= route.path;
-				int fd_cgi[2];
-					pipe(fd_cgi);
-					std::cout << "fd[0]: " << fd_cgi[0];
-					std::cout << ", fd[1]: " << fd_cgi[1] << std::endl;
-					this->pid = fork();
-					struct Route route;
-					if (this->pid == 0 ) //child
-					{
-						Logger::debug("child process on fd: " + Utils::toString(fd));
-						Logger::debug("child pid: " + Utils::toString(getpid()));
-						// route.path = "./"
-						// this->response = retrievePage(route);
-						close(fd_cgi[0]); // Close reading
-						dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end
-						close(fd_cgi[1]);
-						//Currently hardcoded, need to -find which script to run; -create env for the script; -ensure that the file ext is allowed by conf_file; -check if script exist, etc.
-						const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
-						if (execve(args[0], (char *const *)args, NULL) == -1) {
-							perror("execv failed"); // Print error if execv fails
-							return ;
-						}
-					}
-					else if (this->pid > 0)// Parent process
-					{
-							// Store the child PID and its corresponding file descriptor
-							close(fd_cgi[1]); // Close write
-							struct pollfd CGIPoll;
-
-							CGIPoll.fd = fd_cgi[0];
-							CGIPoll.events = POLLIN;
-							poll_sets.push_back(CGIPoll);
-							Logger::debug("parent pushed to poll");
-							std::cout << fd << std::endl;
-							CGI_fd.push_back(fd_cgi[0]);
-							//We need to find which event is this and assign the POLLOUT event
-							//poll_sets[""]
-							// events = POLLOUT;
-						return ;
-					}
+				CGI	cgi(request, route.path, configInfo);
+				cgi_fd = cgi.getFD();
 				return 3;
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())
@@ -342,9 +312,9 @@ int ClientHandler::retrieveResponse(void)
 	return 0;
 }
 
-int ClientHandler::isCgi(std::string str)
+int ClientHandler::isCgi(std::string uri)
 {
-	if (str == "/cgi-bin")
+	if (uri == "/cgi-bin")
 		return true;
 	return false;
 }
