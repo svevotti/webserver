@@ -8,6 +8,7 @@
 #include "HttpException.hpp"
 #include "ClientHandler.hpp"
 #include "Config.hpp"
+#include "CGI.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +58,7 @@ class Webserver {
         std::vector<struct pollfd>  poll_sets;
         int                         serverFd;
         std::vector<ClientHandler>  clientsList;
+        std::vector<CGITracker>     _cgiQueue;
 
 };
 #endif

@@ -125,6 +125,7 @@ void Webserver::dispatchEvents()
 		result = 0;
         if (it->revents & POLLIN)
         {
+			Logger::debug("POLLIN");
 			if (fdIsServerSocket(it->fd) == true)
 				createNewClient(it->fd);
 			else if (fdIsCGI(it->fd) == true)
@@ -140,8 +141,8 @@ void Webserver::dispatchEvents()
 				{
 					buffer[bytesRead] = '\0'; // Null-terminate the buffer
 					std::string str(buffer);
-					Logger::debug("Bytes read: " + str);
 					response_process += str;
+					Logger::debug("Response_process: " + response_process);
 
 					// Get the client fd associated with this CGI process
 					int clientFd = retrieveClientCGI(it->fd)->getFd(); // Ensure you are accessing the correct client fd
@@ -191,6 +192,7 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
+			Logger::debug("POLLOUT");
 			if (processClient(it->fd, WRITE) == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
@@ -199,22 +201,27 @@ void Webserver::dispatchEvents()
 		}
 		else if (it->revents & POLLERR)
 		{
+			Logger::debug("POLLERR");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
 			removeClient(it);
 			return;
 		}
 		else if (it->revents & POLLHUP)
 		{
+			Logger::debug("POLLHUP");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
 			removeClient(it);
 			return;
 		}
 		else if (it->revents & POLLNVAL)
 		{
+			Logger::debug("POLLINVAL");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
 			removeClient(it);
 			return;
 		}
+		else
+			Logger::debug("Nothing");
 		it++;
 	}
 }
@@ -234,6 +241,11 @@ int Webserver::processClient(int fd, int event)
 		status = clientIt->manageRequest(poll_sets);
 	else
 		status = clientIt->retrieveResponse();
+	if (status == 3) //Set CGITracker
+	{
+		CGITracker tracker(NULL, clientIt->getCGI_Fd(), clientIt->getFd());
+		_cgiQueue.push_back(tracker);
+	}
 	return status;
 }
 
@@ -264,7 +276,6 @@ InfoServer*	Webserver::matchFD( int fd ) {
 
 bool Webserver::fdIsCGI(int fd)
 {
-	std::cout << fd << std::endl;
 	std::vector<ClientHandler>::iterator iterClient;
 	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
 
@@ -273,7 +284,7 @@ bool Webserver::fdIsCGI(int fd)
 	{
 		if (iterClient->getCGI_Fd() == fd)
 		{
-			Logger::debug("FD " + Utils::toString(fd) + "is CGI");
+			Logger::debug("FD " + Utils::toString(fd) + " is CGI");
 			return true;
 		}
 	}

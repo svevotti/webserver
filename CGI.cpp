@@ -164,15 +164,15 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 
 	// Set environment variables
 	_env_map["QUERY_STRING"] = request.getQuery();
-	_env_map["PATH_INFO"] = _uri; // Use full filesystem path
+	_env_map["PATH_INFO"] = "." + _serverInfo.getRoot() + _uri; // Use full filesystem path
 	_env_map["REQUEST_METHOD"] = _request_method;
-	//_env_map["REQUEST_URI"] = _uri;// this should be the same as script_filename
+	_env_map["REQUEST_URI"] = _uri;// this should be the same as script_filename
 	_env_map["SERVER_PROTOCOL"] = request.getProtocol();
 	_env_map["SERVER_NAME"] = _serverInfo.getIP();
 	_env_map["SERVER_PORT"] = _serverInfo.getPort();
 	_env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
 	_env_map["REDIRECT_STATUS"] = "200"; // Required for php-cgi with force-cgi-redirect
-	_env_map["SCRIPT_NAME"] = _uri;
+	_env_map["SCRIPT_FILENAME"] = "." + _serverInfo.getRoot() + _uri;
 
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();
@@ -183,11 +183,11 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	// Logger::debug("CGI_PROCESSING_TIMEOUT set to: " + _env_map["CGI_PROCESSING_TIMEOUT"]);
 
 	// Logging
-	Logger::debug("REQUEST_METHOD=" + _env_map["REQUEST_METHOD"]);
-	Logger::debug("SERVER_NAME=" + _env_map["SERVER_NAME"]);
-	Logger::debug("SERVER_PORT=" + _env_map["SERVER_PORT"]);
-	Logger::debug("SCRIPT_NAME=" + _env_map["SCRIPT_NAME"]);
-	Logger::debug("PATH_INFO=" + _env_map["PATH_INFO"]);
+	// Logger::debug("REQUEST_METHOD=" + _env_map["REQUEST_METHOD"]);
+	// Logger::debug("SERVER_NAME=" + _env_map["SERVER_NAME"]);
+	// Logger::debug("SERVER_PORT=" + _env_map["SERVER_PORT"]);
+	// Logger::debug("SCRIPT_NAME=" + _env_map["SCRIPT_NAME"]);
+	// Logger::debug("PATH_INFO=" + _env_map["PATH_INFO"]);
 
 	// Handle POST requests
 	if (_request_method == "POST")
@@ -217,6 +217,9 @@ void CGI::startExecution()
 	int fd_cgi[2];
 	pipe(fd_cgi);
 	_pid = fork();
+	Logger::debug("Checking env");
+	for (int i = 0; _env[i]; i++)
+		Logger::debug(std::string(_env[i]));
 	if (_pid == 0 ) //child
 	{
 		signal(SIGPIPE, SIG_IGN);// Mark SIGPIPE to prevent crashes
@@ -224,7 +227,7 @@ void CGI::startExecution()
 		Logger::debug("child pid: " + Utils::toString(getpid()));
 		// route.path = "./"
 		// this->response = retrievePage(route);
-		Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]));
+		Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]) + " with writing FD " + Utils::toString(fd_cgi[1]));
 		close(fd_cgi[0]); // Close reading
 		dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end
 		close(fd_cgi[1]);

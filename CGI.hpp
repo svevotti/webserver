@@ -81,5 +81,32 @@ class CGI {
 		// void closePipes();
 };
 
+struct CGITracker {
+	CGI* cgi;              // Pointer to the CGI instance
+	int pipeFd;            // Current pipe FD being polled (in_pipe, out_pipe, or err_pipe)
+	int clientFd;          // Original client FD
+	//const InfoServer* serverConfig; // Server-specific configuration
+	std::string response;  // CGI response to be sent by Webserver
+	bool isActive;
+	bool firstResponseSent;
+	std::string bufferedOutput; // Buffer for non-chunked responses
+	bool headersParsed;         // Track if headers are parsed
+	bool isChunked;             // Track if chunking is active
+	std::string contentType;    // Persistent storage for parsed Content-Type
+	int statusCode; // Persistent status code
+	std::map<std::string, std::string> cgi_headers; // CGI headers
+
+	// Default constructor
+	CGITracker()
+	: cgi(NULL), pipeFd(-1), clientFd(-1), response(""),
+	isActive(false), firstResponseSent(false), bufferedOutput(""),
+	headersParsed(false), isChunked(false), contentType("text/plain"), statusCode(200) {} // Initialize contentType
+
+	// Parameterized constructor
+	CGITracker(CGI* c, int pFd, int cFd)
+	: cgi(c), pipeFd(pFd), clientFd(cFd), response(""),
+	isActive(true), firstResponseSent(false), bufferedOutput(""),
+	headersParsed(false), isChunked(false), contentType("text/plain"), statusCode(200) {} // Initialize contentType
+};
 
 #endif
