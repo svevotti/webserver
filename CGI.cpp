@@ -168,13 +168,13 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	_env_map["QUERY_STRING"] = request.getQuery();
 	//_env_map["PATH_INFO"] = getScriptFileName(request); // Use full filesystem path
 	_env_map["REQUEST_METHOD"] = _request_method;
-	_env_map["REQUEST_URI"] = _uri;
+	//_env_map["REQUEST_URI"] = _uri; this should be the same as script_filename
 	_env_map["SERVER_PROTOCOL"] = request.getProtocol();
 	_env_map["SERVER_NAME"] = _serverInfo.getIP();
 	_env_map["SERVER_PORT"] = _serverInfo.getPort();
 	_env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
 	_env_map["REDIRECT_STATUS"] = "200"; // Required for php-cgi with force-cgi-redirect
-	//_env_map["SCRIPT_FILENAME"] = getScriptFileName(request);
+	_env_map["SCRIPT_FILENAME"] = _uri;
 
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();
