@@ -11,6 +11,7 @@ CGI::CGI(const HttpRequest& request, const std::string& PathToScript, const Info
 	_output(""),
 	_av(NULL),
 	_env(NULL),
+	_fd(0),
 	_pid(-1),
 	_uri(request.getUri()),
 	// _bytes_written(0),
@@ -115,7 +116,7 @@ void CGI::createAv()
 	if (extension.find(".py") != std::string::npos)
 		_av[0] = strdup("/usr/bin/python3");
 	else if (extension.find(".php") != std::string::npos)
-		_av[0] = strdup("/usr/bin/php-cgi");
+		_av[0] = strdup("/opt/homebrew/bin/php-cgi"); ///usr/bin/php-cgi
 	else
 		throw InternalServerErrorException();
 	//Argument 1 is the script
@@ -174,11 +175,8 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	_env_map["SERVER_PORT"] = _serverInfo.getPort();
 	_env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
 	_env_map["REDIRECT_STATUS"] = "200"; // Required for php-cgi with force-cgi-redirect
-	_env_map["SCRIPT_FILENAME"] = "." + _serverInfo.getRoot() + _uri;
+	_env_map["SCRIPT_FILENAME"] = _cgi_path;
 	_env_map["FILE_NAME"] = getFileName(request.getHttpSection().myMap);
-	std::cout << "file name: " << _env_map["FILE_NAME"] << std::endl;
-
-
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();
 	Logger::debug("DOCUMENT_ROOT=" + _env_map["DOCUMENT_ROOT"]);

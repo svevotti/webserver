@@ -16,6 +16,16 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 
 //Setters and Getters
 
+void ClientHandler::setResponse(std::string str)
+{
+	this->response = str;
+}
+
+void ClientHandler::resetCGIFD(void)
+{
+	this->cgi_fd = 0;
+}
+
 int ClientHandler::getFd(void) const
 {
 	return this->fd;
@@ -310,6 +320,7 @@ int ClientHandler::retrieveResponse(void)
 	this->raw_data.clear();
 	this->totbytes = 0;
 	this->request.cleanProperties();
+	this->cgi_fd = 0;
 	this->startingTime = time(NULL);
 	return 0;
 }

@@ -134,36 +134,46 @@ void Webserver::dispatchEvents()
 				std::string response_process = "HTTP/1.1 200 OK\r\n";
 				response_process += "Content-Type: text/html\r\n";
 				response_process += "Connection: keep-alive\r\n";
-				response_process += "\r\n\r\n"; // End of headers
-				char buffer[1024];
-				ssize_t bytesRead = read(it->fd, buffer, sizeof(buffer) - 1);
-				if (bytesRead > 0)
+				char buffer[5000];
+				std::string html_page;
+				int res;
+				while (1)
 				{
-					buffer[bytesRead] = '\0'; // Null-terminate the buffer
-					std::string str(buffer);
-					response_process += str;
-					Logger::debug("Response_process: " + response_process);
+					Utils::ft_memset(buffer, 0, sizeof(buffer));
+					res = read(it->fd, buffer, BUFFER - 1);
+					if (res <= 0)
+						break;
+					html_page.append(buffer, res);
+					// bytes += res;
+				}
+				// ssize_t bytesRead = read(it->fd, buffer, sizeof(buffer) - 1);
+				// std::string str(buffer);
+				response_process += "Content-Lenght: " + Utils::toString(html_page.size());
+				response_process += "\r\n"; // End of headers
+				response_process += html_page;
+				Logger::debug("Response_process: " + response_process);
 
-					// Get the client fd associated with this CGI process
-					int clientFd = retrieveClientCGI(it->fd)->getFd(); // Ensure you are accessing the correct client fd
-					send(clientFd, response_process.c_str(), response_process.size(), 0); // Send response
-				}
-				else if (bytesRead == 0)
+				// Get the client fd associated with this CGI process
+				std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
+				int clientFd = clientIt->getFd(); // Ensure you are accessing the correct client fd
+				Logger::debug("ready to send");
+				send(clientFd, response_process.c_str(), response_process.size(), 0); // Send response
+				Logger::debug("sent");
+				std::vector<struct pollfd> copypoll = poll_sets;
+				close(it->fd);
+				close(clientFd);
+				// clientIt->resetCGIFD();
+				Logger::debug("fd cgi: " + Utils::toString(it->fd));
+				Logger::debug("fd client: " + Utils::toString(clientFd));
+				poll_sets.erase(it);
+				std::cout << copypoll.size() << std::endl;
+				std::cout << poll_sets.size() << std::endl;
+				for (int i = 0; i < poll_sets.size(); i++)
 				{
-					// Handle the case where the child process has finished
-					removeClient(it);
+					if (poll_sets[i].fd == clientFd)
+						poll_sets.erase(poll_sets.begin() + i);
 				}
-				else
-				{
-					// Handle error in recv
-					perror("recv failed");
-					removeClient(it);
-				}
-				// close(it->fd);
-				// poll_sets.erase(it);
-				// childProcesses.clear();
-				exit(0);
-				// removeClient(it);
+				return;
 				// exit(0);
 			}
 			else
@@ -217,7 +227,7 @@ void Webserver::dispatchEvents()
 		{
 			Logger::debug("POLLINVAL");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
-			removeClient(it);
+			poll_sets.erase(it);
 			return;
 		}
 		else

@@ -37,6 +37,8 @@ class ClientHandler {
 		double 		getTimeOut(void) const;
 		HttpRequest	getRequest(void) const;
 		std::string getResponse(void) const;
+		void		resetCGIFD(void);
+		void		setResponse(std::string);
 		int 		manageRequest(std::vector<pollfd> poll_sets);
 		int 		readData(int fd, std::string &str, int &bytes);
 		std::string findDirectory(std::string uri);
