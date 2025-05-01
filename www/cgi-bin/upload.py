@@ -7,7 +7,7 @@ import json
 import logging
 
 # Set up logging to a file
-logging.basicConfig(filename='home/hdorado-/upload.py.log', level=logging.DEBUG,
+logging.basicConfig(filename='/Users/hdorado/Webserv_final/upload.py.log', level=logging.DEBUG,
                     format='%(asctime)s - %(message)s')
 # These are for backup
 ERROR_MESSAGES = {
@@ -68,19 +68,19 @@ def save_uploaded_file(upload_dir):
         send_json_response(400, "Bad Request", ERROR_MESSAGES[400])
 
     # Read raw input
-    if hasattr(sys.stdin, 'buffer'):
-        raw_input = sys.stdin.buffer.read(content_length)
-    else:
-        raw_input = sys.stdin.read(content_length).encode('utf-8', errors='replace')
-    logging.debug("Raw stdin length: %d" % len(raw_input))
+    # if hasattr(sys.stdin, 'buffer'):
+    #     raw_input = sys.stdin.buffer.read(content_length)
+    # else:
+    #     raw_input = sys.stdin.read(content_length).encode('utf-8', errors='replace')
+    # logging.debug("Raw stdin length: %d" % len(raw_input))
 
     # Parse form data
     try:
-        buffer = io.BytesIO(raw_input)
+        # buffer = io.BytesIO(raw_input)
         # form = cgi.FieldStorage(fp=buffer, environ=os.environ)
         environ = dict(os.environ)
-        environ['CONTENT_LENGTH'] = str(len(raw_input))
-        form = cgi.FieldStorage(fp=buffer, environ=environ, keep_blank_values=True)
+        #environ['CONTENT_LENGTH'] = str(len(raw_input))
+        form = cgi.FieldStorage(environ=environ)
         logging.debug("Form parsed, keys: %s" % list(form.keys()))
     except Exception as e:
         logging.debug("FieldStorage error: %s" % str(e))
