@@ -214,8 +214,13 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 
 void CGI::startExecution()
 {
-	int fd_cgi[2];
-	pipe(fd_cgi);
+	//int fd_cgi[2];
+	//pipe(fd_cgi);
+	int pipe_in[2];   // For stdin to CGI
+	int pipe_out[2];  // For stdout from CGI
+
+	pipe(pipe_in);
+	pipe(pipe_out);
 	_pid = fork();
 	Logger::debug("Checking env");
 	for (int i = 0; _env[i]; i++)
@@ -227,10 +232,20 @@ void CGI::startExecution()
 		Logger::debug("child pid: " + Utils::toString(getpid()));
 		// route.path = "./"
 		// this->response = retrievePage(route);
-		Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]) + " with writing FD " + Utils::toString(fd_cgi[1]));
-		close(fd_cgi[0]); // Close reading
-		dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end
-		close(fd_cgi[1]);
+		Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]));
+
+		//close(fd_cgi[0]); // Close reading
+		//dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end
+		//close(fd_cgi[1]);
+		// Redirect STDIN: child will read POST body from pipe_in[0]
+		close(pipe_in[1]); // Close write end (parent writes here)
+		dup2(pipe_in[0], STDIN_FILENO);
+		close(pipe_in[0]);
+
+		// Redirect STDOUT: child writes CGI response to pipe_out[1]
+		close(pipe_out[0]); // Close read end (parent reads here)
+		dup2(pipe_out[1], STDOUT_FILENO);
+		close(pipe_out[1]);
 		//Currently hardcoded, need to -find which script to run; -create env for the script; -ensure that the file ext is allowed by conf_file; -check if script exist, etc.
 		//const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
 		execve(_av[0], _av, _env);
@@ -243,9 +258,39 @@ void CGI::startExecution()
 	}
 	else if (_pid > 0)// Parent process
 	{
-			// Store the child PID and its corresponding file descriptor
-			close(fd_cgi[1]); // Close write
-			_fd = fd_cgi[0];
+		close(pipe_in[0]);
+		if (_request_method == "POST")
+		{
+			if (!_processed_body.empty())
+			{
+				const size_t CHUNK_SIZE = 4096;
+				size_t total_written = 0;
+				const char *data = _processed_body.c_str();
+				size_t remaining = _processed_body.length();
+
+				while (remaining > 0)
+				{
+					size_t to_write = std::min(CHUNK_SIZE, remaining);
+					ssize_t written = write(pipe_in[1], data + total_written, to_write);
+
+					if (written == -1)
+					{
+						close(pipe_in[1]);
+						throw std::runtime_error("Failed to write to CGI input pipe");
+					}
+					total_written += written;
+					remaining -= written;
+				}
+				close(pipe_in[1]);
+			}
+			else
+				close(pipe_in[1]); // Only if body is empty? Unsure why
+		}
+		else
+			close(pipe_in[1]);
+		// Store the child PID and its corresponding file descriptor
+		close(pipe_out[1]); // Close write
+		_fd = pipe_out[0];
 	}
 
 

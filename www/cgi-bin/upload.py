@@ -7,7 +7,7 @@ import json
 import logging
 
 # Set up logging to a file
-logging.basicConfig(filename='home/hdorado-/upload.py.log', level=logging.DEBUG,
+logging.basicConfig(filename='/Users/hdorado/Webserv_final/upload.py.log', level=logging.DEBUG,
                     format='%(asctime)s - %(message)s')
 # These are for backup
 ERROR_MESSAGES = {
