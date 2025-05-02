@@ -181,7 +181,9 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 			}
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
+			// Logger::debug(raw_data);
 			Logger::info("Done parsing");
+			// std::cout << request << std::endl;
 			Logger::info("Done reading the request parsed");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];

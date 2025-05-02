@@ -192,11 +192,11 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	// Handle POST requests
 	if (_request_method == "POST")
 	{
-		_env_map["CONTENT_LENGTH"] = request.getContentLength();
+		_env_map["CONTENT_LENGTH"] = request.getHttpContentLength();
 		Logger::debug("CONTENT_LENGTH set to: " + _env_map["CONTENT_LENGTH"]);
 
 		// Retrieve headers and set CONTENT_TYPE if available
-		_env_map["CONTENT_TYPE"] = request.getContentType();
+		_env_map["CONTENT_TYPE"] = request.getHttpContentType();
 		// if (it != headers.end())
 		// {
 		// 	_env_map["CONTENT_TYPE"] = it->second;
