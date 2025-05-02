@@ -132,7 +132,7 @@ void Webserver::dispatchEvents()
 			{
 				Logger::info("Start CGI logic here");
 				std::string response_process = "HTTP/1.1 200 OK\r\n";
-				response_process += "Content-Type: text/html\r\n";
+				response_process += "Content-Type: application/json\r\n";
 				response_process += "Connection: keep-alive\r\n";
 				char buffer[5000];
 				std::string html_page;

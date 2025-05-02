@@ -102,6 +102,7 @@ void signal_handler(int sig)
     if (g_server)
     {
         Logger::info("Received signal " + Utils::toString(sig) + ", shutting down server");
+		delete g_server;
         g_server = NULL;
     }
     exit(0);
