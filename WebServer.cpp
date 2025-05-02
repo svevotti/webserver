@@ -114,6 +114,25 @@ int	Webserver::startServer()
 	return 0;
 }
 
+std::string responseType(std::string str)
+{
+	int magicNumber;
+
+	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
+		return "text/html";
+	return "application/json";
+}
+
+std::string timeStamp(void)
+{
+	std::time_t result = std::time(NULL);
+	std::tm *localtime = std::localtime(&result);
+	char *time = std::asctime(localtime);
+	time[strlen(time) - 1] = '\0';
+	std::string str(time);
+	return str;
+}
+
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
@@ -132,8 +151,6 @@ void Webserver::dispatchEvents()
 			{
 				Logger::info("Start CGI logic here");
 				std::string response_process = "HTTP/1.1 200 OK\r\n";
-				response_process += "Content-Type: application/json\r\n";
-				response_process += "Connection: keep-alive\r\n";
 				char buffer[5000];
 				std::string html_page;
 				int res;
@@ -148,8 +165,13 @@ void Webserver::dispatchEvents()
 				}
 				// ssize_t bytesRead = read(it->fd, buffer, sizeof(buffer) - 1);
 				// std::string str(buffer);
-				response_process += "Content-Lenght: " + Utils::toString(html_page.size());
-				response_process += "\r\n"; // End of headers
+				response_process += "Content-Type: " + responseType(html_page) + "\r\n";
+				response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
+				std::string	time = timeStamp();
+				response_process += "Date: " + time + "\r\n";
+				response_process += "Cache-Control: no-store\r\n";
+				response_process += "Connection: keep-alive\r\n";
+				// response_process += "\r\n"; // End of headers
 				response_process += html_page;
 				Logger::debug("Response_process: " + response_process);
 

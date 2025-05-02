@@ -23,8 +23,8 @@ ERROR_MESSAGES = {
 }
 
 def send_json_response(status_code, status, message):
-    print(f"Status: {status_code} {status}")
-    print("Content-Type: application/json")
+    # print(f"Status: {status_code} {status}")
+    # print("Content-Type: application/json")
     print()
     response = {"status": status.lower(), "message": message}
     print(json.dumps(response))
