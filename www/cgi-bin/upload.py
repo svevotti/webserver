@@ -75,7 +75,9 @@ def save_uploaded_file(upload_dir):
     # Check directory writability
     if not os.access(abs_upload_dir, os.W_OK):
         send_json_response(403, "Forbidden", "Forbidden: No Write Vibes Here!")
-
+    #Check payload
+    if content_length > int(os.environ.get("MAX_CLIENT_BODY", 0)):
+        send_json_response(413, "Payload Too Large", ERROR_MESSAGES[413])
     # Set target filename and check for conflict
     filename = os.environ.get("FILE_NAME")
     full_filename = os.path.join(abs_upload_dir, os.path.basename(filename))

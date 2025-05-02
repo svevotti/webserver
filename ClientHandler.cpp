@@ -176,8 +176,8 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 				int start = stringLowerCases.find("content-length") + 16;
 				int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
 				int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-				if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
-					throw PayLoadTooLargeException();
+				// if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
+				// 	throw PayLoadTooLargeException();
 				if (this->totbytes < bytes_expected)
 					return 0;
 			}

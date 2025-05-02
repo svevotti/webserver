@@ -133,6 +133,28 @@ std::string timeStamp(void)
 	return str;
 }
 
+std::string findStatusCode(std::string str)
+{
+	if (str.find("ok") != std::string::npos)
+		return "200";
+	else if (str.find("conflict") != std::string::npos)
+		return "409";
+	else if (str.find("payload too large") != std::string::npos)
+		return "413";
+	return "500";
+}
+
+std::string findStaus(std::string str)
+{
+	if (str == "200")
+		return "OK";
+	else if (str == "409")
+		return "CONFLICT";
+	else if (str == "413")
+		return "PAYLOAD TOO LARGE";
+	return "SERVER INTERNAL ERROR";
+}
+
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
@@ -150,7 +172,6 @@ void Webserver::dispatchEvents()
 			else if (fdIsCGI(it->fd) == true)
 			{
 				Logger::info("Start CGI logic here");
-				std::string response_process = "HTTP/1.1 200 OK\r\n";
 				char buffer[5000];
 				std::string html_page;
 				int res;
@@ -161,17 +182,14 @@ void Webserver::dispatchEvents()
 					if (res <= 0)
 						break;
 					html_page.append(buffer, res);
-					// bytes += res;
 				}
-				// ssize_t bytesRead = read(it->fd, buffer, sizeof(buffer) - 1);
-				// std::string str(buffer);
+				std::string response_process = "HTTP/1.1 " + findStatusCode(html_page) + " " + findStaus(findStatusCode(html_page)) + "\r\n";
 				response_process += "Content-Type: " + responseType(html_page) + "\r\n";
 				response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
 				std::string	time = timeStamp();
 				response_process += "Date: " + time + "\r\n";
 				response_process += "Cache-Control: no-store\r\n";
 				response_process += "Connection: keep-alive\r\n";
-				// response_process += "\r\n"; // End of headers
 				response_process += html_page;
 				Logger::debug("Response_process: " + response_process);
 
