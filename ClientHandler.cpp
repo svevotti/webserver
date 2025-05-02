@@ -64,9 +64,9 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 	route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
-	std::string method = this->request.getHttpRequestLine()["method"];
-	int	method_count = route.methods.size();
-	Logger::debug("Method: " + method + " and count " + Utils::toString(method_count));
+	//std::string method = this->request.getHttpRequestLine()["method"];
+	//int	method_count = route.methods.size();
+	//Logger::debug("For URI: " + uri + " Method: " + method + " and count " + Utils::toString(method_count));
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
 		if (it->first == "content-type")
@@ -94,10 +94,10 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 			}
 		}
 		//Check if method is allowed
-		else if (method_count == 0 || route.methods.count(method))
-		{
+		// else if (method_count == 0 || route.methods.count(method))
+		// {
 
-		}
+		// }
 		else if (it->first == "upgrade")
 			throw HttpVersionNotSupported();
 	}
@@ -251,9 +251,14 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 			if (isCgi(route.uri) == true)
 			{
 				Logger::info("Set up CGI");
+				std::string	upload_dir;
+				if (route.locSettings.find("upload_dir") != route.locSettings.end())
+					upload_dir = "." + route.locSettings["upload_dir"];
+				else
+					upload_dir = "";
 				if (access(route.path.c_str(), F_OK) != 0)
 					throw NotFoundException();
-				CGI	cgi(request, route.path, configInfo);
+				CGI	cgi(request, upload_dir, route.path, configInfo);
 				cgi_fd = cgi.getFD();
 				return 3;
 			}

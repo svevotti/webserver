@@ -4,8 +4,9 @@
 
 std::string getFileName(std::map<std::string, std::string> headers);
 
-CGI::CGI(const HttpRequest& request, const std::string& PathToScript, const InfoServer& serverInfo)
+CGI::CGI(const HttpRequest& request, const std::string& upload_dir, const std::string& PathToScript, const InfoServer& serverInfo)
 	: _request_method(request.getMethod()),
+	_upload_dir(upload_dir),
 	_cgi_path(PathToScript),
 	_processed_body(request.getBodyContent()),
 	_output(""),
@@ -121,8 +122,15 @@ void CGI::createAv()
 		throw InternalServerErrorException();
 	//Argument 1 is the script
 	_av[1] = strdup(_cgi_path.c_str()); // Script/file path as argument
-	//_av[2] = _upload_to.empty() ? NULL : strdup(_upload_to.c_str()); // Optional for GET
-	_av[2] = NULL;
+	//Argument 2 is where it will be uploaded
+	Logger::debug("Upload dir " + _upload_dir);
+	if(_upload_dir == "")
+		_av[2] = NULL;
+	else
+	{
+		_av[2] = strdup(_upload_dir.c_str());
+		Logger::debug(std::string(_av[2]));
+	}
 	_av[3] = NULL;
 
 	//Logging
@@ -232,10 +240,10 @@ void CGI::startExecution()
 	{
 		signal(SIGPIPE, SIG_IGN);// Mark SIGPIPE to prevent crashes
 		signal(SIGCHLD, SIG_DFL); // Reset SIGCHLD handler in child proces
-		Logger::debug("child pid: " + Utils::toString(getpid()));
+		//Logger::debug("child pid: " + Utils::toString(getpid()));
 		// route.path = "./"
 		// this->response = retrievePage(route);
-		Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]));
+		//Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]));
 
 		//close(fd_cgi[0]); // Close reading
 		//dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end

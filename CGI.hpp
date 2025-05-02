@@ -24,6 +24,7 @@ class CGI {
 
 	private:
 		std::string _request_method;
+		std::string	_upload_dir;
 		std::string _cgi_path;
 		std::string _processed_body;
 		std::string _output;
@@ -55,7 +56,7 @@ class CGI {
 		// static const std::string SCRIPT_BASE_DIR;
 		// static const int TIMEOUT_SECONDS;
 
-		CGI(const HttpRequest& request, const std::string& PathToScript, const InfoServer& info);
+		CGI(const HttpRequest& request, const std::string& upload_dir, const std::string& PathToScript, const InfoServer& info);
 		~CGI();
 
 		int getFD() const { return _fd; }
