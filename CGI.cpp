@@ -116,7 +116,7 @@ void CGI::createAv()
 	if (extension.find(".py") != std::string::npos)
 		_av[0] = strdup("/usr/bin/python3");
 	else if (extension.find(".php") != std::string::npos)
-		_av[0] = strdup("/opt/homebrew/bin/php-cgi"); ///usr/bin/php-cgi
+		_av[0] = strdup("/usr/bin/php-cgi"); ///usr/bin/php-cgi
 	else
 		throw InternalServerErrorException();
 	//Argument 1 is the script

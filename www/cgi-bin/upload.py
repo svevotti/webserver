@@ -6,7 +6,7 @@ import json
 import logging
 
 # Set up logging to a file
-logging.basicConfig(filename='/Users/sveva/repos/Circle5/webserver/upload.py.log', level=logging.DEBUG,
+logging.basicConfig(filename='/tmp/upload.py.log', level=logging.DEBUG,
                     format='%(asctime)s - %(message)s')
 # These are for backup
 ERROR_MESSAGES = {
@@ -38,7 +38,7 @@ def save_uploaded_file(upload_dir):
 
     # Check content length against client_max_body_size from environment
     content_length = int(os.environ.get("CONTENT_LENGTH", 0))
-    # get and check content type to either read string or 
+    # get and check content type to either read string or
     raw_input = sys.stdin.buffer.read(content_length)
     logging.debug("Raw stdin length: %d" % len(raw_input))
 
