@@ -2,6 +2,7 @@
 #define CGI_HPP
 
 #include "HttpRequest.hpp"
+#include "ClientHandler.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
 #include <iostream>

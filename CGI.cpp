@@ -2,6 +2,8 @@
 #include "Utils.hpp"
 #include <signal.h>
 
+std::string getFileName(std::map<std::string, std::string> headers);
+
 CGI::CGI(const HttpRequest& request, const std::string& PathToScript, const InfoServer& serverInfo)
 	: _request_method(request.getMethod()),
 	_cgi_path(PathToScript),
@@ -173,6 +175,9 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	_env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
 	_env_map["REDIRECT_STATUS"] = "200"; // Required for php-cgi with force-cgi-redirect
 	_env_map["SCRIPT_FILENAME"] = "." + _serverInfo.getRoot() + _uri;
+	_env_map["FILE_NAME"] = getFileName(request.getHttpSection().myMap);
+	std::cout << "file name: " << _env_map["FILE_NAME"] << std::endl;
+
 
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();

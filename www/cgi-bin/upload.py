@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import cgi
 import os
 import sys
 import io
@@ -7,7 +6,7 @@ import json
 import logging
 
 # Set up logging to a file
-logging.basicConfig(filename='/Users/hdorado/Webserv_final/upload.py.log', level=logging.DEBUG,
+logging.basicConfig(filename='/Users/sveva/repos/Circle5/webserver/upload.py.log', level=logging.DEBUG,
                     format='%(asctime)s - %(message)s')
 # These are for backup
 ERROR_MESSAGES = {
@@ -23,13 +22,6 @@ ERROR_MESSAGES = {
     505: "505 - HTTP Version Not Supported: Your Protocol's Outta Sync!"
 }
 
-#def send_error(status_code, message=None):
-#    print(f"Status: {status_code} {message or ''}")
-#    print("Content-Type: text/html")
-#    print()
-#    print(ERROR_TEMPLATES[status_code])
-#    sys.exit(0)
-
 def send_json_response(status_code, status, message):
     print(f"Status: {status_code} {status}")
     print("Content-Type: application/json")
@@ -44,52 +36,29 @@ def save_uploaded_file(upload_dir):
     logging.debug("CONTENT_TYPE: %s" % os.environ.get("CONTENT_TYPE", "unset"))
     logging.debug("REQUEST_METHOD: %s" % os.environ.get("REQUEST_METHOD", "unset"))
 
-    # Check HTTP method
-    method = os.environ.get("REQUEST_METHOD", "").upper()
-    if method != "POST":
-        send_json_response(405, "Method Not Allowed", ERROR_MESSAGES[405])
-
-    # Check protocol version
-    protocol = os.environ.get("SERVER_PROTOCOL", "")
-    if protocol != "HTTP/1.1":
-        send_json_response(505, "HTTP Version Not Supported", ERROR_MESSAGES[505])
-
     # Check content length against client_max_body_size from environment
     content_length = int(os.environ.get("CONTENT_LENGTH", 0))
-    max_size = int(os.environ.get("HTTP_CONTENT_LENGTH_MAX", 10 * 1024 * 1024))  # Default to 10MB if not set
-    #max_size = int(os.environ.get("CLIENT_MAX_BODY_SIZE", 10 * 1024 * 1024))  # Default to 10MB
-    logging.debug("Max body size from config: %d bytes" % max_size)
-    if "CLIENT_MAX_BODY_SIZE" in os.environ:
-        max_size = int(os.environ.get("CLIENT_MAX_BODY_SIZE"))  # use config value if passed
-    logging.debug("Max body size from config: %d bytes" % max_size)  # logging for verification
-    if content_length > max_size:
-        send_json_response(413, "Payload Too Large", ERROR_MESSAGES[413])
-    if content_length <= 0:
-        send_json_response(400, "Bad Request", ERROR_MESSAGES[400])
-
-    # Read raw input
-    if hasattr(sys.stdin, 'buffer'):
-        raw_input = sys.stdin.buffer.read(content_length)
-    else:
-        raw_input = sys.stdin.read(content_length).encode('utf-8', errors='replace')
+    # get and check content type to either read string or 
+    raw_input = sys.stdin.buffer.read(content_length)
     logging.debug("Raw stdin length: %d" % len(raw_input))
 
     # Parse form data
-    try:
-        buffer = io.BytesIO(raw_input)
-        # form = cgi.FieldStorage(fp=buffer, environ=os.environ)
-        environ = dict(os.environ)
-        environ['CONTENT_LENGTH'] = str(len(raw_input))
-        form = cgi.FieldStorage(fp=buffer, environ=environ, keep_blank_values=True)
-        logging.debug("Form parsed, keys: %s" % list(form.keys()))
-    except Exception as e:
-        logging.debug("FieldStorage error: %s" % str(e))
-        send_json_response(500, "Internal Server Error", ERROR_MESSAGES[500])
+    # try:
+    #     buffer = io.BytesIO(raw_input)
+    #     # form = cgi.FieldStorage(fp=buffer, environ=os.environ)
+    #     environ = dict(os.environ)
+    #     logging.debug(environ)
+    #     # environ['CONTENT_LENGTH'] = str(len(raw_input))
+    #     form = cgi.FieldStorage(fp=buffer, environ=environ, keep_blank_values=True)
+    #     # logging.debug("Form parsed, keys: %s" % list(form.keys()))
+    # except Exception as e:
+    #     logging.debug("FieldStorage error: %s" % str(e))
+    #     send_json_response(500, "Internal Server Error", ERROR_MESSAGES[500])
 
-    # Validate file field
-    if "file" not in form or not form["file"].filename:
-        send_json_response(400, "Bad Request", ERROR_MESSAGES[400])
-    file_item = form["file"]
+    # # Validate file field
+    # if "file" not in form or not form["file"].filename:
+    #     send_json_response(400, "Bad Request", ERROR_MESSAGES[400])
+    # file_item = form["file"]
 
     # Prepare upload directory
     abs_upload_dir = os.path.abspath(upload_dir)
@@ -108,21 +77,22 @@ def save_uploaded_file(upload_dir):
         send_json_response(403, "Forbidden", "Forbidden: No Write Vibes Here!")
 
     # Set target filename and check for conflict
-    filename = os.path.join(abs_upload_dir, os.path.basename(file_item.filename))
-    logging.debug("Target filename: %s" % filename)
-    if os.path.exists(filename):
+    filename = os.environ.get("FILE_NAME")
+    full_filename = os.path.join(abs_upload_dir, os.path.basename(filename))
+    logging.debug("Target filename: %s" % full_filename)
+    if os.path.exists(full_filename):
         send_json_response(409, "Conflict", ERROR_MESSAGES[409])
 
     # Simulate server overload (example condition) -- to take out before submission
-    if len(os.listdir(abs_upload_dir)) > 100:  # Adjustable threshold 4 testing
-        send_json_response(503, "Service Unavailable", ERROR_MESSAGES[503])
+    # if len(os.listdir(abs_upload_dir)) > 100:  # Adjustable threshold 4 testing
+    #     send_json_response(503, "Service Unavailable", ERROR_MESSAGES[503])
 
     # Process and save the file
     try:
-        file_data = file_item.file.read()
-        logging.debug("File data size: %d bytes" % len(file_data))
-        with open(filename, "wb") as f:
-            bytes_written = f.write(file_data)
+        # file_data = file_item.file.read()
+        # logging.debug("File data size: %d bytes" % len(file_data))
+        with open(full_filename, "wb") as f:
+            bytes_written = f.write(raw_input)
             logging.debug("Bytes written: %d" % bytes_written)
             f.flush()
             os.fsync(f.fileno())
