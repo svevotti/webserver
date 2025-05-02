@@ -64,6 +64,9 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 	route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
+	std::string method = this->request.getHttpRequestLine()["method"];
+	int	method_count = route.methods.size();
+	Logger::debug("Method: " + method + " and count " + Utils::toString(method_count));
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
 		if (it->first == "content-type")
@@ -89,6 +92,11 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 						throw UnsupportedMediaTypeException();
 				}
 			}
+		}
+		//Check if method is allowed
+		else if (method_count == 0 || route.methods.count(method))
+		{
+
 		}
 		else if (it->first == "upgrade")
 			throw HttpVersionNotSupported();
