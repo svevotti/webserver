@@ -161,7 +161,7 @@ void Webserver::dispatchEvents()
 				Logger::debug("sent");
 				std::vector<struct pollfd> copypoll = poll_sets;
 				close(it->fd);
-				close(clientFd);
+				// close(clientFd);
 				// clientIt->resetCGIFD();
 				Logger::debug("fd cgi: " + Utils::toString(it->fd));
 				Logger::debug("fd client: " + Utils::toString(clientFd));
@@ -170,8 +170,11 @@ void Webserver::dispatchEvents()
 				std::cout << poll_sets.size() << std::endl;
 				for (int i = 0; i < poll_sets.size(); i++)
 				{
-					if (poll_sets[i].fd == clientFd)
-						poll_sets.erase(poll_sets.begin() + i);
+					if (poll_sets[i].fd == clientFd) {
+						// poll_sets.erase(poll_sets.begin() + i);
+						removeClient(poll_sets.begin() + i);
+						break;
+					}
 				}
 				return;
 				// exit(0);
