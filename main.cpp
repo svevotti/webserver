@@ -95,9 +95,24 @@ bool	test(Config &conf)
 	return true;
 }
 
+Webserver* g_server = NULL;
+
+void signal_handler(int sig)
+{
+    if (g_server)
+    {
+        Logger::info("Received signal " + Utils::toString(sig) + ", shutting down server");
+        g_server = NULL;
+    }
+    exit(0);
+}
+
 int main(void)
 {
 	Config	configuration("default.conf");
+
+	signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
 	if (configuration.ft_validServer())
 	{
