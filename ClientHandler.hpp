@@ -37,6 +37,12 @@ class ClientHandler {
 		double 		getTimeOut(void) const;
 		HttpRequest	getRequest(void) const;
 		std::string getResponse(void) const;
+		std::string getRawData() const {return raw_data;}
+		int			checkRequestStatus(void);
+		void		redirectClient(struct Route &route);
+		void 		findPath(std::string str, struct Route &route);
+		void		updateRoute(struct Route &route);
+		int			readStdout(int fd);
 		void		resetCGIFD(void);
 		void		setResponse(std::string);
 		int 		manageRequest(std::vector<pollfd> poll_sets);
@@ -49,6 +55,7 @@ class ClientHandler {
 		std::string uploadFile(std::string path);
 		std::string deleteFile(std::string path);
 		std::string prepareResponse(struct Route route);
+		int 		createResponse(void);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
 

@@ -46,6 +46,7 @@ class Webserver {
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
         int                                     processClient(int fd, int event);
+        int                                     processCGI(int fd);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
         std::vector<ClientHandler>::iterator    retrieveClientCGI(int fd);

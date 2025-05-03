@@ -2,6 +2,7 @@
 #include "PrintFunction.hpp"
 #include "CGI.hpp"
 
+#define INCOMPLETE 0
 //Constructor
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 {
@@ -21,11 +22,6 @@ void ClientHandler::setResponse(std::string str)
 {
 	this->response = str;
 }
-
-// void ClientHandler::resetCGIFD(void)
-// {
-// 	this->cgi_fd = 0;
-// }
 
 int ClientHandler::getFd(void) const
 {
@@ -156,6 +152,97 @@ std::string ClientHandler::createPath(struct Route route, std::string uri)
 	return path;
 }
 
+int ClientHandler::checkRequestStatus(void)
+{
+	std::string stringLowerCases = this->raw_data;
+	std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
+	if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
+		return 0;
+	if (stringLowerCases.find("content-length") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
+	{
+		int start = stringLowerCases.find("content-length") + 16;
+		int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
+		int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
+		// if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
+		// 	throw PayLoadTooLargeException();
+		std::string onlyHeaders = this->raw_data.substr(0, this->raw_data.find("\r\n\r\n"));
+		if (this->totbytes < bytes_expected + onlyHeaders.size())
+			return 0;
+	}
+	if (stringLowerCases.find("transfer-encoding") != std::string::npos)
+	{
+		Logger::info("transfer encoding");
+		size_t emptyLines = stringLowerCases.find("\r\n\r\n");
+		if (stringLowerCases.find("0\r\n", emptyLines) == std::string::npos)
+			return 0;
+		else
+		{
+			std::string body = stringLowerCases.substr(stringLowerCases.find("\r\n\r\n") + 4);
+			int bytes_expected = body.size();
+			if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
+				throw PayLoadTooLargeException();
+		}
+	}
+	return 1;
+}
+
+
+void ClientHandler::updateRoute(struct Route &route)
+{
+	if (route.locSettings.find("alias") != route.locSettings.end())
+	{
+		route.path.clear();
+		route.path += "." + route.locSettings.find("alias")->second;
+		int count = std::count(this->request.getUri().begin(), this->request.getUri().end(), '/');
+		if (count >= 2)
+		{
+			std::string copyUri = this->request.getUri();
+			copyUri.erase(0, 1);
+			size_t index = copyUri.find_first_of("/");
+			std::string file = copyUri.substr(index + 1);
+			route.path += "/" + file;
+		}
+		struct stat pathStat;
+		if (stat(route.path.c_str(), &pathStat) == 0)
+		{
+			if (S_ISDIR(pathStat.st_mode))
+			{
+				if (route.locSettings.find("default") != route.locSettings.end())
+				{
+					route.path += "/" + route.locSettings.find("default")->second;
+				}
+			}
+		}
+	}
+}
+
+void ClientHandler::redirectClient(struct Route &route)
+{
+	struct Route redirectRoute;
+	redirectRoute = this->configInfo.getRoute()[route.locSettings.find("redirect")->second];
+	if (redirectRoute.path.empty())
+		findPath(route.locSettings.find("redirect")->second, redirectRoute);
+	route.path.clear();
+	route.path = redirectRoute.path;
+	route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
+	HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
+	http.setUriLocation(redirectRoute.uri);
+	this->response = http.composeRespone();
+}
+
+void ClientHandler::findPath(std::string str, struct Route &route)
+{
+	std::string locationPath;
+	locationPath = findDirectory(str);
+	struct Route newRoute;
+	newRoute = this->configInfo.getRoute()[locationPath];
+	route = newRoute;
+	std::string newPath;
+	newPath = createPath(route, str);
+	route.path.clear();
+	route.path = newPath;
+}
+
 int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 {
 	int result;
@@ -166,87 +253,21 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 		return 1;
 	else
 	{
-		std::string stringLowerCases = this->raw_data;
-		std::transform(stringLowerCases.begin(), stringLowerCases.end(), stringLowerCases.begin(), Utils::toLowerChar);
 		try
 		{
-			if (stringLowerCases.find("\r\n\r\n") == std::string::npos)
+			if (checkRequestStatus() == INCOMPLETE)
 				return 0;
-			if (stringLowerCases.find("content-length") != std::string::npos && stringLowerCases.find("post") != std::string::npos)
-			{
-				int start = stringLowerCases.find("content-length") + 16;
-				int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
-				int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-				// if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
-				// 	throw PayLoadTooLargeException();
-				if (this->totbytes < bytes_expected)
-					return 0;
-			}
-			if (stringLowerCases.find("transfer-encoding") != std::string::npos)
-			{
-				Logger::info("transfer encoding");
-				size_t emptyLines = stringLowerCases.find("\r\n\r\n");
-				if (stringLowerCases.find("0\r\n", emptyLines) == std::string::npos)
-					return 0;
-				else
-				{
-					std::string body = stringLowerCases.substr(stringLowerCases.find("\r\n\r\n") + 4);
-					int bytes_expected = body.size();
-					if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
-						throw PayLoadTooLargeException();
-				}
-			}
 			Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
-			// Logger::debug(raw_data);
 			Logger::info("Done parsing");
-			// std::cout << request << std::endl;
-			Logger::info("Done reading the request parsed");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (route.uri.empty())
-			{
-				std::string locationPath;
-				locationPath = findDirectory(uri);
-				struct Route newRoute;
-				newRoute = this->configInfo.getRoute()[locationPath];
-				route = newRoute;
-				std::string newPath;
-				newPath = createPath(route, uri);
-				route.path.clear();
-				route.path = newPath;
-			}
-			if (route.locSettings.find("alias") != route.locSettings.end())
-			{
-				route.path.clear();
-				route.path += "." + route.locSettings.find("alias")->second;
-				int count = std::count(uri.begin(), uri.end(), '/');
-				if (count >= 2)
-				{
-					std::string copyUri = uri;
-					copyUri.erase(0, 1);
-					size_t index = copyUri.find_first_of("/");
-					std::string file = copyUri.substr(index + 1);
-					route.path += "/" + file;
-				}
-				struct stat pathStat;
-				if (stat(route.path.c_str(), &pathStat) == 0)
-				{
-					if (S_ISDIR(pathStat.st_mode))
-					{
-						if (route.locSettings.find("default") != route.locSettings.end())
-						{
-							route.path += "/" + route.locSettings.find("default")->second;
-						}
-					}
-				}
-			}
+				findPath(uri, route);
+			updateRoute(route);
 			Logger::info("Got route");
 			validateHttpHeaders(route);
 			Logger::info("Validate http request");
-			//std::cout << request << std::endl;
-			//std::cout << uri << std::endl;
-			printRoute(route);
 			if (isCgi(route.uri) == true)
 			{
 				Logger::info("Set up CGI");
@@ -259,35 +280,18 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 					throw NotFoundException();
 				CGI	cgi(request, upload_dir, route.path, configInfo);
 				internal_fd = cgi.getFD();
+				this->raw_data.clear();
 				return 3;
 			}
-			if (route.locSettings.find("redirect") != route.locSettings.end())
-			{
-				struct Route redirectRoute;
-				redirectRoute = this->configInfo.getRoute()[route.locSettings.find("redirect")->second];
-				if (redirectRoute.path.empty())
-				{
-					std::string locationPath;
-					locationPath = findDirectory(route.locSettings.find("redirect")->second);
-					struct Route newRoute;
-					newRoute = this->configInfo.getRoute()[locationPath];
-					redirectRoute = newRoute;
-					std::string newPath;
-					newPath = createPath(redirectRoute, route.locSettings.find("redirect")->second);
-					redirectRoute.path.clear();
-					redirectRoute.path = newPath;
-				}
-				route.path.clear();
-				route.path = redirectRoute.path;
-				route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
-				HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
-				http.setUriLocation(redirectRoute.uri);
-				this->response = http.composeRespone();
-			}
 			else
-				this->response = prepareResponse(route);
-			Logger::info("It is static");
-			Logger::info("Response created successfully and store in clientQueu");
+			{
+				if (route.locSettings.find("redirect") != route.locSettings.end())
+					redirectClient(route);
+				else
+					this->response = prepareResponse(route);
+				Logger::info("It is static");
+				Logger::info("Response created successfully and store in clientQueu");
+			}
 		}
 		catch (const HttpException &e)
 		{
@@ -307,15 +311,10 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 	int res = 0;
 	char buffer[BUFFER];
 
-	while (1)
-	{
-		Utils::ft_memset(buffer, 0, sizeof(buffer));
-		res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
-		if (res <= 0)
-			break;
-		str.append(buffer, res);
-		bytes += res;
-	}
+	Utils::ft_memset(buffer, 0, sizeof(buffer));
+	res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
+	str.append(buffer, res);
+	bytes += res;
 	if (res == 0)
 		return 0;
 	else if (res == -1 && bytes == 0)
@@ -525,3 +524,36 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	response = http.composeRespone();
 	return response;
 }
+
+int ClientHandler::readStdout(int fd)
+{
+	int res = 0;
+	char buffer[BUFFER];
+	Utils::ft_memset(buffer, 0, sizeof(buffer));
+	res = read(fd, buffer, BUFFER - 1);
+	this->raw_data.append(buffer, res);
+	Logger::debug("res\n");
+	Logger::debug(Utils::toString(res));
+	Logger::debug("raw data\n");
+	Logger::debug(this->raw_data);
+	if (res > 0)
+		return 0;
+	else if (res == -1 && this->totbytes == 0)
+		return 1;
+	return 2;
+}
+
+// int getStatusCode(std::string str)
+// {
+
+// }
+// int ClientHandler::createResponse(void)
+// {
+// 	int code;
+
+// 	code = getStatusCode(this->raw);
+// 	HttpResponse http(code, this->raw_data);
+	
+// 	this->response = http.composeRespone();
+// 	return 2;
+// }
