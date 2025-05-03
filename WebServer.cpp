@@ -120,7 +120,9 @@ std::string responseType(std::string str)
 
 	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
 		return "text/html";
-	return "application/json";
+	else if (str[1] == '{')
+		return "application/json";
+	return "text/plain";
 }
 
 std::string timeStamp(void)
@@ -136,7 +138,7 @@ std::string timeStamp(void)
 std::string findStatusCode(std::string str)
 {
 	if (str.find("ok") != std::string::npos)
-		return "200";
+		return "201";
 	else if (str.find("conflict") != std::string::npos)
 		return "409";
 	else if (str.find("payload too large") != std::string::npos)
@@ -146,8 +148,8 @@ std::string findStatusCode(std::string str)
 
 std::string findStaus(std::string str)
 {
-	if (str == "200")
-		return "OK";
+	if (str == "201")
+		return "CREATED";
 	else if (str == "409")
 		return "CONFLICT";
 	else if (str == "413")
@@ -183,14 +185,40 @@ void Webserver::dispatchEvents()
 						break;
 					html_page.append(buffer, res);
 				}
-				std::string response_process = "HTTP/1.1 " + findStatusCode(html_page) + " " + findStaus(findStatusCode(html_page)) + "\r\n";
-				response_process += "Content-Type: " + responseType(html_page) + "\r\n";
-				response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
-				std::string	time = timeStamp();
-				response_process += "Date: " + time + "\r\n";
-				response_process += "Cache-Control: no-store\r\n";
-				response_process += "Connection: keep-alive\r\n";
-				response_process += html_page;
+				std::string response_process;
+				if (responseType(html_page) == "application/json")
+				{
+					response_process = "HTTP/1.1 " + findStatusCode(html_page) + " " + findStaus(findStatusCode(html_page)) + "\r\n";
+					response_process += "Content-Type: " + responseType(html_page) + "\r\n";
+					response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
+					std::string	time = timeStamp();
+					response_process += "Date: " + time + "\r\n";
+					response_process += "Cache-Control: no-store\r\n";
+					response_process += "Connection: keep-alive\r\n";
+					response_process += html_page;
+				}
+				else if (responseType(html_page) == "text/html")
+				{
+					response_process = "HTTP/1.1 200 OK\r\n";
+					response_process += "Content-Type: " + responseType(html_page) + "\r\n";
+					response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
+					std::string	time = timeStamp();
+					response_process += "Date: " + time + "\r\n";
+					response_process += "Cache-Control: no-store\r\n";
+					response_process += "Connection: keep-alive\r\n\r\n";
+					response_process += html_page;
+				}
+				else
+				{
+					response_process = "HTTP/1.1 200 OK\r\n";
+					response_process += "Content-Type: " + responseType(html_page) + "\r\n";
+					response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
+					std::string	time = timeStamp();
+					response_process += "Date: " + time + "\r\n";
+					response_process += "Cache-Control: no-store\r\n";
+					response_process += "Connection: keep-alive\r\n\r\n";
+					response_process += html_page;
+				}
 				Logger::debug("Response_process: " + response_process);
 
 				// Get the client fd associated with this CGI process

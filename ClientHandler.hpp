@@ -53,7 +53,7 @@ class ClientHandler {
 		int 		isCgi(std::string str);
 
 	private:
-	int 		fd;
+	int 		client_fd;
 	int 		totbytes;
 	std::string raw_data;
 	double		startingTime;
@@ -61,7 +61,7 @@ class ClientHandler {
 	InfoServer	configInfo;
 	HttpRequest request;
 	std::string response;
-	int			cgi_fd;
+	int			internal_fd;
 };
 
 #endif

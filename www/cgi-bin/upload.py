@@ -31,13 +31,15 @@ def send_json_response(status_code, status, message):
     sys.exit(0)
 
 def save_uploaded_file(upload_dir):
-    logging.debug("All environment variables: %s" % os.environ)
-    logging.debug("CONTENT_LENGTH: %s" % os.environ.get("CONTENT_LENGTH", "unset"))
-    logging.debug("CONTENT_TYPE: %s" % os.environ.get("CONTENT_TYPE", "unset"))
-    logging.debug("REQUEST_METHOD: %s" % os.environ.get("REQUEST_METHOD", "unset"))
+    # logging.debug("All environment variables: %s" % os.environ)
+    # logging.debug("CONTENT_LENGTH: %s" % os.environ.get("CONTENT_LENGTH", "unset"))
+    # logging.debug("CONTENT_TYPE: %s" % os.environ.get("CONTENT_TYPE", "unset"))
+    # logging.debug("REQUEST_METHOD: %s" % os.environ.get("REQUEST_METHOD", "unset"))
 
     # Check content length against client_max_body_size from environment
     content_length = int(os.environ.get("CONTENT_LENGTH", 0))
+    if content_length > int(os.environ.get("MAX_CLIENT_BODY", 0)):
+        send_json_response(413, "Payload Too Large", ERROR_MESSAGES[413])
     # get and check content type to either read string or
     raw_input = sys.stdin.buffer.read(content_length)
     logging.debug("Raw stdin length: %d" % len(raw_input))
@@ -75,9 +77,6 @@ def save_uploaded_file(upload_dir):
     # Check directory writability
     if not os.access(abs_upload_dir, os.W_OK):
         send_json_response(403, "Forbidden", "Forbidden: No Write Vibes Here!")
-    #Check payload
-    if content_length > int(os.environ.get("MAX_CLIENT_BODY", 0)):
-        send_json_response(413, "Payload Too Large", ERROR_MESSAGES[413])
     # Set target filename and check for conflict
     filename = os.environ.get("FILE_NAME")
     full_filename = os.path.join(abs_upload_dir, os.path.basename(filename))

@@ -5,11 +5,12 @@
 //Constructor
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 {
-	this->fd = fd;
+	this->client_fd = fd;
 	this->totbytes = 0;
 	this->configInfo = configInfo;
 	this->startingTime = time(NULL);
 	this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
+	this->internal_fd = 0;
 	std::string errorPath = this->configInfo.getSetting()["error_path"];
 	HttpException::setHtmlRootPath(errorPath);
 }
@@ -21,19 +22,19 @@ void ClientHandler::setResponse(std::string str)
 	this->response = str;
 }
 
-void ClientHandler::resetCGIFD(void)
-{
-	this->cgi_fd = 0;
-}
+// void ClientHandler::resetCGIFD(void)
+// {
+// 	this->cgi_fd = 0;
+// }
 
 int ClientHandler::getFd(void) const
 {
-	return this->fd;
+	return this->client_fd;
 }
 
 int ClientHandler::getCGI_Fd(void) const
 {
-	return this->cgi_fd;
+	return this->internal_fd;
 }
 
 HttpRequest ClientHandler::getRequest() const
@@ -160,7 +161,7 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 	int result;
 	std::string uri;
 	struct Route route;
-	result = readData(this->fd, this->raw_data, this->totbytes);
+	result = readData(this->client_fd, this->raw_data, this->totbytes);
 	if (result == 0 || result == 1)
 		return 1;
 	else
@@ -257,7 +258,7 @@ int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
 				if (access(route.path.c_str(), F_OK) != 0)
 					throw NotFoundException();
 				CGI	cgi(request, upload_dir, route.path, configInfo);
-				cgi_fd = cgi.getFD();
+				internal_fd = cgi.getFD();
 				return 3;
 			}
 			if (route.locSettings.find("redirect") != route.locSettings.end())
@@ -324,14 +325,14 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 
 int ClientHandler::retrieveResponse(void)
 {
-	int bytes = send(fd, this->response.c_str(), this->response.size(), 0);
+	int bytes = send(client_fd, this->response.c_str(), this->response.size(), 0);
 	if (bytes == -1)
 		return -1;
 	this->response.clear();
 	this->raw_data.clear();
 	this->totbytes = 0;
 	this->request.cleanProperties();
-	this->cgi_fd = 0;
+	this->internal_fd = 0;
 	this->startingTime = time(NULL);
 	return 0;
 }
