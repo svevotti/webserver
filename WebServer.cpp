@@ -63,42 +63,10 @@ int	Webserver::startServer()
 		else
 			dispatchEvents();
 		std::cout << "exit dispatch\n";
-		// checkTime();
+		checkTime();
 		std::cout << "after timecheck\n";
 	}
 	return 0;
-}
-
-std::string timeStamp(void)
-{
-	std::time_t result = std::time(NULL);
-	std::tm *localtime = std::localtime(&result);
-	char *time = std::asctime(localtime);
-	time[strlen(time) - 1] = '\0';
-	std::string str(time);
-	return str;
-}
-
-std::string findStatusCode(std::string str)
-{
-	if (str.find("ok") != std::string::npos)
-		return "201";
-	else if (str.find("conflict") != std::string::npos)
-		return "409";
-	else if (str.find("payload too large") != std::string::npos)
-		return "413";
-	return "500";
-}
-
-std::string findStaus(std::string str)
-{
-	if (str == "201")
-		return "CREATED";
-	else if (str == "409")
-		return "CONFLICT";
-	else if (str == "413")
-		return "PAYLOAD TOO LARGE";
-	return "SERVER INTERNAL ERROR";
 }
 
 void Webserver::dispatchEvents()
@@ -395,7 +363,22 @@ void Webserver::checkTime(void)
 			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
+				if (clientIt->getCGI_Fd() > 0)
+				{
+					for (int i = 0; i < poll_sets.size(); i++)
+					{
+						Logger::warn(Utils::toString(poll_sets[i].fd));
+						if (poll_sets[i].fd == clientIt->getCGI_Fd())
+						{
+							kill(clientIt->getPid(), SIGTERM);
+							close(clientIt->getCGI_Fd());
+							poll_sets.erase(poll_sets.begin() + i);
+							break;
+						}
+					}
+				}
 				removeClient(it);
+				break;
 			}
 		}
 	}

@@ -12,6 +12,7 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 	this->startingTime = time(NULL);
 	this->timeoutTime = atof(this->configInfo.getSetting()["keepalive_timeout"].c_str());
 	this->internal_fd = 0;
+	this->pid = 0;
 	std::string errorPath = this->configInfo.getSetting()["error_path"];
 	HttpException::setHtmlRootPath(errorPath);
 }
@@ -26,6 +27,11 @@ void ClientHandler::setResponse(std::string str)
 int ClientHandler::getFd(void) const
 {
 	return this->client_fd;
+}
+
+int ClientHandler::getPid(void) const
+{
+	return this->pid;
 }
 
 int ClientHandler::getCGI_Fd(void) const
@@ -290,6 +296,7 @@ int ClientHandler::manageRequest()
 				CGI	cgi(request, upload_dir, route.path, configInfo);
 				internal_fd = cgi.getFD();
 				this->raw_data.clear();
+				pid = cgi.getPid();
 				return 3;
 			}
 			else
@@ -540,15 +547,33 @@ int ClientHandler::readStdout(int fd)
 	Utils::ft_memset(buffer, 0, sizeof(buffer));
 	res = read(fd, buffer, BUFFER - 1);
 	this->raw_data.append(buffer, res);
-	Logger::debug("res\n");
-	Logger::debug(Utils::toString(res));
-	Logger::debug("raw data\n");
-	Logger::debug(this->raw_data);
 	if (res > 0)
 		return 0;
 	else if (res == -1 && this->totbytes == 0)
 		return 1;
 	return 2;
+}
+
+std::string findStatusCode(std::string str)
+{
+	if (str.find("ok") != std::string::npos)
+		return "201";
+	else if (str.find("conflict") != std::string::npos)
+		return "409";
+	else if (str.find("payload too large") != std::string::npos)
+		return "413";
+	return "500";
+}
+
+std::string findStaus(std::string str)
+{
+	if (str == "201")
+		return "CREATED";
+	else if (str == "409")
+		return "CONFLICT";
+	else if (str == "413")
+		return "PAYLOAD TOO LARGE";
+	return "SERVER INTERNAL ERROR";
 }
 
 int getStatusCode(std::string str)

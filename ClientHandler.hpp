@@ -35,6 +35,7 @@ class ClientHandler {
 		int 		getCGI_Fd(void) const;
 		double 		getTime(void) const;
 		double 		getTimeOut(void) const;
+		int 		getPid(void) const;
 		HttpRequest	getRequest(void) const;
 		std::string getResponse(void) const;
 		std::string getRawData() const {return raw_data;}
@@ -43,7 +44,6 @@ class ClientHandler {
 		void 		findPath(std::string str, struct Route &route);
 		void		updateRoute(struct Route &route);
 		int			readStdout(int fd);
-		void		resetCGIFD(void);
 		void		setResponse(std::string);
 		int 		manageRequest(void);
 		int 		readData(int fd, std::string &str, int &bytes);
@@ -69,6 +69,7 @@ class ClientHandler {
 	HttpRequest request;
 	std::string response;
 	int			internal_fd;
+	int			pid;
 };
 
 #endif
