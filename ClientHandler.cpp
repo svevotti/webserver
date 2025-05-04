@@ -243,7 +243,7 @@ void ClientHandler::findPath(std::string str, struct Route &route)
 	route.path = newPath;
 }
 
-int ClientHandler::manageRequest(std::vector<pollfd> poll_sets)
+int ClientHandler::manageRequest()
 {
 	int result;
 	std::string uri;
@@ -331,9 +331,15 @@ int ClientHandler::retrieveResponse(void)
 	this->raw_data.clear();
 	this->totbytes = 0;
 	this->request.cleanProperties();
-	this->internal_fd = 0;
 	this->startingTime = time(NULL);
-	return 0;
+	int remove_fd = this->internal_fd;
+	if (this->internal_fd > 0)
+	{
+		Logger::debug("close fd if cgi");
+		close(this->internal_fd);
+		this->internal_fd = 0;
+	}
+	return remove_fd;
 }
 
 int ClientHandler::isCgi(std::string uri)
@@ -543,17 +549,54 @@ int ClientHandler::readStdout(int fd)
 	return 2;
 }
 
-// int getStatusCode(std::string str)
-// {
+int getStatusCode(std::string str)
+{
+	std::string codeStr;
+	std::string statusStr = "Status:";
+	int len_line;
+	std::string lineStatus;
+	if (str.find(statusStr) != std::string::npos)
+	{
+		std::vector<std::string> splitHeader;
+		size_t index_status_line;
+		size_t index_new_line;
+		index_status_line = str.find(statusStr);
+		std::cout << index_status_line << std::endl;
+		if (index_status_line != std::string::npos)
+		{
+			index_new_line = str.find("\n");
+			if (index_new_line != std::string::npos)
+				lineStatus = str.substr(index_status_line, index_new_line);
+		}
+		Logger::debug("line: " + lineStatus);
+	}
+	else
+	{
+		if (!str.empty())
+			return 200;
+	}
+	//Status: 200 OK
+	size_t index_number = lineStatus.find_first_of(" ");
+	if (index_number != std::string::npos)
+	{
+		int first_space = index_number;
+		index_number = lineStatus.find(" ", first_space + 1);
+		if (index_number != std::string::npos)
+		{
+			codeStr = lineStatus.substr(first_space, lineStatus.size() - index_number + 1);
+		}
+	}
+	Logger::debug("codeStr: " + codeStr);
+	return Utils::toInt(codeStr);
+}
 
-// }
-// int ClientHandler::createResponse(void)
-// {
-// 	int code;
+int ClientHandler::createResponse(void)
+{
+	int code;
 
-// 	code = getStatusCode(this->raw);
-// 	HttpResponse http(code, this->raw_data);
+	code = getStatusCode(this->raw_data);
+	HttpResponse http(code, this->raw_data);
 	
-// 	this->response = http.composeRespone();
-// 	return 2;
-// }
+	this->response = http.composeRespone();
+	return 2;
+}

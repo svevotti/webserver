@@ -63,21 +63,10 @@ int	Webserver::startServer()
 		else
 			dispatchEvents();
 		std::cout << "exit dispatch\n";
-		checkTime();
+		// checkTime();
 		std::cout << "after timecheck\n";
 	}
 	return 0;
-}
-
-std::string responseType(std::string str)
-{
-	int magicNumber;
-
-	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
-		return "text/html";
-	else if (str[1] == '{')
-		return "application/json";
-	return "text/plain";
 }
 
 std::string timeStamp(void)
@@ -115,7 +104,7 @@ std::string findStaus(std::string str)
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
-	int result;
+	int result = -2;
 
     for (it = poll_sets.begin(); it != poll_sets.end();)
     {
@@ -132,74 +121,15 @@ void Webserver::dispatchEvents()
 				result = processCGI(it->fd);
 				if (result == DONE)
 				{
-				// 	std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
-				// 	for (int i = 0; i < poll_sets.size(); i++)
-				// 	{
-				// 		if (poll_sets[i].fd == clientIt->getFd())
-				// 		{
-				// 			poll_sets[i].events = POLLOUT;
-				// 			break;
-				// 		}
-				// 	}
-					std::string response_process;
 					std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
-					std::string html_page = clientIt->getRawData();
-					if (responseType(html_page) == "application/json")
-					{
-						response_process = "HTTP/1.1 " + findStatusCode(html_page) + " " + findStaus(findStatusCode(html_page)) + "\r\n";
-						response_process += "Content-Type: " + responseType(html_page) + "\r\n";
-						response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
-						std::string	time = timeStamp();
-						response_process += "Date: " + time + "\r\n";
-						response_process += "Cache-Control: no-store\r\n";
-						response_process += "Connection: keep-alive\r\n";
-						response_process += html_page;
-					}
-					else if (responseType(html_page) == "text/html")
-					{
-						response_process = "HTTP/1.1 200 OK\r\n";
-						response_process += "Content-Type: " + responseType(html_page) + "\r\n";
-						response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
-						std::string	time = timeStamp();
-						response_process += "Date: " + time + "\r\n";
-						response_process += "Cache-Control: no-store\r\n";
-						response_process += "Connection: keep-alive\r\n\r\n";
-						response_process += html_page;
-					}
-					else
-					{
-						response_process = "HTTP/1.1 200 OK\r\n";
-						response_process += "Content-Type: " + responseType(html_page) + "\r\n";
-						response_process += "Content-Lenght: " + Utils::toString(html_page.size()) + "\r\n";
-						std::string	time = timeStamp();
-						response_process += "Date: " + time + "\r\n";
-						response_process += "Cache-Control: no-store\r\n";
-						response_process += "Connection: keep-alive\r\n\r\n";
-						response_process += html_page;
-					}
-					Logger::debug("Response_process: " + response_process);
-
-					// Get the client fd associated with this CGI process
-					// std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
-					int clientFd = clientIt->getFd(); // Ensure you are accessing the correct client fd
-					Logger::debug("ready to send");
-					send(clientFd, response_process.c_str(), response_process.size(), 0); // Send response
-					Logger::debug("sent");
-					std::vector<struct pollfd> copypoll = poll_sets;
-					close(it->fd);
-					Logger::debug("fd cgi: " + Utils::toString(it->fd));
-					Logger::debug("fd client: " + Utils::toString(clientFd));
-					poll_sets.erase(it);
-					std::cout << copypoll.size() << std::endl;
-					std::cout << poll_sets.size() << std::endl;
 					for (int i = 0; i < poll_sets.size(); i++)
 					{
-						if (poll_sets[i].fd == clientFd) {
-							removeClient(poll_sets.begin() + i);
+						if (poll_sets[i].fd == clientIt->getFd())
+						{
+							poll_sets[i].events = POLLOUT;
 							break;
 						}
 					}
-				return;
 				}
 			}
 			else
@@ -227,10 +157,28 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
-			Logger::debug("POLLOUT");
-			if (processClient(it->fd, WRITE) == -1)
+			Logger::error("POLLOUT");
+			result = -2;
+			Logger::error("result: " + Utils::toString(result));
+			result = processClient(it->fd, WRITE) == -1;
+			Logger::error("result after processClient: " + Utils::toString(result));
+			Logger::error("fd: " + Utils::toString(it->fd));
+			if (result == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
+			}
+			if (result == 0)
+			{
+				for (int i = 0; i < poll_sets.size(); i++)
+				{
+					Logger::debug(Utils::toString(poll_sets[i].fd));
+					if (poll_sets[i].fd == result) {
+						poll_sets.erase(poll_sets.begin() + i);
+						break;
+					}
+				}
+				it->events = POLLIN;
+				return;
 			}
 			it->events = POLLIN;
 		}
@@ -263,7 +211,7 @@ void Webserver::dispatchEvents()
 
 int Webserver::processClient(int fd, int event)
 {
-	int status;
+	int status = -2;
 	std::vector<ClientHandler>::iterator clientIt;
 
 	clientIt = retrieveClient(fd);
@@ -273,14 +221,16 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
-		status = clientIt->manageRequest(poll_sets);
+		status = clientIt->manageRequest();
 	else
-		status = clientIt->retrieveResponse();
-	if (status == 3) //Set CGITracker
 	{
-		CGITracker tracker(NULL, clientIt->getCGI_Fd(), clientIt->getFd());
-		_cgiQueue.push_back(tracker);
+		Logger::error("client fd: " + Utils::toString(fd));
+		Logger::error("retrieve response");
+		Logger::error("status before: " + Utils::toString(status));
+		status = clientIt->retrieveResponse();
+		Logger::error("status after: " + Utils::toString(status));
 	}
+	Logger::error("status after: " + Utils::toString(status));
 	return status;
 }
 
@@ -298,10 +248,8 @@ int Webserver::processCGI(int fd)
 	Logger::debug("client: " + Utils::toString(clientIt->getFd()));
 	status = clientIt->readStdout(fd);
 	Logger::debug("status" + Utils::toString(status));
-	// if (status == DONE)
-	// {
-	// 	status = clientIt->createResponse();
-	// }
+	if (status == DONE)
+		status = clientIt->createResponse();
 	return status;
 }
 
@@ -441,25 +389,25 @@ void Webserver::checkTime(void)
 			{
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
 				// child_done = true;
-				kill(this->pid, SIGKILL);
-				std::string response_process = "HTTP/1.1 200 OK\r\n";
-				response_process += "Content-Type: text/html\r\n";
-				response_process += "Connection: keep alive\r\n";
-				response_process += "\r\n"; // End of headers
-				response_process += "<!DOCTYPE html>\n";
-				response_process += "<html>\n";
-				response_process += "<head><title>Bye Child</title></head>\n";
-				response_process += "<body>\n";
-				response_process += "<h1>Bye Child</h1>\n";
-				response_process += "<form action=\"/submit\" method=\"post\">\n";
-				response_process += "  <input type=\"text\" name=\"message\" placeholder=\"Type your message here\">\n";
-				response_process += "  <input type=\"submit\" value=\"Send\">\n";
-				response_process += "</form>\n";
-				response_process += "</body>\n";
-				response_process += "</html>\n";
-				send(it->fd, response_process.c_str(), response_process.size(), 0);
-				Logger::debug("fd: " + Utils::toString(this->pid));
-				Logger::debug("pid: " + Utils::toString(it->fd));
+				// kill(this->pid, SIGKILL);
+				// std::string response_process = "HTTP/1.1 200 OK\r\n";
+				// response_process += "Content-Type: text/html\r\n";
+				// response_process += "Connection: keep alive\r\n";
+				// response_process += "\r\n"; // End of headers
+				// response_process += "<!DOCTYPE html>\n";
+				// response_process += "<html>\n";
+				// response_process += "<head><title>Bye Child</title></head>\n";
+				// response_process += "<body>\n";
+				// response_process += "<h1>Bye Child</h1>\n";
+				// response_process += "<form action=\"/submit\" method=\"post\">\n";
+				// response_process += "  <input type=\"text\" name=\"message\" placeholder=\"Type your message here\">\n";
+				// response_process += "  <input type=\"submit\" value=\"Send\">\n";
+				// response_process += "</form>\n";
+				// response_process += "</body>\n";
+				// response_process += "</html>\n";
+				// send(it->fd, response_process.c_str(), response_process.size(), 0);
+				// Logger::debug("fd: " + Utils::toString(this->pid));
+				// Logger::debug("pid: " + Utils::toString(it->fd));
 				removeClient(it);
 			}
 		}

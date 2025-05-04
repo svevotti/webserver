@@ -115,15 +115,6 @@ int HttpResponse::findFileType(std::string str)
 						static_cast<unsigned char>(str[2]) == 0x46 && 
 						static_cast<unsigned char>(str[3]) == 0x38))
 		return 2; // GIF
-	// if (str.size() >= 12 && (static_cast<unsigned char>(str[0]) == 0x52 && 
-	// 					 static_cast<unsigned char>(str[1]) == 0x49 && 
-	// 					 static_cast<unsigned char>(str[2]) == 0x46 && 
-	// 					 static_cast<unsigned char>(str[3]) == 0x46 &&
-	// 					 static_cast<unsigned char>(str[8]) == 0x57 && 
-	// 					 static_cast<unsigned char>(str[9]) == 0x45 && 
-	// 					 static_cast<unsigned char>(str[10]) == 0x42 && 
-	// 					 static_cast<unsigned char>(str[11]) == 0x50))
-	// 	return 3; // WEMP
 	if (str.size() >= 4 && (static_cast<unsigned char>(str[0]) == 0x00 && 
 						static_cast<unsigned char>(str[1]) == 0x00 && 
 						static_cast<unsigned char>(str[2]) == 0x01 && 
@@ -138,6 +129,8 @@ std::string HttpResponse::findType(std::string str)
 
 	if (str.find("<html") != std::string::npos || str.find("<!DOCTYPE") != std::string::npos)
 		return "text/html";
+	else if (str[1] == '{')
+		return "application/json";
 	magicNumber = findFileType(str);
 	switch (magicNumber)
 	{

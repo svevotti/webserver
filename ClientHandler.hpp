@@ -45,7 +45,7 @@ class ClientHandler {
 		int			readStdout(int fd);
 		void		resetCGIFD(void);
 		void		setResponse(std::string);
-		int 		manageRequest(std::vector<pollfd> poll_sets);
+		int 		manageRequest(void);
 		int 		readData(int fd, std::string &str, int &bytes);
 		std::string findDirectory(std::string uri);
 		std::string createPath(struct Route route, std::string uri);
