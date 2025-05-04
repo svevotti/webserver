@@ -248,7 +248,16 @@ int ClientHandler::manageRequest()
 	int result;
 	std::string uri;
 	struct Route route;
-	result = readData(this->client_fd, this->raw_data, this->totbytes);
+	try
+	{
+		result = readData(this->client_fd, this->raw_data, this->totbytes);
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		exit(1);
+	}
+	
 	if (result == 0 || result == 1)
 		return 1;
 	else
@@ -332,14 +341,7 @@ int ClientHandler::retrieveResponse(void)
 	this->totbytes = 0;
 	this->request.cleanProperties();
 	this->startingTime = time(NULL);
-	int remove_fd = this->internal_fd;
-	if (this->internal_fd > 0)
-	{
-		Logger::debug("close fd if cgi");
-		close(this->internal_fd);
-		this->internal_fd = 0;
-	}
-	return remove_fd;
+	return this->internal_fd;
 }
 
 int ClientHandler::isCgi(std::string uri)

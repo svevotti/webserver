@@ -160,6 +160,7 @@ void Webserver::dispatchEvents()
 			Logger::error("POLLOUT");
 			result = -2;
 			Logger::error("result: " + Utils::toString(result));
+			Logger::error("client fd: " + Utils::toString(it->fd));
 			result = processClient(it->fd, WRITE) == -1;
 			Logger::error("result after processClient: " + Utils::toString(result));
 			Logger::error("fd: " + Utils::toString(it->fd));
@@ -167,17 +168,22 @@ void Webserver::dispatchEvents()
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
 			}
-			if (result == 0)
+			std::vector<ClientHandler>::iterator clientIt;
+			clientIt = retrieveClient(it->fd);
+			if (clientIt->getCGI_Fd() > 0)
 			{
 				for (int i = 0; i < poll_sets.size(); i++)
 				{
-					Logger::debug(Utils::toString(poll_sets[i].fd));
-					if (poll_sets[i].fd == result) {
+					Logger::warn(Utils::toString(poll_sets[i].fd));
+					if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
+						close(clientIt->getCGI_Fd());
 						poll_sets.erase(poll_sets.begin() + i);
 						break;
 					}
 				}
-				it->events = POLLIN;
+				close(it->fd);
+				poll_sets.erase(it);
+				clientsList.erase(clientIt);
 				return;
 			}
 			it->events = POLLIN;
@@ -221,16 +227,19 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
+	{
+		Logger::debug("event on pollin");
 		status = clientIt->manageRequest();
+	}
 	else
 	{
+		Logger::debug("event on pollout");
 		Logger::error("client fd: " + Utils::toString(fd));
 		Logger::error("retrieve response");
 		Logger::error("status before: " + Utils::toString(status));
 		status = clientIt->retrieveResponse();
-		Logger::error("status after: " + Utils::toString(status));
 	}
-	Logger::error("status after: " + Utils::toString(status));
+	Logger::error("retrieve response " + Utils::toString(status));
 	return status;
 }
 
@@ -245,9 +254,7 @@ int Webserver::processCGI(int fd)
 		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
 		return 0;
 	}
-	Logger::debug("client: " + Utils::toString(clientIt->getFd()));
 	status = clientIt->readStdout(fd);
-	Logger::debug("status" + Utils::toString(status));
 	if (status == DONE)
 		status = clientIt->createResponse();
 	return status;
@@ -388,26 +395,6 @@ void Webserver::checkTime(void)
 			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
-				// child_done = true;
-				// kill(this->pid, SIGKILL);
-				// std::string response_process = "HTTP/1.1 200 OK\r\n";
-				// response_process += "Content-Type: text/html\r\n";
-				// response_process += "Connection: keep alive\r\n";
-				// response_process += "\r\n"; // End of headers
-				// response_process += "<!DOCTYPE html>\n";
-				// response_process += "<html>\n";
-				// response_process += "<head><title>Bye Child</title></head>\n";
-				// response_process += "<body>\n";
-				// response_process += "<h1>Bye Child</h1>\n";
-				// response_process += "<form action=\"/submit\" method=\"post\">\n";
-				// response_process += "  <input type=\"text\" name=\"message\" placeholder=\"Type your message here\">\n";
-				// response_process += "  <input type=\"submit\" value=\"Send\">\n";
-				// response_process += "</form>\n";
-				// response_process += "</body>\n";
-				// response_process += "</html>\n";
-				// send(it->fd, response_process.c_str(), response_process.size(), 0);
-				// Logger::debug("fd: " + Utils::toString(this->pid));
-				// Logger::debug("pid: " + Utils::toString(it->fd));
 				removeClient(it);
 			}
 		}
