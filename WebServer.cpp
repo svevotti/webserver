@@ -168,7 +168,7 @@ void Webserver::dispatchEvents()
 				poll_sets.erase(it);
 				std::cout << copypoll.size() << std::endl;
 				std::cout << poll_sets.size() << std::endl;
-				for (int i = 0; i < poll_sets.size(); i++)
+				for (unsigned long i = 0; i < poll_sets.size(); i++)
 				{
 					if (poll_sets[i].fd == clientFd) {
 						// poll_sets.erase(poll_sets.begin() + i);

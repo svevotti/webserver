@@ -61,12 +61,15 @@ double ClientHandler::getTimeOut(void) const
 void ClientHandler::validateHttpHeaders(struct Route route)
 {
 	std::string uri = this->request.getHttpRequestLine()["request-uri"];
-	route = this->configInfo.getRoute()[uri];
+	std::string method = this->request.getHttpRequestLine()["method"];
+	int	method_count = route.methods.size();
+	//Logger::debug("For URI: " + uri + " Method: " + method + " and count " + Utils::toString(method_count) + " ");
+	//Check if method is allowed
+	if ((method_count == 0) | (route.methods.find(method) == route.methods.end()))
+		throw MethodNotAllowedException();
+	// route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
-	//std::string method = this->request.getHttpRequestLine()["method"];
-	//int	method_count = route.methods.size();
-	//Logger::debug("For URI: " + uri + " Method: " + method + " and count " + Utils::toString(method_count));
 	for (it = headers.begin(); it != headers.end(); it++)
 	{
 		if (it->first == "content-type")
@@ -82,7 +85,7 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 			else
 				type = it->second;
 			std::map<std::string, std::string>::iterator itC;
-			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); it++)
+			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); itC++)
 			{
 				if (itC->first == "content_type")
 				{
@@ -93,11 +96,6 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 				}
 			}
 		}
-		//Check if method is allowed
-		// else if (method_count == 0 || route.methods.count(method))
-		// {
-
-		// }
 		else if (it->first == "upgrade")
 			throw HttpVersionNotSupported();
 	}
@@ -520,8 +518,8 @@ std::string ClientHandler::prepareResponse(struct Route route)
 		body = deleteFile(route.path);
 		code = 204;
 	}
-	else
-		throw MethodNotAllowedException();
+	// else
+	// 	throw MethodNotAllowedException();
 	HttpResponse http(code, body);
 	response = http.composeRespone();
 	return response;

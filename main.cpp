@@ -95,30 +95,38 @@ bool	test(Config &conf)
 	return true;
 }
 
-Webserver* g_server = NULL;
+Config*	configuration = new Config("default.conf");
+Webserver* server = new Webserver(*configuration);
 
 void signal_handler(int sig)
 {
-    if (g_server)
+    if (server)
     {
+		std::cout << std::endl;
         Logger::info("Received signal " + Utils::toString(sig) + ", shutting down server");
-		delete g_server;
-        g_server = NULL;
+		delete server;
+        server = NULL;
+    }
+	if (configuration)
+    {
+        Logger::info("Received signal " + Utils::toString(sig) + ", shutting down configuration");
+		delete configuration;
+        configuration = NULL;
     }
     exit(0);
 }
 
 int main(void)
 {
-	Config	configuration("default.conf");
+	//Config	configuration("default.conf");
 
 	signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-	if (configuration.ft_validServer())
+	if (configuration->ft_validServer())
 	{
-		Webserver 	server(configuration);
-		if (server.startServer() == -1)
+		//Webserver 	server(configuration);
+		if (server->startServer() == -1)
 		{
 			Logger::error("Could not start the server");
 			return 1;

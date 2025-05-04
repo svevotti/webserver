@@ -117,7 +117,7 @@ void CGI::createAv()
 	if (extension.find(".py") != std::string::npos)
 		_av[0] = strdup("/usr/bin/python3");
 	else if (extension.find(".php") != std::string::npos)
-		_av[0] = strdup("/usr/bin/php-cgi"); ///usr/bin/php-cgi
+		_av[0] = strdup("/opt/homebrew/bin/php-cgi"); ///usr/bin/php-cgi or /opt/homebrew/bin/php
 	else
 		throw InternalServerErrorException();
 	//Argument 1 is the script
@@ -142,7 +142,6 @@ void CGI::createAv()
 
 void CGI::createEnv(const HttpRequest& request)
 {
-	//If we decide to pass the headers; else remove next line and headers.size()
 	std::map<std::string, std::string> headers = request.getHttpHeaders();
 	size_t env_size = _env_map.size() + headers.size() + 1;
 	_env = new char*[env_size];
@@ -158,7 +157,6 @@ void CGI::createEnv(const HttpRequest& request)
 		//Logger::debug("ENV: " + env_entry);
 	}
 
-	//If we pass the headers
 	std::map<std::string, std::string>::const_iterator header_it;
 	for (header_it = headers.begin(); header_it != headers.end(); ++header_it)
 	{
@@ -225,8 +223,6 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 
 void CGI::startExecution()
 {
-	//int fd_cgi[2];
-	//pipe(fd_cgi);
 	int pipe_in[2];   // For stdin to CGI
 	int pipe_out[2];  // For stdout from CGI
 
@@ -245,10 +241,6 @@ void CGI::startExecution()
 		// this->response = retrievePage(route);
 		//Logger::debug("execve for " + std::string(_av[0]) + " and " + std::string(_av[1]));
 
-		//close(fd_cgi[0]); // Close reading
-		//dup2(fd_cgi[1], STDOUT_FILENO); //redirect stdout to the writing end
-		//close(fd_cgi[1]);
-		// Redirect STDIN: child will read POST body from pipe_in[0]
 		close(pipe_in[1]); // Close write end (parent writes here)
 		dup2(pipe_in[0], STDIN_FILENO);
 		close(pipe_in[0]);
@@ -257,8 +249,6 @@ void CGI::startExecution()
 		close(pipe_out[0]); // Close read end (parent reads here)
 		dup2(pipe_out[1], STDOUT_FILENO);
 		close(pipe_out[1]);
-		//Currently hardcoded, need to -find which script to run; -create env for the script; -ensure that the file ext is allowed by conf_file; -check if script exist, etc.
-		//const char *args[] = {"/usr/bin/python3", "script.py", NULL}; //implement env by adding to the char **, the script will call library
 		execve(_av[0], _av, _env);
 		perror("execv failed"); // Print error if execv fails
 		// write(STDERR_FILENO, "execve failed for ", 18);
