@@ -23,8 +23,8 @@ ERROR_MESSAGES = {
 }
 
 def send_json_response(status_code, status, message):
-    # print(f"Status: {status_code} {status}")
-    # print("Content-Type: application/json")
+    print(f"Status: {status_code} {status}")
+    print("Content-Type: application/json")
     print()
     response = {"status": status.lower(), "message": message}
     print(json.dumps(response))
@@ -100,7 +100,7 @@ def save_uploaded_file(upload_dir):
         logging.debug("File exists after write: %s" % os.path.exists(filename))
 
         # Success response
-        send_json_response(200, "OK", "Upload Grooved to Perfection, Baby!")
+        send_json_response(201, "CREATED", "Upload Grooved to Perfection, Baby!")
     except Exception as e:
         logging.debug("Error processing file: %s" % str(e))
         send_json_response(500, "Internal Server Error", ERROR_MESSAGES[500])
