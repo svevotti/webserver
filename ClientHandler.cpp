@@ -4,6 +4,7 @@
 
 #define INCOMPLETE 0
 //Constructor
+
 ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 {
 	this->client_fd = fd;
@@ -161,7 +162,6 @@ std::string ClientHandler::createPath(struct Route route, std::string uri)
 void ClientHandler::validateHttpHeaders(struct Route route)
 {
 	std::string uri = this->request.getHttpRequestLine()["request-uri"];
-	route = this->configInfo.getRoute()[uri];
 	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
 	std::map<std::string, std::string>::iterator it;
 	for (it = headers.begin(); it != headers.end(); it++)
@@ -179,7 +179,7 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 			else
 				type = it->second;
 			std::map<std::string, std::string>::iterator itC;
-			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); it++)
+			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); itC++)
 			{
 				if (itC->first == "content_type")
 				{
@@ -229,36 +229,6 @@ int ClientHandler::checkRequestStatus(void)
 	return 1;
 }
 
-
-void ClientHandler::updateRoute(struct Route &route)
-{
-	if (route.locSettings.find("alias") != route.locSettings.end())
-	{
-		route.path.clear();
-		route.path += "." + route.locSettings.find("alias")->second;
-		int count = std::count(this->request.getUri().begin(), this->request.getUri().end(), '/');
-		if (count >= 2)
-		{
-			std::string copyUri = this->request.getUri();
-			copyUri.erase(0, 1);
-			size_t index = copyUri.find_first_of("/");
-			std::string file = copyUri.substr(index + 1);
-			route.path += "/" + file;
-		}
-		struct stat pathStat;
-		if (stat(route.path.c_str(), &pathStat) == 0)
-		{
-			if (S_ISDIR(pathStat.st_mode))
-			{
-				if (route.locSettings.find("default") != route.locSettings.end())
-				{
-					route.path += "/" + route.locSettings.find("default")->second;
-				}
-			}
-		}
-	}
-}
-
 void ClientHandler::redirectClient(struct Route &route)
 {
 	struct Route redirectRoute;
@@ -271,19 +241,6 @@ void ClientHandler::redirectClient(struct Route &route)
 	HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
 	http.setUriLocation(redirectRoute.uri);
 	this->response = http.composeRespone("");
-}
-
-void ClientHandler::findPath(std::string str, struct Route &route)
-{
-	std::string locationPath;
-	locationPath = findDirectory(str);
-	struct Route newRoute;
-	newRoute = this->configInfo.getRoute()[locationPath];
-	route = newRoute;
-	std::string newPath;
-	newPath = createPath(route, str);
-	route.path.clear();
-	route.path = newPath;
 }
 
 int ClientHandler::manageRequest()
@@ -381,29 +338,6 @@ int ClientHandler::retrieveResponse(void)
 	return this->internal_fd;
 }
 
-int ClientHandler::isCgi(std::string uri)
-{
-	if (uri == "/cgi-bin")
-		return true;
-	return false;
-}
-
-std::string ClientHandler::extractContent(std::string path)
-{
-	std::ifstream inputFile(path.c_str(), std::ios::binary);
-	if (!inputFile)
-		throw NotFoundException();
-	inputFile.seekg(0, std::ios::end);
-	std::streamsize size = inputFile.tellg();
-	inputFile.seekg(0, std::ios::beg);
-	std::string buffer;
-	buffer.resize(size);
-	if (!(inputFile.read(&buffer[0], size)))
-		throw NotFoundException();
-	inputFile.close();
-	return buffer;
-}
-
 std::string ClientHandler::retrievePage(struct Route route)
 {
 	std::string body;
@@ -419,66 +353,6 @@ std::string ClientHandler::retrievePage(struct Route route)
 	}
 	body = extractContent(route.path);
 	return body;
-}
-
-std::string getFileType(std::map<std::string, std::string> headers)
-{
-	std::map<std::string, std::string>::iterator it;
-	std::string type;
-
-	for (it = headers.begin(); it != headers.end(); it++)
-	{
-		if (it->first == "content-type")
-			type = it->second;
-	}
-	return type;
-}
-
-std::string getFileName(std::map<std::string, std::string> headers)
-{
-	std::map<std::string, std::string>::iterator it;
-	std::string name;
-
-	for (it = headers.begin(); it != headers.end(); it++)
-	{
-		if (it->first == "content-disposition")
-		{
-			if (it->second.find("filename") != std::string::npos)
-			{
-				std::string fileNameField = it->second.substr(it->second.find("filename"));
-				if (fileNameField.find('"') != std::string::npos)
-				{
-					int indexFirstQuote = fileNameField.find('"');
-					int indexSecondQuote = 0;
-					if (fileNameField.find('"', indexFirstQuote+1) != std::string::npos)
-					{
-						indexSecondQuote = fileNameField.find('"', indexFirstQuote+1);
-					}
-					name = fileNameField.substr(indexFirstQuote+1,indexSecondQuote - indexFirstQuote-1);
-				}
-			}
-		}
-	}
-	return name;
-}
-
-int checkNameFile(std::string str, std::string path)
-{
-	DIR *folder;
-	struct dirent *data;
-
-	folder = opendir(path.c_str());
-	std::string convStr;
-	if (folder == NULL)
-		throw NotFoundException();
-	while ((data = readdir(folder)))
-	{
-		convStr = data->d_name;
-		if (convStr == str)
-			return (1);
-	}
-	closedir(folder);
-	return (0);
 }
 
 std::string ClientHandler::uploadFile(std::string path)
@@ -593,38 +467,10 @@ int ClientHandler::createResponse(void)
 		std::string headers;
 
 		size_t index_new_line = this->raw_data.find("\n\n");
-		if (index_new_line != std::string::npos) //there are headers
+		if (index_new_line != std::string::npos)
 		{
-			size_t index_status = this->raw_data.find("Status");
-			std::string statusLine;
-			size_t index_end_line;
-			size_t index_start_number;
-			size_t index_end_number;
-			std::string codeStr;
-			if (index_status == std::string::npos)
-			{
-				if (this->request.getMethod() == "POST")
-					code = 201;
-				else
-					code = 200;
-			}
-			else
-			{
-				index_end_line = this->raw_data.find("\n");
-				if (index_end_line == std::string::npos)
-					throw ServiceUnavailabledException();
-				statusLine = this->raw_data.substr(index_status, index_end_line);
-				index_start_number = statusLine.find(" ");
-				if (index_start_number == std::string::npos)
-					throw ServiceUnavailabledException();
-				statusLine = statusLine.substr(index_start_number + 1);
-				index_end_number = statusLine.find(" ");
-				if (index_end_number == std::string::npos)
-					throw ServiceUnavailabledException();
-				codeStr = statusLine.substr(0, index_end_line - 1);
-				code = Utils::toInt(codeStr);
-			}
-			headers = this->raw_data.substr(0, index_new_line + 2); //include \n\n
+			code = extractStatusCode(this->raw_data, this->request.getMethod());
+			headers = this->raw_data.substr(0, index_new_line + 2);
 			body = this->raw_data.substr(index_new_line + 2);
 		}
 		else

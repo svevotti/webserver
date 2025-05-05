@@ -58,7 +58,6 @@ class ClientHandler {
 		int 		createResponse(void);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
-		std::map<std::string, std::string>		parseScriptHeaders(void);
 
 	private:
 	int 		client_fd;
@@ -72,5 +71,10 @@ class ClientHandler {
 	int			internal_fd;
 	int			pid;
 };
+
+int			checkNameFile(std::string str, std::string path);
+std::string	getFileName(std::map<std::string, std::string> headers);
+std::string	getFileType(std::map<std::string, std::string> headers);
+int 		extractStatusCode(std::string str, std::string method);
 
 #endif

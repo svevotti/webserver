@@ -5,14 +5,14 @@ OBJ_DIR = obj
 CPP_FILES = ServerSockets.cpp main.cpp HttpResponse.cpp \
 			WebServer.cpp HttpRequest.cpp Logger.cpp \
 			ClientHandler.cpp Config.cpp InfoServer.cpp \
-			HttpException.cpp CGI.cpp
+			HttpException.cpp CGI.cpp ClientHandlerUtils.cpp
 CPP_OBJ = $(OBJ_DIR)/ServerSockets.o $(OBJ_DIR)/main.o \
           $(OBJ_DIR)/HttpResponse.o \
           $(OBJ_DIR)/Logger.o \
 		  $(OBJ_DIR)/WebServer.o $(OBJ_DIR)/HttpRequest.o \
 		  $(OBJ_DIR)/ClientHandler.o  $(OBJ_DIR)/Config.o \
 		  $(OBJ_DIR)/InfoServer.o $(OBJ_DIR)/HttpException.o \
-		  $(OBJ_DIR)/CGI.o
+		  $(OBJ_DIR)/CGI.o $(OBJ_DIR)/ClientHandlerUtils.o
 
 NAME = webserver
 

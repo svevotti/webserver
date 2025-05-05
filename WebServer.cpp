@@ -6,11 +6,6 @@
 #define DONE 2
 
 // Constructor and Destructor
-typedef struct m_pid
-{
-	int cgi_fd;
-	int clent_fd;
-} t_pid;
 
 Webserver::Webserver(Config& file)
 {
