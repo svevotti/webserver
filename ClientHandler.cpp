@@ -254,16 +254,7 @@ int ClientHandler::manageRequest()
 	int result;
 	std::string uri;
 	struct Route route;
-	try
-	{
-		result = readData(this->client_fd, this->raw_data, this->totbytes);
-	}
-	catch(const std::exception& e)
-	{
-		std::cerr << e.what() << '\n';
-		exit(1);
-	}
-	
+	result = readData(this->client_fd, this->raw_data, this->totbytes);
 	if (result == 0 || result == 1)
 		return 1;
 	else
@@ -328,8 +319,10 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 	char buffer[BUFFER];
 
 	Utils::ft_memset(buffer, 0, sizeof(buffer));
+	Logger::error("buffer error memset");
 	res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
-	str.append(buffer, res);
+	if (res > 0)
+		str.append(buffer, res);
 	bytes += res;
 	if (res == 0)
 		return 0;
@@ -622,7 +615,7 @@ int ClientHandler::createResponse(void)
 	int code;
 
 	code = getStatusCode(this->raw_data);
-	HttpResponse http(code, this->raw_data);
+	HttpResponse http(200, this->raw_data);
 	
 	this->response = http.composeRespone();
 	return 2;

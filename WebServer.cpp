@@ -129,7 +129,7 @@ void Webserver::dispatchEvents()
 			result = -2;
 			Logger::error("result: " + Utils::toString(result));
 			Logger::error("client fd: " + Utils::toString(it->fd));
-			result = processClient(it->fd, WRITE) == -1;
+			result = processClient(it->fd, WRITE);
 			Logger::error("result after processClient: " + Utils::toString(result));
 			Logger::error("fd: " + Utils::toString(it->fd));
 			if (result == -1)
