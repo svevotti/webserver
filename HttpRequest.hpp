@@ -46,7 +46,7 @@ class HttpRequest {
 		// std::string							getRemoteHost(void) const;
 		std::string 						getHost(void) const;
 		std::string 						getProtocol(void) const;
-		// std::string							getScriptName(void) const;
+		std::string							getScriptName(void) const;
 		// std::string							getServerPort(void)const;
 		// std::string							getServerProtocol(void) const;
 		std::string							findValue(std::map<std::string, std::string> map, std::string key) const;
@@ -74,6 +74,7 @@ class HttpRequest {
 		struct section						sectionInfo;
 		std::string							body;
 		std::string							content_type;
+		std::string							scriptName;
 };
 
 std::ostream &operator<<(std::ostream &output, HttpRequest const &request);

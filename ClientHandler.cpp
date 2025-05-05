@@ -158,6 +158,43 @@ std::string ClientHandler::createPath(struct Route route, std::string uri)
 	return path;
 }
 
+void ClientHandler::validateHttpHeaders(struct Route route)
+{
+	std::string uri = this->request.getHttpRequestLine()["request-uri"];
+	route = this->configInfo.getRoute()[uri];
+	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
+	std::map<std::string, std::string>::iterator it;
+	for (it = headers.begin(); it != headers.end(); it++)
+	{
+		if (it->first == "content-type")
+		{
+			std::string type;
+			if (it->second.find("multipart/form-data") != std::string::npos)
+			{
+				std::string genericType = it->second.substr(0, it->second.find(";"));
+				type = this->request.getHttpSection().myMap["content-type"];
+				if (type.length() >= 1)
+					type.erase(type.length() - 1);
+			}
+			else
+				type = it->second;
+			std::map<std::string, std::string>::iterator itC;
+			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); it++)
+			{
+				if (itC->first == "content_type")
+				{
+					if (itC->second.find(type) != std::string::npos)
+						return;
+					else
+						throw UnsupportedMediaTypeException();
+				}
+			}
+		}
+		else if (it->first == "upgrade")
+			throw HttpVersionNotSupported();
+	}
+}
+
 int ClientHandler::checkRequestStatus(void)
 {
 	std::string stringLowerCases = this->raw_data;
@@ -547,76 +584,63 @@ int ClientHandler::readStdout(int fd)
 	return 2;
 }
 
-std::string findStatusCode(std::string str)
-{
-	if (str.find("ok") != std::string::npos)
-		return "201";
-	else if (str.find("conflict") != std::string::npos)
-		return "409";
-	else if (str.find("payload too large") != std::string::npos)
-		return "413";
-	return "500";
-}
-
-std::string findStaus(std::string str)
-{
-	if (str == "201")
-		return "CREATED";
-	else if (str == "409")
-		return "CONFLICT";
-	else if (str == "413")
-		return "PAYLOAD TOO LARGE";
-	return "SERVER INTERNAL ERROR";
-}
-
-int getStatusCode(std::string str)
-{
-	std::string codeStr;
-	std::string statusStr = "Status:";
-	int len_line;
-	std::string lineStatus;
-	if (str.find(statusStr) != std::string::npos)
-	{
-		std::vector<std::string> splitHeader;
-		size_t index_status_line;
-		size_t index_new_line;
-		index_status_line = str.find(statusStr);
-		std::cout << index_status_line << std::endl;
-		if (index_status_line != std::string::npos)
-		{
-			index_new_line = str.find("\n");
-			if (index_new_line != std::string::npos)
-				lineStatus = str.substr(index_status_line, index_new_line);
-		}
-		Logger::debug("line: " + lineStatus);
-	}
-	else
-	{
-		if (!str.empty())
-			return 200;
-	}
-	//Status: 200 OK
-	size_t index_number = lineStatus.find_first_of(" ");
-	if (index_number != std::string::npos)
-	{
-		int first_space = index_number;
-		index_number = lineStatus.find(" ", first_space + 1);
-		if (index_number != std::string::npos)
-		{
-			codeStr = lineStatus.substr(first_space, lineStatus.size() - index_number + 1);
-		}
-	}
-	Logger::debug("codeStr: " + codeStr);
-	return Utils::toInt(codeStr);
-}
-
 int ClientHandler::createResponse(void)
 {
-	int code;
-
-	code = getStatusCode(this->raw_data);
-	HttpResponse http(200, this->raw_data);
-	
-	this->response = http.composeRespone();
+	try
+	{
+		int code = 200;
+		if (this->raw_data.find("<html") != std::string::npos || this->raw_data.find("<!DOCTYPE") != std::string::npos)
+		{
+			HttpResponse http(code, this->raw_data);
+			this->response = http.composeRespone();
+		}
+		else
+		{
+			if (this->raw_data.find("Content-Type") == std::string::npos)
+				throw ServiceUnavailabledException();
+			if (this->raw_data.find("\n\n") == std::string::npos)
+				throw ServiceUnavailabledException();
+			size_t index_status = this->raw_data.find("Status");
+			std::string statusLine;
+			size_t index_end_line;
+			size_t index_start_number;
+			size_t index_end_number;
+			std::string codeStr;
+			if (index_status == std::string::npos)
+			{
+				if (this->request.getMethod() == "POST")
+					code = 201;
+			}
+			else
+			{
+				index_end_line = this->raw_data.find("\n");
+				if (index_end_line == std::string::npos)
+					throw ServiceUnavailabledException();
+				statusLine = this->raw_data.substr(index_status, index_end_line);
+				index_start_number = statusLine.find(" ");
+				if (index_start_number == std::string::npos)
+					throw ServiceUnavailabledException();
+				statusLine = statusLine.substr(index_start_number + 1);
+				index_end_number = statusLine.find(" ");
+				if (index_end_number == std::string::npos)
+					throw ServiceUnavailabledException();
+				codeStr = statusLine.substr(0, index_end_line - 1);
+				code = Utils::toInt(codeStr);
+			}
+			size_t index = this->raw_data.find("\n\n");
+			std::string headers;
+			headers = this->raw_data.substr(0, index + 2);
+			std::string body;
+			body = this->raw_data.substr(index + 2);
+			HttpResponse http(code, body);
+			this->response = http.composeRespone(headers);
+		}
+	}
+	catch (const HttpException &e)
+	{
+		HttpResponse http(e.getCode(), e.getBody());
+		this->response = http.composeRespone();
+		Logger::error(Utils::toString(e.getCode()) + " " + e.what());
+	}
 	return 2;
 }

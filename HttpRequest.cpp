@@ -16,6 +16,7 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->headers = other.headers;
 	this->sectionInfo = other.sectionInfo;
 	this->body = other.body;
+	this->scriptName = other.scriptName;
 }
 
 // Setters and Getters
@@ -95,6 +96,11 @@ std::string HttpRequest::getBodyContent(void) const
 	return this->body;
 }
 
+std::string HttpRequest::getScriptName(void) const
+{
+	return this->scriptName;
+}
+
 // Main functions
 
 void HttpRequest::HttpParse(std::string str, int size)
@@ -151,6 +157,7 @@ void HttpRequest::setExtraHeaders(void)
 	it = this->headers.find("content-length");
 	this->body = this->sectionInfo.body;
 }
+
 void HttpRequest::parseRequestHttp(void)
 {
 	std::string inputString(this->str);
