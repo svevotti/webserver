@@ -35,11 +35,17 @@ class ClientHandler {
 		int 		getCGI_Fd(void) const;
 		double 		getTime(void) const;
 		double 		getTimeOut(void) const;
+		int 		getPid(void) const;
 		HttpRequest	getRequest(void) const;
 		std::string getResponse(void) const;
-		void		resetCGIFD(void);
+		std::string getRawData() const {return raw_data;}
+		int			checkRequestStatus(void);
+		void		redirectClient(struct Route &route);
+		void 		findPath(std::string str, struct Route &route);
+		void		updateRoute(struct Route &route);
+		int			readStdout(int fd);
 		void		setResponse(std::string);
-		int 		manageRequest(std::vector<pollfd> poll_sets);
+		int 		manageRequest(void);
 		int 		readData(int fd, std::string &str, int &bytes);
 		std::string findDirectory(std::string uri);
 		std::string createPath(struct Route route, std::string uri);
@@ -49,11 +55,12 @@ class ClientHandler {
 		std::string uploadFile(std::string path);
 		std::string deleteFile(std::string path);
 		std::string prepareResponse(struct Route route);
+		int 		createResponse(void);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
 
 	private:
-	int 		fd;
+	int 		client_fd;
 	int 		totbytes;
 	std::string raw_data;
 	double		startingTime;
@@ -61,7 +68,13 @@ class ClientHandler {
 	InfoServer	configInfo;
 	HttpRequest request;
 	std::string response;
-	int			cgi_fd;
+	int			internal_fd;
+	int			pid;
 };
+
+int			checkNameFile(std::string str, std::string path);
+std::string	getFileName(std::map<std::string, std::string> headers);
+std::string	getFileType(std::map<std::string, std::string> headers);
+int 		extractStatusCode(std::string str, std::string method);
 
 #endif

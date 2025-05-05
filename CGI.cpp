@@ -183,6 +183,7 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	_env_map["REDIRECT_STATUS"] = "200"; // Required for php-cgi with force-cgi-redirect
 	_env_map["SCRIPT_FILENAME"] = _cgi_path;
 	_env_map["FILE_NAME"] = getFileName(request.getHttpSection().myMap);
+	_env_map["MAX_CLIENT_BODY"] = _serverInfo.getSetting()["client_max_body_size"];
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();
 	Logger::debug("DOCUMENT_ROOT=" + _env_map["DOCUMENT_ROOT"]);
