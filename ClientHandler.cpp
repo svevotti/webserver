@@ -105,96 +105,6 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 	}
 }
 
-std::string ClientHandler::findDirectory(std::string uri)
-{
-	struct Route route;
-	size_t index;
-	route = this->configInfo.getRoute()[uri];
-	if (route.path.empty())
-	{
-		index = uri.find(".");
-		if (index != std::string::npos)
-		{
-			index = uri.find_last_of("/");
-			uri = uri.substr(0, index);
-			route = this->configInfo.getRoute()[uri];
-			if (!route.path.empty())
-				return uri;
-		}
-		while (uri.size() > 1)
-		{
-			index = uri.find_last_of("/");
-			if (index != std::string::npos)
-				uri = uri.substr(0, index);
-			else
-				break;
-			route = this->configInfo.getRoute()[uri];
-			if (!(route.path.empty()))
-				return uri;
-		}
-	}
-	else
-		return (uri);
-	return "/";
-}
-
-std::string ClientHandler::createPath(struct Route route, std::string uri)
-{
-	std::string lastItem;
-	std::string path = route.path;
-	std::string defaultFile = route.locSettings["index"];
-	size_t index;
-
-	if (path == "/")
-		return "";
-	if (path[path.size() - 1] == '/')
-		path.erase(path.size() - 1, 1);
-	index = uri.find_last_of("/");
-	if (index != std::string::npos)
-		lastItem = uri.substr(index + 1);
-	if (defaultFile.empty())
-		path += "/" + lastItem;
-	else
-		path += uri;
-	return path;
-}
-
-void ClientHandler::validateHttpHeaders(struct Route route)
-{
-	std::string uri = this->request.getHttpRequestLine()["request-uri"];
-	std::map<std::string, std::string> headers = this->request.getHttpHeaders();
-	std::map<std::string, std::string>::iterator it;
-	for (it = headers.begin(); it != headers.end(); it++)
-	{
-		if (it->first == "content-type")
-		{
-			std::string type;
-			if (it->second.find("multipart/form-data") != std::string::npos)
-			{
-				std::string genericType = it->second.substr(0, it->second.find(";"));
-				type = this->request.getHttpSection().myMap["content-type"];
-				if (type.length() >= 1)
-					type.erase(type.length() - 1);
-			}
-			else
-				type = it->second;
-			std::map<std::string, std::string>::iterator itC;
-			for (itC = route.locSettings.begin(); itC != route.locSettings.end(); itC++)
-			{
-				if (itC->first == "content_type")
-				{
-					if (itC->second.find(type) != std::string::npos)
-						return;
-					else
-						throw UnsupportedMediaTypeException();
-				}
-			}
-		}
-		else if (it->first == "upgrade")
-			throw HttpVersionNotSupported();
-	}
-}
-
 int ClientHandler::checkRequestStatus(void)
 {
 	std::string stringLowerCases = this->raw_data;
@@ -206,8 +116,6 @@ int ClientHandler::checkRequestStatus(void)
 		int start = stringLowerCases.find("content-length") + 16;
 		int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
 		int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
-		// if (bytes_expected > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
-		// 	throw PayLoadTooLargeException();
 		std::string onlyHeaders = this->raw_data.substr(0, this->raw_data.find("\r\n\r\n"));
 		if (this->totbytes < bytes_expected + onlyHeaders.size())
 			return 0;
@@ -367,6 +275,10 @@ std::string ClientHandler::uploadFile(std::string path)
 	sectionBody = request.getHttpSection();
 	headersBody = sectionBody.myMap;
 	binaryBody = sectionBody.body;
+	Logger::debug(Utils::toString(binaryBody.size()));
+	Logger::debug(this->configInfo.getSetting()["client_max_body_size"]);
+	if (binaryBody.size() > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
+			throw PayLoadTooLargeException();
 	if (binaryBody.empty())
 	{
 		fileName = "file";
@@ -422,17 +334,17 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	if (route.internal == true)
 		throw NotFoundException();
 	method = this->request.getHttpRequestLine()["method"];
-	if (method == "GET" && route.methods.count(method) > 0)
+	if (method == "GET")
 	{
 		body = retrievePage(route);
 		code = 200;
 	}
-	else if (method == "POST" && route.methods.count(method) > 0)
+	else if (method == "POST")
 	{
 		body = uploadFile(route.path);
 		code = 201;
 	}
-	else if (method == "DELETE" && route.methods.count(method) > 0)
+	else if (method == "DELETE")
 	{
 		body = deleteFile(route.path);
 		code = 204;
@@ -467,9 +379,9 @@ int ClientHandler::createResponse(void)
 		std::string headers;
 
 		size_t index_new_line = this->raw_data.find("\n\n");
+		code = extractStatusCode(this->raw_data, this->request.getMethod());
 		if (index_new_line != std::string::npos)
 		{
-			code = extractStatusCode(this->raw_data, this->request.getMethod());
 			headers = this->raw_data.substr(0, index_new_line + 2);
 			body = this->raw_data.substr(index_new_line + 2);
 		}

@@ -4,10 +4,11 @@ import sys
 import io
 import json
 import logging
+from time import sleep
 
 # Set up logging to a file
-logging.basicConfig(filename='/Users/hdorado/Webserv_final/upload.py.log', level=logging.DEBUG,
-                    format='%(asctime)s - %(message)s')
+# logging.basicConfig(filename='/Users/hdorado/Webserv_final/upload.py.log', level=logging.DEBUG,
+#                     format='%(asctime)s - %(message)s')
 # These are for backup
 ERROR_MESSAGES = {
     400: "400 - Bad Request: Yo, Your Upload's Got No Vibe!",
@@ -28,6 +29,7 @@ def send_json_response(status_code, status, message):
     print()
     response = {"status": status.lower(), "message": message}
     print(json.dumps(response))
+    # sleep(1)
     sys.exit(0)
 
 def save_uploaded_file(upload_dir):
@@ -37,13 +39,12 @@ def save_uploaded_file(upload_dir):
     # logging.debug("REQUEST_METHOD: %s" % os.environ.get("REQUEST_METHOD", "unset"))
 
     # Check content length against client_max_body_size from environment
+    # get and check content type to either read string or
     content_length = int(os.environ.get("CONTENT_LENGTH", 0))
+    raw_input = sys.stdin.buffer.read(content_length)
     if content_length > int(os.environ.get("MAX_CLIENT_BODY", 0)):
         send_json_response(413, "Payload Too Large", ERROR_MESSAGES[413])
-    # get and check content type to either read string or
-    raw_input = sys.stdin.buffer.read(content_length)
-    logging.debug("Raw stdin length: %d" % len(raw_input))
-
+    # logging.debug("Raw stdin length: %d" % len(raw_input))
     # Parse form data
     # try:
     #     buffer = io.BytesIO(raw_input)
