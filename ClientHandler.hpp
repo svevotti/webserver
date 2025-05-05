@@ -58,6 +58,7 @@ class ClientHandler {
 		int 		createResponse(void);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
+		std::map<std::string, std::string>		parseScriptHeaders(void);
 
 	private:
 	int 		client_fd;

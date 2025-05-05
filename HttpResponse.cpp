@@ -48,20 +48,20 @@ void HttpResponse::setUriLocation(std::string url)
 }
 
 // Main functions
-std::string HttpResponse::composeRespone(void)
-{
-	std::string response;
-	std::string statusLine;
-	std::string headers;
+// std::string HttpResponse::composeRespone(void)
+// {
+// 	std::string response;
+// 	std::string statusLine;
+// 	std::string headers;
 
 
-	statusLine = generateStatusLine(this->statusCode);
-	response += statusLine;
-	headers = generateHttpHeaders();
-	response += headers + "\r\n";
-	response += this->body;
-	return response;
-}
+// 	statusLine = generateStatusLine(this->statusCode);
+// 	response += statusLine;
+// 	headers = generateHttpHeaders();
+// 	response += headers + "\r\n";
+// 	response += this->body;
+// 	return response;
+// }
 
 std::string HttpResponse::composeRespone(std::string str)
 {
@@ -72,7 +72,10 @@ std::string HttpResponse::composeRespone(std::string str)
 	
 	statusLine = generateStatusLine(this->statusCode);
 	response += statusLine;
-	headers = str + "\r\n";
+	if (!str.empty())
+		headers = str + "\r\n";
+	else
+		headers = generateHttpHeaders();
 	response += headers + "\r\n";
 	response += this->body;
 	return response;

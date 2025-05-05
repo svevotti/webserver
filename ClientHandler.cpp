@@ -270,7 +270,7 @@ void ClientHandler::redirectClient(struct Route &route)
 	route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
 	HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
 	http.setUriLocation(redirectRoute.uri);
-	this->response = http.composeRespone();
+	this->response = http.composeRespone("");
 }
 
 void ClientHandler::findPath(std::string str, struct Route &route)
@@ -340,7 +340,7 @@ int ClientHandler::manageRequest()
 		catch (const HttpException &e)
 		{
 			HttpResponse http(e.getCode(), e.getBody());
-			this->response = http.composeRespone();
+			this->response = http.composeRespone("");
 			Logger::error(Utils::toString(e.getCode()) + " " + e.what());
 		}
 		this->totbytes = 0;
@@ -566,7 +566,7 @@ std::string ClientHandler::prepareResponse(struct Route route)
 	// else
 	// 	throw MethodNotAllowedException();
 	HttpResponse http(code, body);
-	response = http.composeRespone();
+	response = http.composeRespone("");
 	return response;
 }
 
@@ -588,18 +588,13 @@ int ClientHandler::createResponse(void)
 {
 	try
 	{
-		int code = 200;
-		if (this->raw_data.find("<html") != std::string::npos || this->raw_data.find("<!DOCTYPE") != std::string::npos)
+		int code = 0;
+		std::string body;
+		std::string headers;
+
+		size_t index_new_line = this->raw_data.find("\n\n");
+		if (index_new_line != std::string::npos) //there are headers
 		{
-			HttpResponse http(code, this->raw_data);
-			this->response = http.composeRespone();
-		}
-		else
-		{
-			if (this->raw_data.find("Content-Type") == std::string::npos)
-				throw ServiceUnavailabledException();
-			if (this->raw_data.find("\n\n") == std::string::npos)
-				throw ServiceUnavailabledException();
 			size_t index_status = this->raw_data.find("Status");
 			std::string statusLine;
 			size_t index_end_line;
@@ -610,6 +605,8 @@ int ClientHandler::createResponse(void)
 			{
 				if (this->request.getMethod() == "POST")
 					code = 201;
+				else
+					code = 200;
 			}
 			else
 			{
@@ -627,19 +624,18 @@ int ClientHandler::createResponse(void)
 				codeStr = statusLine.substr(0, index_end_line - 1);
 				code = Utils::toInt(codeStr);
 			}
-			size_t index = this->raw_data.find("\n\n");
-			std::string headers;
-			headers = this->raw_data.substr(0, index + 2);
-			std::string body;
-			body = this->raw_data.substr(index + 2);
-			HttpResponse http(code, body);
-			this->response = http.composeRespone(headers);
+			headers = this->raw_data.substr(0, index_new_line + 2); //include \n\n
+			body = this->raw_data.substr(index_new_line + 2);
 		}
+		else
+			body = this->raw_data;
+		HttpResponse http(code, body);
+		this->response = http.composeRespone(headers);
 	}
 	catch (const HttpException &e)
 	{
 		HttpResponse http(e.getCode(), e.getBody());
-		this->response = http.composeRespone();
+		this->response = http.composeRespone("");
 		Logger::error(Utils::toString(e.getCode()) + " " + e.what());
 	}
 	return 2;
