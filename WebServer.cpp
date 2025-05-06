@@ -345,6 +345,33 @@ void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 }
 
+void Webserver::timeoutClient(std::vector<struct pollfd>::iterator it)
+{
+		std::string str = "HTTP/1.1 200 OK\r\n"
+	"Content-Type: text/plain\r\n"
+	"Content-Length: 4\r\n"
+	"\r\n"
+	"ciao";
+
+	int bytes_sent = send(it->fd, str.c_str(), str.length(), 0);
+	if (bytes_sent == -1)
+	{
+        perror("send failed");
+        printf("Error number: %d\n", errno);
+        printf("Error message: %s\n", strerror(errno));
+    } else
+        printf("Sent %zd bytes\n", bytes_sent);
+	if (fcntl(it->fd, F_GETFD) != -1)
+	{
+        if (errno == EBADF)
+            std::cout << "open socket\n";
+        perror("fcntl failed");
+    }
+	std::cout << str.length() << std::endl;
+	std::cout << str << std::endl;
+	removeClient(it);
+}
+
 void Webserver::checkTime(void)
 {
 	std::time_t currentTime = std::time(NULL);
@@ -372,7 +399,7 @@ void Webserver::checkTime(void)
 						}
 					}
 				}
-				removeClient(it);
+				timeoutClient(it);
 				break;
 			}
 		}

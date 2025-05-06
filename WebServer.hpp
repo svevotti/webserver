@@ -51,6 +51,7 @@ class Webserver {
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
         std::vector<ClientHandler>::iterator    retrieveClientCGI(int fd);
         void                                    removeClient(std::vector<struct pollfd>::iterator it);
+        void timeoutClient(std::vector<struct pollfd>::iterator it);
         void checkTime(void);
         InfoServer*	matchFD( int fd );
 
