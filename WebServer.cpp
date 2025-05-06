@@ -120,13 +120,8 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
-			Logger::error("POLLOUT");
 			result = -2;
-			Logger::error("result: " + Utils::toString(result));
-			Logger::error("client fd: " + Utils::toString(it->fd));
 			result = processClient(it->fd, WRITE);
-			Logger::error("result after processClient: " + Utils::toString(result));
-			Logger::error("fd: " + Utils::toString(it->fd));
 			if (result == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
@@ -196,18 +191,12 @@ int Webserver::processClient(int fd, int event)
 	}
 	if (event == READ)
 	{
-		Logger::debug("event on pollin");
 		status = clientIt->manageRequest();
 	}
 	else
 	{
-		Logger::debug("event on pollout");
-		Logger::error("client fd: " + Utils::toString(fd));
-		Logger::error("retrieve response");
-		Logger::error("status before: " + Utils::toString(status));
 		status = clientIt->retrieveResponse();
 	}
-	Logger::error("retrieve response " + Utils::toString(status));
 	return status;
 }
 
@@ -344,7 +333,6 @@ void Webserver::closeSockets()
 
 void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
-	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 	close(it->fd);
 	this->clientsList.erase(retrieveClient(it->fd));
 	this->poll_sets.erase(it);
