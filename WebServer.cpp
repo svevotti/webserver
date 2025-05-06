@@ -5,7 +5,6 @@
 #define MAX 1024
 #define DONE 2
 
-std::string extractContent(std::string path);
 // Constructor and Destructor
 
 Webserver::Webserver(Config& file)
@@ -148,6 +147,11 @@ void Webserver::dispatchEvents()
 				close(it->fd);
 				poll_sets.erase(it);
 				clientsList.erase(clientIt);
+				return;
+			}
+			if (this->timeout == true)
+			{
+				removeClient(it);
 				return;
 			}
 			it->events = POLLIN;
@@ -297,6 +301,7 @@ void Webserver::createNewClient(int fd)
 	std::vector<pollfd> newSet = poll_sets;
 	InfoServer *server = matchFD(fd);
 	ClientHandler newClient(clientFd, *server);
+	this->timeout = false;
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }
@@ -346,16 +351,6 @@ void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 }
 
-void Webserver::timeoutResponse(int fd)
-{
-	std::string body = extractContent("./www/errors/504.html");
-	Logger::debug(body);
-	HttpResponse http(504, body);
-	std::string response = http.composeRespone("");
-	int bytes = send(fd, response.c_str(), response.size(), 0);
-	Logger::debug("bytes sent: " + Utils::toString(bytes));
-}
-
 void Webserver::checkTime(void)
 {
 	std::time_t currentTime = std::time(NULL);
@@ -383,7 +378,10 @@ void Webserver::checkTime(void)
 							break;
 						}
 					}
-					timeoutResponse(it->fd);
+					clientIt->setGateawayResponse();
+					this->timeout = true;
+					it->events = POLLOUT;
+					return;
 				}
 				removeClient(it);
 				break;

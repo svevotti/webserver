@@ -96,7 +96,7 @@ void ClientHandler::findPath(std::string str, struct Route &route)
 	route.path = newPath;
 }
 
-std::string extractContent(std::string path)
+std::string ClientHandler::extractContent(std::string path)
 {
 	std::ifstream inputFile(path.c_str(), std::ios::binary);
 	if (!inputFile)

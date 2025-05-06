@@ -61,6 +61,6 @@ class Webserver {
         int                         serverFd;
         std::vector<ClientHandler>  clientsList;
         std::vector<CGITracker>     _cgiQueue;
-
+        bool                        timeout;
 };
 #endif

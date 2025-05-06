@@ -31,6 +31,7 @@
 class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
+		void		setGateawayResponse();
 		int 		getFd(void) const;
 		int 		getCGI_Fd(void) const;
 		double 		getTime(void) const;
@@ -51,7 +52,7 @@ class ClientHandler {
 		std::string createPath(struct Route route, std::string uri);
 		void 		validateHttpHeaders(struct Route route);
 		std::string	retrievePage(struct Route route);
-		// std::string extractContent(std::string path);
+		std::string extractContent(std::string path);
 		std::string uploadFile(std::string path);
 		std::string deleteFile(std::string path);
 		std::string prepareResponse(struct Route route);
@@ -76,6 +77,5 @@ int			checkNameFile(std::string str, std::string path);
 std::string	getFileName(std::map<std::string, std::string> headers);
 std::string	getFileType(std::map<std::string, std::string> headers);
 int 		extractStatusCode(std::string str, std::string method);
-std::string extractContent(std::string path);
 
 #endif
