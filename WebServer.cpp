@@ -120,13 +120,8 @@ void Webserver::dispatchEvents()
         }
 		else if (it->revents & POLLOUT)
 		{
-			Logger::error("POLLOUT");
 			result = -2;
-			Logger::error("result: " + Utils::toString(result));
-			Logger::error("client fd: " + Utils::toString(it->fd));
 			result = processClient(it->fd, WRITE);
-			Logger::error("result after processClient: " + Utils::toString(result));
-			Logger::error("fd: " + Utils::toString(it->fd));
 			if (result == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
@@ -147,6 +142,11 @@ void Webserver::dispatchEvents()
 				close(it->fd);
 				poll_sets.erase(it);
 				clientsList.erase(clientIt);
+				return;
+			}
+			if (this->timeout == true)
+			{
+				removeClient(it);
 				return;
 			}
 			it->events = POLLIN;
@@ -191,18 +191,12 @@ int Webserver::processClient(int fd, int event)
 	}
 	if (event == READ)
 	{
-		Logger::debug("event on pollin");
 		status = clientIt->manageRequest();
 	}
 	else
 	{
-		Logger::debug("event on pollout");
-		Logger::error("client fd: " + Utils::toString(fd));
-		Logger::error("retrieve response");
-		Logger::error("status before: " + Utils::toString(status));
 		status = clientIt->retrieveResponse();
 	}
-	Logger::error("retrieve response " + Utils::toString(status));
 	return status;
 }
 
@@ -296,6 +290,7 @@ void Webserver::createNewClient(int fd)
 	std::vector<pollfd> newSet = poll_sets;
 	InfoServer *server = matchFD(fd);
 	ClientHandler newClient(clientFd, *server);
+	this->timeout = false;
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }
@@ -338,7 +333,6 @@ void Webserver::closeSockets()
 
 void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
-	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 	close(it->fd);
 	this->clientsList.erase(retrieveClient(it->fd));
 	this->poll_sets.erase(it);
@@ -360,6 +354,7 @@ void Webserver::checkTime(void)
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
 				if (clientIt->getCGI_Fd() > 0)
 				{
+					std::cout << "script\n";
 					for (int i = 0; i < poll_sets.size(); i++)
 					{
 						Logger::warn(Utils::toString(poll_sets[i].fd));
@@ -371,6 +366,10 @@ void Webserver::checkTime(void)
 							break;
 						}
 					}
+					clientIt->setGateawayResponse();
+					this->timeout = true;
+					it->events = POLLOUT;
+					return;
 				}
 				removeClient(it);
 				break;

@@ -19,6 +19,12 @@ ClientHandler::ClientHandler(int fd, InfoServer const &configInfo)
 }
 
 //Setters and Getters
+void ClientHandler::setGateawayResponse()
+{
+	std::string body = extractContent("." + this->configInfo.getSetting()["error_path"] + "/504.html");
+	HttpResponse http(504, body);
+	this->response = http.composeRespone("");
+}
 
 void ClientHandler::setResponse(std::string str)
 {

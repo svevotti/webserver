@@ -31,6 +31,7 @@
 class ClientHandler {
 	public:
 		ClientHandler(int fd, InfoServer const &configInfo);
+		void		setGateawayResponse();
 		int 		getFd(void) const;
 		int 		getCGI_Fd(void) const;
 		double 		getTime(void) const;

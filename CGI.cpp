@@ -169,7 +169,7 @@ void CGI::createEnv(const HttpRequest& request)
 
 void CGI::populateEnvVariables(const HttpRequest& request)
 {
-	Logger::debug("Populating environment variables for Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
+	// Logger::debug("Populating environment variables for Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
 
 	// Set environment variables
 	_env_map["QUERY_STRING"] = request.getQuery();
@@ -186,7 +186,7 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	_env_map["MAX_CLIENT_BODY"] = _serverInfo.getSetting()["client_max_body_size"];
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();
-	Logger::debug("DOCUMENT_ROOT=" + _env_map["DOCUMENT_ROOT"]);
+	// Logger::debug("DOCUMENT_ROOT=" + _env_map["DOCUMENT_ROOT"]);
 
 	// Set CGI processing timeout
 	// _env_map["CGI_PROCESSING_TIMEOUT"] = Utils::toString(_timeout);
@@ -255,7 +255,7 @@ void CGI::startExecution()
 		// write(STDERR_FILENO, "execve failed for ", 18);
 		// write(STDERR_FILENO, _av[0], strlen(_av[0]));
 		// write(STDERR_FILENO, "\n", 1);
-		Logger::error("execve failed for " + std::string(_av[0]) + " on Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
+		// Logger::error("execve failed for " + std::string(_av[0]) + " on Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
 		exit(1); // only reached if execve fails
 	}
 	else if (_pid > 0)// Parent process
