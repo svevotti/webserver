@@ -5,6 +5,7 @@
 #define MAX 1024
 #define DONE 2
 
+std::string extractContent(std::string path);
 // Constructor and Destructor
 
 Webserver::Webserver(Config& file)
@@ -345,31 +346,14 @@ void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 }
 
-void Webserver::timeoutClient(std::vector<struct pollfd>::iterator it)
+void Webserver::timeoutResponse(int fd)
 {
-		std::string str = "HTTP/1.1 200 OK\r\n"
-	"Content-Type: text/plain\r\n"
-	"Content-Length: 4\r\n"
-	"\r\n"
-	"ciao";
-
-	int bytes_sent = send(it->fd, str.c_str(), str.length(), 0);
-	if (bytes_sent == -1)
-	{
-        perror("send failed");
-        printf("Error number: %d\n", errno);
-        printf("Error message: %s\n", strerror(errno));
-    } else
-        printf("Sent %zd bytes\n", bytes_sent);
-	if (fcntl(it->fd, F_GETFD) != -1)
-	{
-        if (errno == EBADF)
-            std::cout << "open socket\n";
-        perror("fcntl failed");
-    }
-	std::cout << str.length() << std::endl;
-	std::cout << str << std::endl;
-	removeClient(it);
+	std::string body = extractContent("./www/errors/504.html");
+	Logger::debug(body);
+	HttpResponse http(504, body);
+	std::string response = http.composeRespone("");
+	int bytes = send(fd, response.c_str(), response.size(), 0);
+	Logger::debug("bytes sent: " + Utils::toString(bytes));
 }
 
 void Webserver::checkTime(void)
@@ -387,6 +371,7 @@ void Webserver::checkTime(void)
 				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
 				if (clientIt->getCGI_Fd() > 0)
 				{
+					std::cout << "script\n";
 					for (int i = 0; i < poll_sets.size(); i++)
 					{
 						Logger::warn(Utils::toString(poll_sets[i].fd));
@@ -398,8 +383,9 @@ void Webserver::checkTime(void)
 							break;
 						}
 					}
+					timeoutResponse(it->fd);
 				}
-				timeoutClient(it);
+				removeClient(it);
 				break;
 			}
 		}

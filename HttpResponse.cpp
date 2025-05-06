@@ -38,6 +38,7 @@ HttpResponse::HttpResponse(int code, std::string str)
 	this->mapStatusCode.insert(std::pair<int, std::string>(500, "500 Internal Server Error"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(501, "501 Not Implemented"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(503, "503 Service Unavailabled"));
+	this->mapStatusCode.insert(std::pair<int, std::string>(504, "504 Gateaway Timeout"));
 	this->mapStatusCode.insert(std::pair<int, std::string>(505, "505 HTTP Version Not Supported"));
 }
 
