@@ -157,6 +157,30 @@ void ClientHandler::redirectClient(struct Route &route)
 	this->response = http.composeRespone("");
 }
 
+std::string ClientHandler::createBodyError(int code, std::string str)
+{
+	struct Route errorRoute;
+	std::string body;
+
+	errorRoute = this->configInfo.getRoute()["/" + Utils::toString(code)];
+	if (!errorRoute.uri.empty())
+	{
+		std::string path;
+		std::string file;
+		path = errorRoute.path.substr(0, errorRoute.path.find_last_of("/") + 1);
+		if (errorRoute.locSettings.find("return") != errorRoute.locSettings.end())
+		{
+			file = errorRoute.locSettings.find("return")->second;
+		}
+		path += file;
+		Logger::debug(path);
+		body = extractContent(path);
+	}
+	else
+		body = str;
+	return body;
+}
+
 int ClientHandler::manageRequest()
 {
 	int result;
@@ -210,7 +234,10 @@ int ClientHandler::manageRequest()
 		}
 		catch (const HttpException &e)
 		{
-			HttpResponse http(e.getCode(), e.getBody());
+			std::string body;
+
+			body = createBodyError(e.getCode(), e.getBody());
+			HttpResponse http(e.getCode(), body);
 			this->response = http.composeRespone("");
 			Logger::error(Utils::toString(e.getCode()) + " " + e.what());
 		}

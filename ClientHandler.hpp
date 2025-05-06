@@ -59,6 +59,7 @@ class ClientHandler {
 		int 		createResponse(void);
 		int			retrieveResponse(void);
 		int 		isCgi(std::string str);
+		std::string createBodyError(int code, std::string str);
 
 	private:
 	int 		client_fd;
