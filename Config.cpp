@@ -1,4 +1,5 @@
 #include "Config.hpp"
+#include "Utils.hpp"
 
 //default constructor (only for orthodox form)
 //Copy constructor
@@ -29,11 +30,15 @@ Config::~Config() {
 	std::vector<InfoServer*>::iterator	servIt;
 
 	for(servIt = _servlist.begin(); servIt != _servlist.end(); servIt++)
-		delete (*servIt);
+	{
+		if (*servIt)
+			delete (*servIt);
+	}
 }
 
 //Constructor that takes a configFile as argument
 Config::Config( const std::string& configFile) {
+	_servcount = 0;
 	parseConfigFile(configFile);
 	//Handle return from parseConfigFile
 }
@@ -76,7 +81,7 @@ bool	Config::ft_validServer( void )
 	server = (*this).getServList();
 	if (server.empty())
 	{
-		std::cout << "Error! No server was properly parsed!" << std::endl;
+		Logger::error("Error! No server was properly parsed!");
 		return false;
 	}
 	for(servIt = server.begin(); servIt != server.end(); servIt++)
@@ -85,13 +90,13 @@ bool	Config::ft_validServer( void )
 		inserted = s_port.insert(name_port);
 		if (!inserted.second)
 		{
-			std::cout << "Error, two servers have the same port!" << std::endl;
+			Logger::error("Error, two servers have the same port!");
 			return false;
 		}
 	}
 	if ((int) s_port.size() != _servcount)
 	{
-		std::cout << "Error, not all servers were parsed!" << std::endl;
+		Logger::error("Error, not all servers were parsed!");
 		return false;
 	}
 	return true;
@@ -148,7 +153,7 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				if (route.internal)
 					route.path =("." + settingMap["error_path"] + route.uri);
 				else
-				route.path =("." + settingMap["root"] + route.uri);
+					route.path =("." + settingMap["root"] + route.uri);
 			}
 			if (!route.uri.empty() && !route.path.empty()) //Add a uri != path?
 			{
@@ -157,7 +162,12 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				server->setRoutes(route.uri, route);
 				return true;
 			}
-			std::cout << "Error is in " << location << std::endl;
+			Logger::error("Error is in " + location);
+			return false;
+		}
+		else if (isLocationLine(line))
+		{
+			Logger::error("Error: Location block start found inside another location block: " + line);
 			return false;
 		}
 		else
@@ -208,7 +218,14 @@ bool	Config::parseServer(std::istream &conf)
 			delete server;
 			return false; //Check if memory is lost and I need to add a delete here
 		}
-		else if (line.find("location ") != std::string::npos) //If we find a location block, we need to parse it
+		if (isServerLine(line))
+		{
+			Logger::error("Unexpected server block inside another server: \"" + line +"\", aborting parsing");
+			delete server;
+			return false;
+		}
+		int	IsLocation = isLocationLine(line);
+		if (IsLocation == 1) //If we find a location block, we need to parse it
 		{
 			line = line.substr(line.find("location ") + 9); //Remove the "location " bit of the line
 			size_t n = line.find(" ");
@@ -218,8 +235,18 @@ bool	Config::parseServer(std::istream &conf)
 				location = location.substr(0, location.size() - 1);
 			location_ok = parseLocation(conf, server, location);
 			if (location_ok == false)
-				std::cerr << "Error in location block!" << std::endl;
+			{
+				Logger::error("Error in location block: " + location);
+				delete server;
+				return false;
+			}
 			location_ok = false;
+		}
+		else if (IsLocation == 2)
+		{
+			Logger::error("Error in parsing of location block: " + line);
+			delete server;
+			return false;
 		}
 		else //It's a line that we need to split into key and value
 		{
@@ -238,14 +265,14 @@ bool	Config::parseServer(std::istream &conf)
 					if(atoi(value.c_str()) > 0 && atoi(value.c_str()) < 65535 && (value.find_first_not_of("0123456789") == std::string::npos))
 						server->setPort(value); //Saved as string, change to int?
 					else
-						std::cerr << "Incorrect port value: " << value << std::endl;
+					Logger::error("Incorrect port value: " + value);
 				}
 				if (key == "server_name") //host?
 				{
 					if (server->isIPValid(value))
 						server->setIP(value); //Saved as string
 					else
-						std::cerr << "Incorrect IP: " << value << std::endl;
+						Logger::error("Incorrect IP: " + value);
 				}
 				if (key == "root")
 					server->setRoot(value);
@@ -256,7 +283,7 @@ bool	Config::parseServer(std::istream &conf)
 			//If there is a line that is not a key	value it is ignored, keep in mind
 		}
 	}
-	std::cout << "This should not have happened (parseServer)" << std::endl;
+	Logger::error("This should not have happened (parseServer)");
 	delete server;
 	return false; //We should never get here, so if we do, something is messed up somewhere
 }
@@ -276,6 +303,34 @@ bool	Config::trimLine(std::string& line)
 	return (true);
 }
 
+int	Config::isLocationLine(std::string const line)
+{
+	if (line.find("{") == std::string::npos)
+		return 0;
+	if ((line.find("location ") != std::string::npos) && (line.find("{")+1 == line.length()))
+		return 1;
+	if (line.find("location ") != std::string::npos)
+	{
+		Logger::warn("New location block found, but incorrectly parsed: \"" + line + "\". Exiting parser");
+		return 2;
+	}
+	return 0;
+}
+
+int	Config::isServerLine(std::string const line)
+{
+	if (line.find("{") == std::string::npos)
+		return 0;
+	if ((line.find("server ") != std::string::npos) && (line.find("{")+1 == line.length()))
+		return 1;
+	if (line.find("server ") != std::string::npos)
+	{
+		Logger::warn("New server line found, but incorrectly parsed: \"" + line + "\". Exiting parser");
+		return 2;
+	}
+	return 0;
+}
+
 //Parses the config file and populates all the attributes of the Config class
 bool	Config::parseConfigFile(const std::string &configFile)
 {
@@ -286,7 +341,7 @@ bool	Config::parseConfigFile(const std::string &configFile)
 
 	if (!conf) //Checks if the file is accessible
 	{
-		std::cerr << "Error: Unable to open file " << configFile << std::endl;
+		Logger::error("Error: Unable to open file " + configFile);
 		return false;
 	}
 
@@ -297,12 +352,21 @@ bool	Config::parseConfigFile(const std::string &configFile)
 		if (!trimLine(line))
 			continue;
 
-		if (line.find("server ") != std::string::npos)
+		int IsServer = isServerLine(line);
+		if (IsServer == 1)
 		{
 			_servcount++;
 			started_server = parseServer(conf);
 			if (started_server == false)
-				std::cout << "Something went wrong in parseServer, skipped one server" <<std::endl;
+			{
+				Logger::error("Something went wrong in parseServer, abort");
+				return false;
+			}
+		}
+		else if (IsServer == 2)
+		{
+			_servcount++;
+			return false;
 		}
 	// 	//Look for info, locations have space separators, while parameters have \t
 	// 	size_t pos = line.find('\t');
@@ -342,7 +406,7 @@ bool	Config::parseConfigFile(const std::string &configFile)
 	// //Here I would run isValid() to check if all essential info is there. isValid should also add as default those that are missing and a default is available
 	// _valid = true;
 	}
-	std::cout << "All good!" <<std::endl;
+	Logger::debug("Configuration file read completely!");
 	//What if server is empty for some reason? Add check to exit
 	return true;
 }

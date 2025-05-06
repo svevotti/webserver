@@ -95,8 +95,8 @@ bool	test(Config &conf)
 	return true;
 }
 
-Config*	configuration = new Config("default.conf");
-Webserver* server = new Webserver(*configuration);
+Config*	configuration;
+Webserver* server;
 
 void signal_handler(int sig)
 {
@@ -116,23 +116,36 @@ void signal_handler(int sig)
     exit(0);
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
-	//Config	configuration("default.conf");
+	if (argc != 2)
+	{
+		Logger::error("Program usage: ./webserver <configuration>");
+		return 1;
+	}
+	configuration = new Config(argv[1]);
 
 	signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
 	if (configuration->ft_validServer())
 	{
-		//Webserver 	server(configuration);
+		server = new Webserver(*configuration);
 		if (server->startServer() == -1)
 		{
 			Logger::error("Could not start the server");
+			delete server;
+			delete configuration;
 			return 1;
 		}
 	}
 	else
-		Logger::error("Parsing configuration file");
+	{
+		Logger::error("Error while parsing configuration file");
+		delete configuration;
+		return (1);
+	}
+	delete server;
+	delete configuration;
 	return (0);
 }
