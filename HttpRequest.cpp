@@ -347,7 +347,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
-	delete b;
+	delete [] b;
 }
 
 struct section HttpRequest::extractSections(std::string buffer, int firstB, int secondB, std::string b)

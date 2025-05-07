@@ -123,7 +123,7 @@ int ClientHandler::checkRequestStatus(void)
 		int end = stringLowerCases.find("\r\n", this->raw_data.find("content-length"));
 		int bytes_expected = Utils::toInt(this->raw_data.substr(start, end - start));
 		std::string onlyHeaders = this->raw_data.substr(0, this->raw_data.find("\r\n\r\n"));
-		if (this->totbytes < bytes_expected + onlyHeaders.size())
+		if (this->totbytes < (int) (bytes_expected + onlyHeaders.size())) //Potential source of errors
 			return 0;
 	}
 	if (stringLowerCases.find("transfer-encoding") != std::string::npos)
@@ -173,7 +173,7 @@ std::string ClientHandler::createBodyError(int code, std::string str)
 			file = errorRoute.locSettings.find("return")->second;
 		}
 		path += file;
-		Logger::debug(path);
+		//Logger::debug(path);
 		body = extractContent(path);
 	}
 	else
@@ -307,9 +307,9 @@ std::string ClientHandler::uploadFile(std::string path)
 	sectionBody = request.getHttpSection();
 	headersBody = sectionBody.myMap;
 	binaryBody = sectionBody.body;
-	Logger::debug(Utils::toString(binaryBody.size()));
-	Logger::debug(this->configInfo.getSetting()["client_max_body_size"]);
-	if (binaryBody.size() > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"]))
+	//Logger::debug(Utils::toString(binaryBody.size()));
+	//Logger::debug(this->configInfo.getSetting()["client_max_body_size"]);
+	if ((int) binaryBody.size() > Utils::toInt(this->configInfo.getSetting()["client_max_body_size"])) //Potential source of errors
 			throw PayLoadTooLargeException();
 	if (binaryBody.empty())
 	{
@@ -401,7 +401,7 @@ int ClientHandler::readStdout(int fd)
 			break;
 		this->raw_data.append(buffer, res);
 	}
-	Logger::debug("bytes read: " + Utils::toString(this->raw_data.size()));
+	//Logger::debug("bytes read: " + Utils::toString(this->raw_data.size()));
 	// if (res > 0)
 	// 	return 0;
 	if (res == -1 && this->totbytes == 0)

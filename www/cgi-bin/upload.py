@@ -70,9 +70,9 @@ def save_uploaded_file(upload_dir):
     if not os.path.exists(abs_upload_dir):
         try:
             os.makedirs(abs_upload_dir, 0o755)
-            logging.debug("Created upload directory: %s" % abs_upload_dir)
+            #logging.debug("Created upload directory: %s" % abs_upload_dir)
         except OSError as e:
-            logging.debug("Error creating upload directory %s: %s" % (abs_upload_dir, str(e)))
+            #logging.debug("Error creating upload directory %s: %s" % (abs_upload_dir, str(e)))
             send_json_response(500, "Internal Server Error", ERROR_MESSAGES[500])
 
     # Check directory writability
@@ -95,15 +95,15 @@ def save_uploaded_file(upload_dir):
         # logging.debug("File data size: %d bytes" % len(file_data))
         with open(full_filename, "wb") as f:
             bytes_written = f.write(raw_input)
-            logging.debug("Bytes written: %d" % bytes_written)
+            #logging.debug("Bytes written: %d" % bytes_written)
             f.flush()
             os.fsync(f.fileno())
-        logging.debug("File exists after write: %s" % os.path.exists(filename))
+        #logging.debug("File exists after write: %s" % os.path.exists(filename))
 
         # Success response
         send_json_response(201, "CREATED", "Upload Grooved to Perfection, Baby!")
     except Exception as e:
-        logging.debug("Error processing file: %s" % str(e))
+        #logging.debug("Error processing file: %s" % str(e))
         send_json_response(500, "Internal Server Error", ERROR_MESSAGES[500])
 
 if __name__ == "__main__":

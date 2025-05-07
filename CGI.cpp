@@ -123,13 +123,13 @@ void CGI::createAv()
 	//Argument 1 is the script
 	_av[1] = strdup(_cgi_path.c_str()); // Script/file path as argument
 	//Argument 2 is where it will be uploaded
-	Logger::debug("Upload dir " + _upload_dir);
+	//Logger::debug("Upload dir " + _upload_dir);
 	if(_upload_dir == "")
 		_av[2] = NULL;
 	else
 	{
 		_av[2] = strdup(_upload_dir.c_str());
-		Logger::debug(std::string(_av[2]));
+		//Logger::debug(std::string(_av[2]));
 	}
 	_av[3] = NULL;
 
@@ -137,7 +137,7 @@ void CGI::createAv()
 	std::string args = _av[2] ?
 		(std::string(_av[0]) + ", " + _av[1] + ", " + _av[2]) :
 		(std::string(_av[0]) + ", " + _av[1]);
-	Logger::debug("CGI arguments: [" + args + "]");
+	//Logger::debug("CGI arguments: [" + args + "]");
 }
 
 void CGI::createEnv(const HttpRequest& request)
@@ -148,7 +148,7 @@ void CGI::createEnv(const HttpRequest& request)
 	size_t i = 0;
 	std::map<std::string, std::string>::const_iterator env_it;
 
-	Logger::debug("Creating environment variables for Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
+	//Logger::debug("Creating environment variables for Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
 
 	for (env_it = _env_map.begin(); env_it != _env_map.end(); ++env_it)
 	{
@@ -203,14 +203,14 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	if (_request_method == "POST")
 	{
 		_env_map["CONTENT_LENGTH"] = request.getHttpContentLength();
-		Logger::debug("CONTENT_LENGTH set to: " + _env_map["CONTENT_LENGTH"]);
+		//Logger::debug("CONTENT_LENGTH set to: " + _env_map["CONTENT_LENGTH"]);
 
 		// Retrieve headers and set CONTENT_TYPE if available
 		_env_map["CONTENT_TYPE"] = request.getHttpContentType();
 		// if (it != headers.end())
 		// {
 		// 	_env_map["CONTENT_TYPE"] = it->second;
-		Logger::debug("CONTENT_TYPE set to: " + _env_map["CONTENT_TYPE"]);
+		//Logger::debug("CONTENT_TYPE set to: " + _env_map["CONTENT_TYPE"]);
 		// }
 		// else
 		// 	Logger::warn("No Content-Type header for POST request; CONTENT_TYPE not set");
@@ -218,7 +218,7 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	else // Handle GET requests
 	{
 		_env_map["CONTENT_LENGTH"] = "0";
-		Logger::debug("Non-POST request: CONTENT_LENGTH=0");
+		//Logger::debug("Non-POST request: CONTENT_LENGTH=0");
 	}
 }
 
@@ -230,10 +230,10 @@ void CGI::startExecution()
 	pipe(pipe_in);
 	pipe(pipe_out);
 	_pid = fork();
-	Logger::debug("Checking env");
-	for (int i = 0; _env[i]; i++)
-		Logger::debug(std::string(_env[i]));
-	Logger::debug("get pid: " + Utils::toString(getpid()));
+	//Logger::debug("Checking env");
+	//for (int i = 0; _env[i]; i++)
+	//	Logger::debug(std::string(_env[i]));
+	//Logger::debug("get pid: " + Utils::toString(getpid()));
 	if (_pid == 0 ) //child
 	{
 		signal(SIGPIPE, SIG_IGN);// Mark SIGPIPE to prevent crashes

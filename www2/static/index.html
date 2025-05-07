@@ -279,8 +279,8 @@
                                 console.error('JSON parsing failed:', e);
                                 throw new Error('Invalid JSON response: ' + jsonText);
                             }
-                            if (data.status === 200 && jsonData.status === 'ok') {
-                                console.log('Success case: 200 OK');
+                            if (data.status === 201 && jsonData.status === 'created') {
+                                console.log('Success case: 201 CREATED');
                                 successMsg.textContent = jsonData.message;
                                 successMsg.style.display = 'block';
                                 setTimeout(() => successMsg.style.display = 'none', 3000);
@@ -289,7 +289,13 @@
                                 successMsg.textContent = jsonData.message;
                                 successMsg.style.display = 'block';
                                 setTimeout(() => successMsg.style.display = 'none', 3000);
-                            } else {
+                            } else if (data.status === 413 && jsonData.status === 'payload too large') {
+                                console.log('Payload Too Large case: 413 Payload Too Large detected in CGI');
+                                successMsg.textContent = jsonData.message;
+                                successMsg.style.display = 'block';
+                                setTimeout(() => successMsg.style.display = 'none', 3000);
+                            }
+                            else {
                                 console.log('Unexpected JSON status:', data.status, 'with jsonData.status:', jsonData.status);
                                 throw new Error('Unexpected JSON response status: ' + data.status);
                             }
