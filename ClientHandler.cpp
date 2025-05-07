@@ -229,7 +229,28 @@ int ClientHandler::manageRequest()
 			else
 			{
 				if (route.locSettings.find("redirect") != route.locSettings.end())
-					redirectClient(route);
+				{
+					struct Route redirectRoute;
+					redirectRoute = this->configInfo.getRoute()[route.locSettings.find("redirect")->second];
+					if (redirectRoute.path.empty())
+					{
+						std::string locationPath;
+						locationPath = findDirectory(route.locSettings.find("redirect")->second);
+						struct Route newRoute;
+						newRoute = this->configInfo.getRoute()[locationPath];
+						redirectRoute = newRoute;
+						std::string newPath;
+						newPath = createPath(redirectRoute, route.locSettings.find("redirect")->second);
+						redirectRoute.path.clear();
+						redirectRoute.path = newPath;
+					}
+					route.path.clear();
+					route.path = redirectRoute.path;
+					route.methods = this->configInfo.getRoute()[redirectRoute.locSettings.find("redirect")->second].methods;
+					HttpResponse http(Utils::toInt(route.locSettings.find("status")->second), "");
+					http.setUriLocation(redirectRoute.uri);
+					this->response = http.composeRespone("");
+				}
 				else
 					this->response = prepareResponse(route);
 				Logger::info("It is static");
