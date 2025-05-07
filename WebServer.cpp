@@ -230,8 +230,8 @@ int Webserver::processCGI(int fd)
 		return 0;
 	}
 	status = clientIt->readStdout(fd);
-	if (status == DONE)
-		status = clientIt->createResponse();
+	// if (status == DONE)
+	clientIt->createResponse();
 	return status;
 }
 
