@@ -100,11 +100,13 @@ void Webserver::dispatchEvents()
 				result = processClient(it->fd, READ);
 				if (result == DISCONNECTED)
 				{
-					Logger::debug("event on it->fd: " + Utils::toString(it->fd));
-					std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
+					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
+					Logger::info("fd cgi: " + Utils::toString(clientIt->getCGI_Fd()));
 					if (clientIt->getCGI_Fd() > 0)
 					{
-						close(clientIt->getCGI_Fd());
+						Logger::info("pid process when disconnecting client: " + Utils::toString(clientIt->getPid()));
+						if (clientIt->getPid() > 1)
+							kill(clientIt->getPid(), SIGTERM);
 						for (int i = 0; i < poll_sets.size(); i++)
 						{
 							if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
@@ -124,7 +126,7 @@ void Webserver::dispatchEvents()
 					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
 					if (clientIt->getCGI_Fd() > 0)
 					{
-						std::cout << "before add to poll: " << clientIt->getCGI_Fd() << std::endl;
+						std::cout << "add to the poll: " << clientIt->getCGI_Fd() << std::endl;
 						struct pollfd CGIPoll;
 
 						CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
