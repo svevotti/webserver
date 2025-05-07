@@ -142,6 +142,21 @@ void Webserver::dispatchEvents()
 			if (result == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
+				std::vector<ClientHandler>::iterator clientIt;
+				clientIt = retrieveClient(it->fd);
+				if (clientIt->getCGI_Fd() > 0)
+				{
+					for (size_t i = 0; i < poll_sets.size(); i++)
+					{
+						if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
+							close(clientIt->getCGI_Fd());
+							poll_sets.erase(poll_sets.begin() + i);
+							break;
+						}
+					}
+				}
+				removeClient(it);
+				return;
 			}
 			std::vector<ClientHandler>::iterator clientIt;
 			clientIt = retrieveClient(it->fd);

@@ -172,6 +172,8 @@ std::string ClientHandler::createBodyError(int code, std::string str)
 		{
 			file = errorRoute.locSettings.find("return")->second;
 		}
+		else
+			return str;
 		path += file;
 		//Logger::debug(path);
 		body = extractContent(path);
