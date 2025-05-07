@@ -184,7 +184,7 @@ void Webserver::dispatchEvents()
 		{
 			Logger::debug("POLLINVAL");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
-			poll_sets.erase(it);
+			removeClient(it);
 			return;
 		}
 		else
