@@ -57,9 +57,7 @@ int	Webserver::startServer()
 			Logger::debug("Poll timeout: no events");
 		else
 			dispatchEvents();
-		std::cout << "exit dispatch\n";
 		checkTime();
-		std::cout << "after timecheck\n";
 	}
 	return 0;
 }
@@ -101,10 +99,8 @@ void Webserver::dispatchEvents()
 				if (result == DISCONNECTED)
 				{
 					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
-					Logger::info("fd cgi: " + Utils::toString(clientIt->getCGI_Fd()));
 					if (clientIt->getCGI_Fd() > 0)
 					{
-						Logger::info("pid process when disconnecting client: " + Utils::toString(clientIt->getPid()));
 						if (clientIt->getPid() > 1)
 							kill(clientIt->getPid(), SIGTERM);
 						for (int i = 0; i < poll_sets.size(); i++)
@@ -126,7 +122,6 @@ void Webserver::dispatchEvents()
 					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
 					if (clientIt->getCGI_Fd() > 0)
 					{
-						std::cout << "add to the poll: " << clientIt->getCGI_Fd() << std::endl;
 						struct pollfd CGIPoll;
 
 						CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
@@ -210,13 +205,9 @@ int Webserver::processClient(int fd, int event)
 		return 0;
 	}
 	if (event == READ)
-	{
 		status = clientIt->manageRequest();
-	}
 	else
-	{
 		status = clientIt->retrieveResponse();
-	}
 	return status;
 }
 
@@ -232,7 +223,6 @@ int Webserver::processCGI(int fd)
 		return 0;
 	}
 	status = clientIt->readStdout(fd);
-	// if (status == DONE)
 	clientIt->createResponse();
 	return status;
 }
@@ -354,7 +344,6 @@ void Webserver::closeSockets()
 void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
-	Logger::debug("even on it->fd: " + Utils::toString(it->fd));
 	close(it->fd);
 	if (retrieveClient(it->fd) != this->clientsList.end())
 		this->clientsList.erase(retrieveClient(it->fd));
@@ -373,10 +362,8 @@ void Webserver::checkTime(void)
 		{
 			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
-				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
 				if (clientIt->getCGI_Fd() > 0)
 				{
-					std::cout << "script\n";
 					for (int i = 0; i < poll_sets.size(); i++)
 					{
 						Logger::warn(Utils::toString(poll_sets[i].fd));
@@ -394,7 +381,6 @@ void Webserver::checkTime(void)
 					it->events = POLLOUT;
 					return;
 				}
-				std::cout << "in check timeout\n";
 				removeClient(it);
 				break;
 			}
