@@ -216,6 +216,8 @@ int ClientHandler::manageRequest()
 					upload_dir = "";
 				if (access(route.path.c_str(), F_OK) != 0)
 					throw NotFoundException();
+				if (access(route.path.c_str(), X_OK) != 0)
+					throw ForbiddenException();
 				CGI	cgi(request, upload_dir, route.path, configInfo);
 				internal_fd = cgi.getFD();
 				this->raw_data.clear();

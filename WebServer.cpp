@@ -67,12 +67,12 @@ void Webserver::dispatchEvents()
 	std::vector<struct pollfd>::iterator it;
 	int result = -2;
 
-    for (it = poll_sets.begin(); it != poll_sets.end();)
-    {
+	for (it = poll_sets.begin(); it != poll_sets.end();)
+	{
 		//Logger::debug("Client: " + Utils::toString(it->fd));
 		result = 0;
-        if (it->revents & POLLIN)
-        {
+		if (it->revents & POLLIN)
+		{
 			//Logger::debug("POLLIN");
 			if (fdIsServerSocket(it->fd) == true)
 				createNewClient(it->fd);
@@ -126,6 +126,7 @@ void Webserver::dispatchEvents()
 
 						CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
 						CGIPoll.events = POLLIN;
+						CGIPoll.revents = 0;
 						poll_sets.push_back(CGIPoll);
 						//Logger::info("CGI set up");
 						//Logger::debug("Client fd after setting up CGI: " + Utils::toString(it->fd));
@@ -275,6 +276,7 @@ void Webserver::addServerSocketsToPoll(int fd)
 
 	serverPoll[0].fd = fd;
 	serverPoll[0].events = POLLIN;
+	serverPoll[0].revents = 0;
 	this->poll_sets.push_back(serverPoll[0]);
 	Logger::info("Add server sockets to poll sets");
 }
@@ -296,6 +298,7 @@ void Webserver::createNewClient(int fd)
 	}
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
+	clientPoll.revents = 0;
 	this->poll_sets.push_back(clientPoll);
 	std::vector<pollfd> newSet = poll_sets;
 	InfoServer *server = matchFD(fd);
