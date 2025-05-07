@@ -100,6 +100,20 @@ void Webserver::dispatchEvents()
 				result = processClient(it->fd, READ);
 				if (result == DISCONNECTED)
 				{
+					Logger::debug("event on it->fd: " + Utils::toString(it->fd));
+					std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
+					if (clientIt->getCGI_Fd() > 0)
+					{
+						close(clientIt->getCGI_Fd());
+						for (int i = 0; i < poll_sets.size(); i++)
+						{
+							if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
+								close(clientIt->getCGI_Fd());
+								poll_sets.erase(poll_sets.begin() + i);
+								break;
+							}
+						}
+					}
 					removeClient(it);
                     return ;
 				}
@@ -107,14 +121,18 @@ void Webserver::dispatchEvents()
 					it->events = POLLOUT;
 				else if (result == 3)
 				{
-					struct pollfd CGIPoll;
+					std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
+					if (clientIt->getCGI_Fd() > 0)
+					{
+						struct pollfd CGIPoll;
 
-					CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
-					CGIPoll.events = POLLIN;
-					poll_sets.push_back(CGIPoll);
-					Logger::info("CGI set up");
-					Logger::debug("Client fd after setting up CGI: " + Utils::toString(it->fd));
-					Logger::debug("CGI fd after setting up CGI: " + Utils::toString(retrieveClient(it->fd)->getCGI_Fd()));
+						CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
+						CGIPoll.events = POLLIN;
+						poll_sets.push_back(CGIPoll);
+						Logger::info("CGI set up");
+						Logger::debug("Client fd after setting up CGI: " + Utils::toString(it->fd));
+						Logger::info("CGI fd after setting up CGI: " + Utils::toString(retrieveClient(it->fd)->getCGI_Fd()));
+					}
 				}
 			}
         }
@@ -132,7 +150,6 @@ void Webserver::dispatchEvents()
 			{
 				for (int i = 0; i < poll_sets.size(); i++)
 				{
-					Logger::warn(Utils::toString(poll_sets[i].fd));
 					if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
 						close(clientIt->getCGI_Fd());
 						poll_sets.erase(poll_sets.begin() + i);
@@ -333,10 +350,12 @@ void Webserver::closeSockets()
 
 void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
-	close(it->fd);
-	this->clientsList.erase(retrieveClient(it->fd));
-	this->poll_sets.erase(it);
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
+	Logger::debug("even on it->fd: " + Utils::toString(it->fd));
+	close(it->fd);
+	if (retrieveClient(it->fd) != this->clientsList.end())
+		this->clientsList.erase(retrieveClient(it->fd));
+	this->poll_sets.erase(it);
 }
 
 void Webserver::checkTime(void)
@@ -360,6 +379,7 @@ void Webserver::checkTime(void)
 						Logger::warn(Utils::toString(poll_sets[i].fd));
 						if (poll_sets[i].fd == clientIt->getCGI_Fd())
 						{
+							Logger::debug("pid: " + Utils::toString(clientIt->getPid()));	
 							kill(clientIt->getPid(), SIGTERM);
 							close(clientIt->getCGI_Fd());
 							poll_sets.erase(poll_sets.begin() + i);
@@ -371,6 +391,7 @@ void Webserver::checkTime(void)
 					it->events = POLLOUT;
 					return;
 				}
+				std::cout << "in check timeout\n";
 				removeClient(it);
 				break;
 			}

@@ -122,6 +122,7 @@ int main(void)
 
 	signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+	signal(SIGPIPE, SIG_IGN);
 
 	if (configuration->ft_validServer())
 	{

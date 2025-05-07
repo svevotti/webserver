@@ -3,6 +3,7 @@
 
 #include "HttpRequest.hpp"
 #include "ClientHandler.hpp"
+#include "HttpException.hpp"
 #include "Config.hpp"
 #include "Logger.hpp"
 #include <iostream>
@@ -19,6 +20,13 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fstream>
+
+class CGIException : public std::runtime_error {
+
+    public:
+        explicit CGIException(const std::string& message) : std::runtime_error(message) {}
+
+};
 
 class CGI {
 

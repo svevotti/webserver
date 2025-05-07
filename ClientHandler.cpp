@@ -254,7 +254,6 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 	char buffer[BUFFER];
 
 	Utils::ft_memset(buffer, 0, sizeof(buffer));
-	Logger::error("buffer error memset");
 	res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
 	if (res > 0)
 		str.append(buffer, res);
