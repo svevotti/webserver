@@ -254,7 +254,6 @@ int ClientHandler::readData(int fd, std::string &str, int &bytes)
 	char buffer[BUFFER];
 
 	Utils::ft_memset(buffer, 0, sizeof(buffer));
-	Logger::error("buffer error memset");
 	res = recv(fd, buffer, BUFFER, MSG_DONTWAIT);
 	if (res > 0)
 		str.append(buffer, res);
@@ -276,7 +275,7 @@ int ClientHandler::retrieveResponse(void)
 	this->totbytes = 0;
 	this->request.cleanProperties();
 	this->startingTime = time(NULL);
-	return this->internal_fd;
+	return bytes;
 }
 
 std::string ClientHandler::retrievePage(struct Route route)
@@ -393,12 +392,19 @@ int ClientHandler::readStdout(int fd)
 {
 	int res = 0;
 	char buffer[BUFFER];
-	Utils::ft_memset(buffer, 0, sizeof(buffer));
-	res = read(fd, buffer, BUFFER - 1);
-	this->raw_data.append(buffer, res);
-	if (res > 0)
-		return 0;
-	else if (res == -1 && this->totbytes == 0)
+	///if don't read all from the pipe right away it goes to POLLHUP
+	while (1)
+	{
+		Utils::ft_memset(buffer, 0, sizeof(buffer));
+		res = read(fd, buffer, BUFFER - 1);
+		if (res == 0)
+			break;
+		this->raw_data.append(buffer, res);
+	}
+	Logger::debug("bytes read: " + Utils::toString(this->raw_data.size()));
+	// if (res > 0)
+	// 	return 0;
+	if (res == -1 && this->totbytes == 0)
 		return 1;
 	return 2;
 }

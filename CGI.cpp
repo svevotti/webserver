@@ -22,8 +22,8 @@ CGI::CGI(const HttpRequest& request, const std::string& upload_dir, const std::s
 	// _timeout(serverInfo.getCGIProcessingTimeout()),
 	_serverInfo(serverInfo)
 {
-	try
-	{
+	// try
+	// {
 		// Logger::debug("Initializing CGI for Server " + _serverInfo.getIP() + ":" + _serverInfo.getPort());
 		// std::string content_type = request.getHttpHeaders().count("content-type") ? request.getHttpHeaders().find("content-type")->second : "";
 		// Logger::debug("Content-Type: " + content_type);
@@ -39,12 +39,12 @@ CGI::CGI(const HttpRequest& request, const std::string& upload_dir, const std::s
 		createAv();
 		createEnv(request);
 		startExecution();
-	}
-	catch (const std::exception& e)
-	{
-		// closePipes();
-		// throw CGIException("CGI init failed: " + std::string(e.what()));
-	}
+	// }
+	// catch (const std::exception& e)
+	// {
+	// 	// closePipes();
+	// 	// throw CGIException("CGI init failed: " + std::string(e.what()));
+	// }
 }
 
 CGI::~CGI()
@@ -112,12 +112,12 @@ void CGI::createAv()
 	// Extract the file extension from cgi_path
 	//Argument zero is where to find the command to run the script
 	std::string extension = _cgi_path.substr(_cgi_path.find_last_of("."));
-	if (_serverInfo.getCGI().locSettings["cgi_extension"].find(extension) == std::string::npos)
+	if (_serverInfo.getCGI().locSettings["cgi_extension"].find(extension) == std::string::npos && _serverInfo.getCGI().locSettings["cgi_extension"].find(extension) != 0)
 		throw UnsupportedMediaTypeException();
 	if (extension.find(".py") != std::string::npos)
 		_av[0] = strdup("/usr/bin/python3");
 	else if (extension.find(".php") != std::string::npos)
-		_av[0] = strdup("/opt/homebrew/bin/php"); ///usr/bin/php-cgi or /opt/homebrew/bin/php
+		_av[0] = strdup("/usr/bin/php-cgi"); ///usr/bin/php-cgi or /opt/homebrew/bin/php
 	else
 		throw InternalServerErrorException();
 	//Argument 1 is the script
@@ -233,6 +233,7 @@ void CGI::startExecution()
 	Logger::debug("Checking env");
 	for (int i = 0; _env[i]; i++)
 		Logger::debug(std::string(_env[i]));
+	Logger::debug("get pid: " + Utils::toString(getpid()));
 	if (_pid == 0 ) //child
 	{
 		signal(SIGPIPE, SIG_IGN);// Mark SIGPIPE to prevent crashes
