@@ -275,7 +275,7 @@ int ClientHandler::retrieveResponse(void)
 	this->totbytes = 0;
 	this->request.cleanProperties();
 	this->startingTime = time(NULL);
-	return this->internal_fd;
+	return bytes;
 }
 
 std::string ClientHandler::retrievePage(struct Route route)

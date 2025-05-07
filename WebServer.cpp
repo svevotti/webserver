@@ -121,9 +121,10 @@ void Webserver::dispatchEvents()
 					it->events = POLLOUT;
 				else if (result == 3)
 				{
-					std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
+					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
 					if (clientIt->getCGI_Fd() > 0)
 					{
+						std::cout << "before add to poll: " << clientIt->getCGI_Fd() << std::endl;
 						struct pollfd CGIPoll;
 
 						CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
