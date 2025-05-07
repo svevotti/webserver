@@ -165,6 +165,11 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 			Logger::error("Error is in " + location);
 			return false;
 		}
+		else if (line.find("}") != std::string::npos)
+		{
+			Logger::error("Incorrect closing of a block, line should only have a \'}\', currently is: \'" + line + "\'");
+			return false;
+		}
 		else if (isLocationLine(line))
 		{
 			Logger::error("Error: Location block start found inside another location block: " + line);
@@ -180,12 +185,22 @@ bool	Config::parseLocation(std::istream &conf, InfoServer *server, const std::st
 				//Trim again
 				key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
 				value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
+				if(key.find(" ") != std::string::npos)
+				{
+					Logger::error("Error in line: \'" + line + "\'. No spaces allowed in variable name (" + key + ")");
+					return false;
+				}
 				if (key == "root")
 					route.path =("." + value + route.uri);
 				else if (key == "allow")
 					route.methods = parseMethods(value);
 				else
 					route.locSettings[key] = value;
+			}
+			else if (line.find(" ") != std::string::npos)
+			{
+				Logger::error("Error parsing line: \'" + line + "\'. Please use tabs to separate variable key and value.");
+				return false;
 			}
 			else if (line == "internal;")
 				route.internal = true;
@@ -215,8 +230,15 @@ bool	Config::parseServer(std::istream &conf)
 				_servlist.push_back(server);
 				return true;
 			}
+			Logger::error("Server is missing either the port (\"port\"), root(\"root\"), or a valid IP(\"server_name\")");
 			delete server;
 			return false; //Check if memory is lost and I need to add a delete here
+		}
+		else if (line.find("}") != std::string::npos)
+		{
+			Logger::error("Incorrect closing of a block, line should only have a \'}\', currently is: \'" + line + "\'");
+			delete server;
+			return false;
 		}
 		if (isServerLine(line))
 		{
@@ -227,12 +249,14 @@ bool	Config::parseServer(std::istream &conf)
 		int	IsLocation = isLocationLine(line);
 		if (IsLocation == 1) //If we find a location block, we need to parse it
 		{
-			line = line.substr(line.find("location ") + 9); //Remove the "location " bit of the line
-			size_t n = line.find(" ");
-			std::string	location = line.substr(0, n);
+			line = line.substr(8, line.length() - 9); //Remove the "location" bit of the line and the last {
+			size_t n = line.find_first_not_of(" \t");
+			std::string	location = line.substr(n, line.length() - n);
+			n = location.find_first_of(" \t");
+			location = location.substr(0, n);
 			//Remove last slash
 			if (location != "/" && location[location.size() - 1] == '/')
-				location = location.substr(0, location.size() - 1);
+			location = location.substr(0, location.size() - 1);
 			location_ok = parseLocation(conf, server, location);
 			if (location_ok == false)
 			{
@@ -258,7 +282,12 @@ bool	Config::parseServer(std::istream &conf)
 				//Trim again
 				key = key.substr(key.find_first_not_of(" \t"), key.find_last_not_of(" \t") + 1);
 				value = value.substr(value.find_first_not_of(" \t"), value.find_last_not_of(" \t") - value.find_first_not_of(" \t"));
-
+				if(key.find(" ") != std::string::npos)
+				{
+					Logger::error("Error in line: \'" + line + "\'. No spaces allowed in variable name (" + key + ")");
+					delete server;
+					return false;
+				}
 				server->setSetting(key, value);
 				if (key == "port") //These are special cases that we may want to have outside of the map, keep for now, can be expanded
 				{
@@ -279,6 +308,12 @@ bool	Config::parseServer(std::istream &conf)
 				if (key == "index")
 					server->setIndex(value);
 				//Expand if we need more variables
+			}
+			else if (line.find(" ") != std::string::npos)
+			{
+				Logger::error("Error parsing line: \'" + line + "\'. Please use tabs to separate variable key and value.");
+				delete server;
+				return false;
 			}
 			//If there is a line that is not a key	value it is ignored, keep in mind
 		}
@@ -307,9 +342,9 @@ int	Config::isLocationLine(std::string const line)
 {
 	if (line.find("{") == std::string::npos)
 		return 0;
-	if ((line.find("location ") != std::string::npos) && (line.find("{")+1 == line.length()))
+	if (((line.find("location ") == 0) || (line.find("location\t") == 0)) && (line.find("{")+1 == line.length()))
 		return 1;
-	if (line.find("location ") != std::string::npos)
+	if ((line.find("location ") != std::string::npos) || (line.find("location\t") != std::string::npos))
 	{
 		Logger::warn("New location block found, but incorrectly parsed: \"" + line + "\". Exiting parser");
 		return 2;
@@ -319,11 +354,12 @@ int	Config::isLocationLine(std::string const line)
 
 int	Config::isServerLine(std::string const line)
 {
-	if (line.find("{") == std::string::npos)
+	//Logger::debug("\'" + line.substr(6, line.length() -7) + "\'");
+	if (line.find("{") == std::string::npos) //If no "{", then it's not the beginning of a block
 		return 0;
-	if ((line.find("server ") != std::string::npos) && (line.find("{")+1 == line.length()))
+	if (((line.find("server ") == 0) || (line.find("server\t") == 0)) && (line.find("{")+1 == line.length()) && line.substr(6, line.length() -7).find_first_not_of(" \t") == std::string::npos) //Checks that line starts with server, ends with {, and there's nothing in the middle
 		return 1;
-	if (line.find("server ") != std::string::npos)
+	if ((line.find("server ") != std::string::npos) || (line.find("server\t") != std::string::npos)) //If it finds server (and fails previous condition), then it's not correctly parsed
 	{
 		Logger::warn("New server line found, but incorrectly parsed: \"" + line + "\". Exiting parser");
 		return 2;

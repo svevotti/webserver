@@ -1,1 +1,0 @@
--CGI upload always says upload failed (only on Mac?), even if the upload was successful (Exception: method not found)
