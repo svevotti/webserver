@@ -162,9 +162,11 @@ std::string getFileName(std::map<std::string, std::string> headers)
 
 int checkNameFile(std::string str, std::string path)
 {
+	int status;
 	DIR *folder;
 	struct dirent *data;
 
+	status = 0;
 	folder = opendir(path.c_str());
 	std::string convStr;
 	if (folder == NULL)
@@ -172,11 +174,13 @@ int checkNameFile(std::string str, std::string path)
 	while ((data = readdir(folder)))
 	{
 		convStr = data->d_name;
-		if (convStr == str)
-			return (1);
+		if (convStr == str) {
+			status = 1;
+			break ;
+		}
 	}
 	closedir(folder);
-	return (0);
+	return (status);
 }
 
 int extractStatusCode(std::string str, std::string method)
