@@ -130,7 +130,7 @@ int ClientHandler::checkRequestStatus(void)
 	}
 	if (stringLowerCases.find("transfer-encoding") != std::string::npos)
 	{
-		Logger::info("transfer encoding");
+		//Logger::info("transfer encoding");
 		size_t emptyLines = stringLowerCases.find("\r\n\r\n");
 		if (stringLowerCases.find("0\r\n", emptyLines) == std::string::npos)
 			return 0;
@@ -199,20 +199,20 @@ int ClientHandler::manageRequest()
 		{
 			if (checkRequestStatus() == INCOMPLETE)
 				return 0;
-			Logger::info("Done receving request");
+			//Logger::info("Done receving request");
 			this->request.HttpParse(this->raw_data, this->totbytes);
-			Logger::info("Done parsing");
+			//Logger::info("Done parsing");
 			uri = this->request.getHttpRequestLine()["request-uri"];
 			route = configInfo.getRoute()[uri];
 			if (route.uri.empty())
 				findPath(uri, route);
 			updateRoute(route);
-			Logger::info("Got route");
+			//Logger::info("Got route");
 			validateHttpHeaders(route);
-			Logger::info("Validate http request");
+			//Logger::info("Validate http request");
 			if (isCgi(route.uri) == true)
 			{
-				Logger::info("Set up CGI");
+				//Logger::info("Set up CGI");
 				std::string	upload_dir;
 				if (route.locSettings.find("upload_dir") != route.locSettings.end())
 					upload_dir = "." + route.locSettings["upload_dir"];
@@ -255,8 +255,8 @@ int ClientHandler::manageRequest()
 				}
 				else
 					this->response = prepareResponse(route);
-				Logger::info("It is static");
-				Logger::info("Response created successfully and store in clientQueu");
+				//Logger::info("It is static");
+				//Logger::info("Response created successfully and store in clientQueu");
 			}
 		}
 		catch (const HttpException &e)

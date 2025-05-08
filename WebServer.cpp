@@ -203,8 +203,8 @@ void Webserver::dispatchEvents()
 			removeClient(it);
 			return;
 		}
-		else
-			Logger::debug("Nothing");
+		// else
+		// 	Logger::debug("Nothing");
 		it++;
 	}
 }
