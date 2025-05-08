@@ -93,6 +93,22 @@ bool	Config::ft_validServer( void )
 			Logger::error("Error, two servers have the same port!");
 			return false;
 		}
+		if ((*servIt)->getSetting()["client_max_body_size"] == "")
+		{
+			Logger::warn("No client_max_body_size set, setting to 10Mb");
+			(*servIt)->setSetting("client_max_body_size", "1000000");
+		}
+		if ((*servIt)->getSetting()["keepalive_timeout"] == "")
+		{
+			Logger::warn("No keepalive_timeout set, setting to 40s");
+			(*servIt)->setSetting("keepalive_timeout", "40");
+		}
+		if ((*servIt)->getSetting()["error_path"] == "")
+		{
+			std::string error_path = (*servIt)->getSetting()["root"] + "/errors";
+			Logger::warn("No error_path set, setting to " + error_path);
+			(*servIt)->setSetting("error_path", error_path);
+		}
 	}
 	if ((int) s_port.size() != _servcount)
 	{

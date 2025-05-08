@@ -38,6 +38,10 @@ def save_uploaded_file(upload_dir):
     # logging.debug("CONTENT_TYPE: %s" % os.environ.get("CONTENT_TYPE", "unset"))
     # logging.debug("REQUEST_METHOD: %s" % os.environ.get("REQUEST_METHOD", "unset"))
 
+     # Check HTTP method
+    method = os.environ.get("REQUEST_METHOD", "").upper()
+    if method != "POST":
+        send_json_response(405, "Method Not Allowed", ERROR_MESSAGES[405])
     # Check content length against client_max_body_size from environment
     # get and check content type to either read string or
     content_length = int(os.environ.get("CONTENT_LENGTH", 0))

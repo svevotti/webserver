@@ -175,6 +175,8 @@ void HttpRequest::parseRequestHttp(void)
 	if (itTransfer != headers.end())
 		unchunkData();
 	itLength = headers.find("content-length");
+	if (requestLine["method"] == "POST" && itLength == headers.end())
+		throw BadRequestException();
 	if (itLength != headers.end() || itTransfer != headers.end())
 		parseBody(requestLine["method"], this->str, this->size);
 }

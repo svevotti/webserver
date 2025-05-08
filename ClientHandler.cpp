@@ -87,6 +87,9 @@ void ClientHandler::validateHttpHeaders(struct Route route)
 			std::string type;
 			if (it->second.find("multipart/form-data") != std::string::npos)
 			{
+				std::string fileName = getFileName(request.getHttpSection().myMap);
+				if (fileName.empty())
+					throw BadRequestException();
 				std::string genericType = it->second.substr(0, it->second.find(";"));
 				type = this->request.getHttpSection().myMap["content-type"];
 				if (type.length() >= 1)
