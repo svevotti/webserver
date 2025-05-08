@@ -63,23 +63,29 @@ int ServerSockets::createSocket(void)
 	if (fd == -1)
 	{
 		Logger::error("Failed socket: " + std::string(strerror(errno)));
+		freeaddrinfo(serverInfo);
 		return -1;
 	}
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 	{
 		Logger::error("Failed set socket: " + std::string(strerror(errno)));
 		close(fd);
+		freeaddrinfo(serverInfo);
 		return (-1);
 	}
 	if (bind(fd, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
 	{
 		Logger::error("Failed bind socket: " + std::string(strerror(errno)));
+		close(fd);
+		freeaddrinfo(serverInfo);
 		return (-1);
 	}
 	freeaddrinfo(serverInfo);
 	if (listen(fd, 128) == -1)
 	{
 		Logger::error("Failed listen socket: " + std::string(strerror(errno)));
+		close(fd);
+		freeaddrinfo(serverInfo);
 		return (-1);
 	}
 	return (fd);
