@@ -182,7 +182,16 @@ void CGI::populateEnvVariables(const HttpRequest& request)
 	_env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
 	_env_map["REDIRECT_STATUS"] = "200"; // Required for php-cgi with force-cgi-redirect
 	_env_map["SCRIPT_FILENAME"] = _cgi_path;
-	_env_map["FILE_NAME"] = getFileName(request.getHttpSection().myMap);
+	std::string fileName = getFileName(request.getHttpSection().myMap);
+	if (fileName.empty())
+	{
+		fileName = "file";
+		std::string type = request.getHttpHeaders()["content-type"];
+		size_t index = type.find("/");
+		type = type.substr(index + 1);
+		fileName += "." + type;
+	}
+	_env_map["FILE_NAME"] = fileName;
 	_env_map["MAX_CLIENT_BODY"] = _serverInfo.getSetting()["client_max_body_size"];
 	// Added now: DOCUMENT_ROOT environment variable
 	_env_map["DOCUMENT_ROOT"] = _serverInfo.getRoot();
