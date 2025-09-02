@@ -1,7 +1,9 @@
 #include "WebServer.hpp"
 #include <ctime>
+#include <signal.h>
 #define BUFFER 1024
 #define MAX 1024
+#define DONE 2
 
 // Constructor and Destructor
 
@@ -29,8 +31,6 @@ Webserver::~Webserver()
 {
 	closeSockets();
 }
-
-// Main functions
 
 int	Webserver::startServer()
 {
@@ -65,65 +65,153 @@ int	Webserver::startServer()
 void Webserver::dispatchEvents()
 {
 	std::vector<struct pollfd>::iterator it;
-	int result;
+	int result = -2;
 
-    for (it = poll_sets.begin(); it != poll_sets.end();) 
-    {
-		Logger::debug("Client: " + Utils::toString(it->fd));
+	for (it = poll_sets.begin(); it != poll_sets.end();)
+	{
+		//Logger::debug("Client: " + Utils::toString(it->fd));
 		result = 0;
-        if (it->revents & POLLIN)
-        {
+		if (it->revents & POLLIN)
+		{
+			//Logger::debug("POLLIN");
 			if (fdIsServerSocket(it->fd) == true)
 				createNewClient(it->fd);
 			else if (fdIsCGI(it->fd) == true)
 			{
-				Logger::info("Start CGI logic here");
+				Logger::info("event on CGI");
+				result = processCGI(it->fd);
+				if (result == DONE)
+				{
+					std::vector<ClientHandler>::iterator clientIt = retrieveClientCGI(it->fd);
+					for (size_t i = 0; i < poll_sets.size(); i++)
+					{
+						if (poll_sets[i].fd == clientIt->getFd())
+						{
+							poll_sets[i].events = POLLOUT;
+							break;
+						}
+					}
+				}
 			}
 			else
 			{
 				result = processClient(it->fd, READ);
 				if (result == DISCONNECTED)
 				{
+					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
+					if (clientIt->getCGI_Fd() > 0)
+					{
+						if (clientIt->getPid() > 1)
+							kill(clientIt->getPid(), SIGTERM);
+						for (size_t i = 0; i < poll_sets.size(); i++)
+						{
+							if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
+								close(clientIt->getCGI_Fd());
+								poll_sets.erase(poll_sets.begin() + i);
+								break;
+							}
+						}
+					}
 					removeClient(it);
                     return ;
 				}
 				else if (result == 2)
 					it->events = POLLOUT;
+				else if (result == 3)
+				{
+					std::vector<ClientHandler>::iterator clientIt = retrieveClient(it->fd);
+					if (clientIt->getCGI_Fd() > 0)
+					{
+						struct pollfd CGIPoll;
+
+						CGIPoll.fd = retrieveClient(it->fd)->getCGI_Fd();
+						CGIPoll.events = POLLIN;
+						CGIPoll.revents = 0;
+						poll_sets.push_back(CGIPoll);
+						//Logger::info("CGI set up");
+						//Logger::debug("Client fd after setting up CGI: " + Utils::toString(it->fd));
+						//Logger::info("CGI fd after setting up CGI: " + Utils::toString(retrieveClient(it->fd)->getCGI_Fd()));
+					}
+				}
 			}
         }
 		else if (it->revents & POLLOUT)
 		{
-			if (processClient(it->fd, WRITE) == -1)
+			result = -2;
+			result = processClient(it->fd, WRITE);
+			if (result == -1)
 			{
 				Logger::error("Something went wrong with send - don't know the meaning of it yet");
+				std::vector<ClientHandler>::iterator clientIt;
+				clientIt = retrieveClient(it->fd);
+				if (clientIt->getCGI_Fd() > 0)
+				{
+					for (size_t i = 0; i < poll_sets.size(); i++)
+					{
+						if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
+							close(clientIt->getCGI_Fd());
+							poll_sets.erase(poll_sets.begin() + i);
+							break;
+						}
+					}
+				}
+				removeClient(it);
+				return;
+			}
+			std::vector<ClientHandler>::iterator clientIt;
+			clientIt = retrieveClient(it->fd);
+			if (clientIt->getCGI_Fd() > 0)
+			{
+				for (size_t i = 0; i < poll_sets.size(); i++)
+				{
+					if (poll_sets[i].fd == clientIt->getCGI_Fd()) {
+						close(clientIt->getCGI_Fd());
+						poll_sets.erase(poll_sets.begin() + i);
+						break;
+					}
+				}
+				close(it->fd);
+				poll_sets.erase(it);
+				clientsList.erase(clientIt);
+				return;
+			}
+			if (this->timeout == true)
+			{
+				removeClient(it);
+				return;
 			}
 			it->events = POLLIN;
 		}
 		else if (it->revents & POLLERR)
 		{
+			//Logger::debug("POLLERR");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": error");
 			removeClient(it);
 			return;
 		}
 		else if (it->revents & POLLHUP)
 		{
+			//Logger::debug("POLLHUP");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": the other end has closed the connection.\n");
 			removeClient(it);
 			return;
 		}
 		else if (it->revents & POLLNVAL)
 		{
+			//Logger::debug("POLLINVAL");
 			Logger::error("Fd " + Utils::toString(it->fd) + ": invalid request, fd not open");
 			removeClient(it);
 			return;
 		}
+		// else
+		// 	Logger::debug("Nothing");
 		it++;
 	}
 }
 
 int Webserver::processClient(int fd, int event)
 {
-	int status;
+	int status = -2;
 	std::vector<ClientHandler>::iterator clientIt;
 
 	clientIt = retrieveClient(fd);
@@ -136,6 +224,22 @@ int Webserver::processClient(int fd, int event)
 		status = clientIt->manageRequest();
 	else
 		status = clientIt->retrieveResponse();
+	return status;
+}
+
+int Webserver::processCGI(int fd)
+{
+	int status;
+	std::vector<ClientHandler>::iterator clientIt;
+
+	clientIt = retrieveClientCGI(fd);
+	if (clientIt == this->clientsList.end())
+	{
+		Logger::error("Fd: " + Utils::toString(fd) + "not found in clientList");
+		return 0;
+	}
+	status = clientIt->readStdout(fd);
+	clientIt->createResponse();
 	return status;
 }
 
@@ -164,9 +268,20 @@ InfoServer*	Webserver::matchFD( int fd ) {
 	return NULL;
 }
 
-int Webserver::fdIsCGI(int fd)
+bool Webserver::fdIsCGI(int fd)
 {
-	(void)fd;
+	std::vector<ClientHandler>::iterator iterClient;
+	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
+
+	//Logger::debug("Checking if it's CGI for fd " + Utils::toString(fd));
+	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
+	{
+		if (iterClient->getCGI_Fd() == fd)
+		{
+			//Logger::debug("FD " + Utils::toString(fd) + " is CGI");
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -176,13 +291,14 @@ void Webserver::addServerSocketsToPoll(int fd)
 
 	serverPoll[0].fd = fd;
 	serverPoll[0].events = POLLIN;
+	serverPoll[0].revents = 0;
 	this->poll_sets.push_back(serverPoll[0]);
 	Logger::info("Add server sockets to poll sets");
 }
 
 void Webserver::createNewClient(int fd)
 {
-	Logger::debug("New client on fd " + Utils::toString(fd));
+	//Logger::debug("New client on fd " + Utils::toString(fd));
 	socklen_t clientSize;
 	struct sockaddr_storage clientStruct;
 	struct pollfd clientPoll;
@@ -197,10 +313,12 @@ void Webserver::createNewClient(int fd)
 	}
 	clientPoll.fd = clientFd;
 	clientPoll.events = POLLIN;
+	clientPoll.revents = 0;
 	this->poll_sets.push_back(clientPoll);
 	std::vector<pollfd> newSet = poll_sets;
 	InfoServer *server = matchFD(fd);
 	ClientHandler newClient(clientFd, *server);
+	this->timeout = false;
 	this->clientsList.push_back(newClient);
 	Logger::info("New client " + Utils::toString(newClient.getFd()) + " created and added to poll sets");
 }
@@ -213,6 +331,19 @@ std::vector<ClientHandler>::iterator Webserver::retrieveClient(int fd)
 	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
 	{
 		if (iterClient->getFd() == fd)
+			return iterClient;
+	}
+	return endClient;
+}
+
+std::vector<ClientHandler>::iterator Webserver::retrieveClientCGI(int fd)
+{
+	std::vector<ClientHandler>::iterator iterClient;
+	std::vector<ClientHandler>::iterator endClient = this->clientsList.end();
+
+	for (iterClient = this->clientsList.begin(); iterClient != endClient; iterClient++)
+	{
+		if (iterClient->getCGI_Fd() == fd)
 			return iterClient;
 	}
 	return endClient;
@@ -232,7 +363,8 @@ void Webserver::removeClient(std::vector<struct pollfd>::iterator it)
 {
 	Logger::info("Client " + Utils::toString(it->fd) + " disconnected");
 	close(it->fd);
-	this->clientsList.erase(retrieveClient(it->fd));
+	if (retrieveClient(it->fd) != this->clientsList.end())
+		this->clientsList.erase(retrieveClient(it->fd));
 	this->poll_sets.erase(it);
 }
 
@@ -248,8 +380,27 @@ void Webserver::checkTime(void)
 		{
 			if (currentTime - clientIt->getTime() > clientIt->getTimeOut())
 			{
-				Logger::error("Fd: " + Utils::toString(it->fd) + " timeout");
+				if (clientIt->getCGI_Fd() > 0)
+				{
+					for (size_t i = 0; i < poll_sets.size(); i++)
+					{
+						Logger::warn(Utils::toString(poll_sets[i].fd));
+						if (poll_sets[i].fd == clientIt->getCGI_Fd())
+						{
+							//Logger::debug("pid: " + Utils::toString(clientIt->getPid()));
+							kill(clientIt->getPid(), SIGTERM);
+							close(clientIt->getCGI_Fd());
+							poll_sets.erase(poll_sets.begin() + i);
+							break;
+						}
+					}
+					clientIt->setGateawayResponse();
+					this->timeout = true;
+					it->events = POLLOUT;
+					return;
+				}
 				removeClient(it);
+				break;
 			}
 		}
 	}
