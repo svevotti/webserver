@@ -29,6 +29,7 @@ class HttpResponse {
 		std::string findType(std::string);
 		std::string findTimeStamp();
 		int			findFileType(std::string str);
+		std::string composeRespone(std::string str);
 
 	private:
 		int							statusCode;

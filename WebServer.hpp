@@ -8,6 +8,7 @@
 #include "HttpException.hpp"
 #include "ClientHandler.hpp"
 #include "Config.hpp"
+#include "CGI.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dirent.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include <cstdio>
@@ -35,18 +36,23 @@
 
 class Webserver {
     public:
+        pid_t pid;
+        Webserver() {};
         Webserver(Config &file);
         ~Webserver();
         int                                     startServer(void);
         void                                    addServerSocketsToPoll(int fd);
         int                                     fdIsServerSocket(int fd);
-        int                                     fdIsCGI(int fd);
+        bool                                     fdIsCGI(int fd);
         void                                    dispatchEvents(void);
         void                                    createNewClient(int fd);
         int                                     processClient(int fd, int event);
+        int                                     processCGI(int fd);
         void                                    closeSockets(void);
         std::vector<ClientHandler>::iterator    retrieveClient(int fd);
+        std::vector<ClientHandler>::iterator    retrieveClientCGI(int fd);
         void                                    removeClient(std::vector<struct pollfd>::iterator it);
+        void timeoutResponse(int fd);
         void checkTime(void);
         InfoServer*	matchFD( int fd );
 
@@ -55,6 +61,7 @@ class Webserver {
         std::vector<struct pollfd>  poll_sets;
         int                         serverFd;
         std::vector<ClientHandler>  clientsList;
-
+        std::vector<CGITracker>     _cgiQueue;
+        bool                        timeout;
 };
 #endif

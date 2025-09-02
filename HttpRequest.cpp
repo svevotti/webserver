@@ -16,6 +16,7 @@ HttpRequest::HttpRequest(HttpRequest const &other)
 	this->headers = other.headers;
 	this->sectionInfo = other.sectionInfo;
 	this->body = other.body;
+	this->scriptName = other.scriptName;
 }
 
 // Setters and Getters
@@ -62,12 +63,22 @@ std::string HttpRequest::getQuery(void) const
 
 std::string HttpRequest::getContentType(void) const
 {
-	return findValue(this->headers, "content-type");
+	return content_type;
 }
 
 std::string HttpRequest::getContentLength(void) const
 {
 	return Utils::toString(this->body.length());
+}
+
+std::string HttpRequest::getHttpContentType(void) const
+{
+	return findValue(this->headers, "content-type");
+}
+
+std::string HttpRequest::getHttpContentLength(void) const
+{
+	return findValue(this->headers, "content-length");
 }
 
 std::string HttpRequest::getHost(void) const
@@ -83,6 +94,11 @@ std::string HttpRequest::getProtocol(void) const
 std::string HttpRequest::getBodyContent(void) const
 {
 	return this->body;
+}
+
+std::string HttpRequest::getScriptName(void) const
+{
+	return this->scriptName;
 }
 
 // Main functions
@@ -119,7 +135,7 @@ void HttpRequest::unchunkData(void)
 			break;
 		int chunkSizeLength = chunkEnd - (chunked + pos);
 		std::string HexNum(chunked + pos, chunkEnd);
-		size_t chunkSize = strtoul(HexNum.c_str(), nullptr, 16);
+		size_t chunkSize = strtoul(HexNum.c_str(), NULL, 16);
 		if (chunkSize == 0)
 			break;
 		pos += chunkSizeLength + 2;
@@ -132,23 +148,16 @@ void HttpRequest::unchunkData(void)
 	this->str = headers + "\r\n\r\n" + first_boundary + unchunked;
 }
 
-void HttpRequest::setCorrectHeaders(void)
+void HttpRequest::setExtraHeaders(void)
 {
 	std::map<std::string, std::string>::iterator it;
 	it = this->headers.find("content-type");
 	if (it != this->headers.end())
-	{
-		it->second.clear();
-		it->second = findValue(this->sectionInfo.myMap, "content-type");
-	}
+		content_type = findValue(this->sectionInfo.myMap, "content-type");
 	it = this->headers.find("content-length");
-	if (it != this->headers.end())
-	{
-		it->second.clear();
-		it->second = Utils::toString(this->sectionInfo.body.length());
-	}
 	this->body = this->sectionInfo.body;
 }
+
 void HttpRequest::parseRequestHttp(void)
 {
 	std::string inputString(this->str);
@@ -156,7 +165,7 @@ void HttpRequest::parseRequestHttp(void)
 	std::string line;
     std::map<std::string, std::string>::iterator itTransfer;
 	std::map<std::string, std::string>::iterator itLength;
-	
+
 	parseRequestLine(inputString);
 	getline(request, line);
 	if (isspace(line[0]) != 0 || line.empty())
@@ -166,6 +175,8 @@ void HttpRequest::parseRequestHttp(void)
 	if (itTransfer != headers.end())
 		unchunkData();
 	itLength = headers.find("content-length");
+	if (requestLine["method"] == "POST" && itLength == headers.end())
+		throw BadRequestException();
 	if (itLength != headers.end() || itTransfer != headers.end())
 		parseBody(requestLine["method"], this->str, this->size);
 }
@@ -177,11 +188,11 @@ void HttpRequest::parseBody(std::string method, std::string buffer, int size)
 	std::map<std::string, std::string>::iterator it;
 
 	if (method == "POST")
-	{	
+	{
 		if (contentType.find("multipart/form-data") != std::string::npos)
 		{
 			parseMultiPartBody(buffer, size);
-			setCorrectHeaders();
+			setExtraHeaders();
 		}
 		else
 			parseOtherTypes(buffer);
@@ -338,7 +349,7 @@ void	HttpRequest::parseMultiPartBody(std::string buffer, int size)
 	int firstB = boundariesIndexes[1];
 	int secondB = boundariesIndexes[2];
 	this->sectionInfo = extractSections(buffer, firstB, secondB, b);
-	delete b;
+	delete [] b;
 }
 
 struct section HttpRequest::extractSections(std::string buffer, int firstB, int secondB, std::string b)
@@ -507,11 +518,17 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     // Print the query
     output << "Query: " << request.getQuery() << std::endl;
 
-    // Print the content type
-    output << "Content Type: " << request.getContentType() << std::endl;
+    // Print the content type http
+    output << "Content Type http: " << request.getHttpContentType() << std::endl;
 
-    // Print the content length
-    output << "Content Length: " << request.getContentLength() << std::endl;
+    // Print the content length http
+    output << "Content Length http: " << request.getHttpContentLength() << std::endl;
+
+	 // Print the content type
+	 output << "Content Type: " << request.getContentType() << std::endl;
+
+	 // Print the content length
+	 output << "Content Length: " << request.getContentLength() << std::endl;
 
     // Print the host
     output << "Host: " << request.getHost() << std::endl;
@@ -528,7 +545,7 @@ std::ostream &operator<<(std::ostream &output, HttpRequest const &request) {
     }
 
 	// Print the body content
-    output << "Body Content: " << request.getBodyContent() << std::endl;
+    // output << "Body Content: " << request.getBodyContent() << std::endl;
 
     return output;
 }

@@ -10,6 +10,7 @@
 # include <map>
 # include <string>
 # include "InfoServer.hpp"
+# include "Logger.hpp"
 
 class Config {
 	private:
@@ -17,6 +18,8 @@ class Config {
 		bool						parseConfigFile(const std::string &configFile);
 		bool						parseServer(std::istream &conf);
 		bool						parseLocation(std::istream &conf, InfoServer *server, const std::string location);
+		int							isServerLine(std::string const line);
+		int							isLocationLine(std::string const line);
 		bool						trimLine(std::string& line);
 		int							_servcount;
 		Config( const Config& copy);

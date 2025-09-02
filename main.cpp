@@ -95,20 +95,58 @@ bool	test(Config &conf)
 	return true;
 }
 
-int main(void)
-{
-	Config	configuration("default.conf");
+Config*	configuration;
+Webserver* server;
 
-	if (configuration.ft_validServer())
+void signal_handler(int sig)
+{
+    if (server)
+    {
+		std::cout << std::endl;
+        Logger::info("Received signal " + Utils::toString(sig) + ", shutting down server");
+		delete server;
+        server = NULL;
+    }
+	if (configuration)
+    {
+        Logger::info("Received signal " + Utils::toString(sig) + ", shutting down configuration");
+		delete configuration;
+        configuration = NULL;
+    }
+    exit(0);
+}
+
+int main(int argc, char** argv)
+{
+	if (argc != 2)
 	{
-		Webserver 	server(configuration);
-		if (server.startServer() == -1)
+		Logger::error("Program usage: ./webserver <configuration>");
+		return 1;
+	}
+	configuration = new Config(argv[1]);
+
+	signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+	signal(SIGPIPE, SIG_IGN);
+
+	if (configuration->ft_validServer())
+	{
+		server = new Webserver(*configuration);
+		if (server->startServer() == -1)
 		{
 			Logger::error("Could not start the server");
+			delete server;
+			delete configuration;
 			return 1;
 		}
 	}
 	else
-		Logger::error("Parsing configuration file");
+	{
+		Logger::error("Error while parsing configuration file");
+		delete configuration;
+		return (1);
+	}
+	delete server;
+	delete configuration;
 	return (0);
 }
